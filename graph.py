@@ -18,7 +18,7 @@ from nodes.extract_node import extract_node
 from nodes.enrich_node import enrich_node
 from nodes.analyst_node import analyst_node
 from nodes.kql_node import kql_node
-from nodes.writeback_node import writeback_node
+from nodes.writeback_node import close_review_node, writeback_node
 
 
 def build_graph():
@@ -33,6 +33,7 @@ def build_graph():
     builder.add_node("analyst", analyst_node)
     builder.add_node("kql", kql_node)
     builder.add_node("writeback", writeback_node)
+    builder.add_node("close_review", close_review_node)
 
     # Define the execution order (linear chain)
     builder.add_edge(START, "fetch")
@@ -42,6 +43,8 @@ def build_graph():
     builder.add_edge("enrich", "analyst")
     builder.add_edge("analyst", "kql")
     builder.add_edge("kql", "writeback")
-    builder.add_edge("writeback", END)
+    builder.add_edge("writeback", "close_review")
+    builder.add_edge("close_review", END)
 
-    return builder.compile()
+    # Pause execution before the close_review node so human approval can be applied.
+    return builder.compile(interrupt_before=["close_review"])

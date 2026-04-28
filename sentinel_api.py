@@ -1,12 +1,53 @@
 # this script fetches and lists incidents filtered by "New", lists incident alerts granularly for IoC extraction, then agent writes comments + updates incident status.
 
+import logging
 import os
 import uuid
 import requests
+from requests.exceptions import RequestException
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 from dotenv import load_dotenv
 from sentinel_auth import get_auth_headers
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
+DEFAULT_HTTP_TIMEOUT = 10
+RETRY_ATTEMPTS = 3
+
+
+@retry(
+    retry=retry_if_exception_type(RequestException),
+    wait=wait_exponential(multiplier=1, min=1, max=10),
+    stop=stop_after_attempt(RETRY_ATTEMPTS),
+    reraise=True,
+)
+def _http_request(method: str, url: str, *, headers=None, params=None, json=None) -> requests.Response:
+    try:
+        response = requests.request(
+            method,
+            url,
+            headers=headers,
+            params=params,
+            json=json,
+            timeout=DEFAULT_HTTP_TIMEOUT,
+        )
+        if response.status_code in (429, 503, 504):
+            logger.warning("Transient HTTP %s for %s; retrying", response.status_code, url)
+            response.raise_for_status()
+        response.raise_for_status()
+        return response
+    except RequestException as exc:
+        logger.warning("HTTP %s request to %s failed: %s", method, url, exc)
+        raise
+
+
+def _request(method: str, url: str, *, headers=None, params=None, json=None) -> requests.Response:
+    try:
+        return _http_request(method, url, headers=headers, params=params, json=json)
+    except RequestException as exc:
+        logger.exception("HTTP request to %s failed after retries: %s", url, exc)
+        raise
 
 SUBSCRIPTION_ID = os.getenv("SUBSCRIPTION_ID")
 RESOURCE_GROUP = os.getenv("RESOURCE_GROUP")
@@ -39,9 +80,7 @@ def list_incidents(status_filter: str = "New", max_results: int = 5) -> list[dic
         "$top": max_results,
     }
 
-    response = requests.get(url, headers=get_auth_headers(), params=params)
-    response.raise_for_status()  # Raises HTTPError for 4xx/5xx responses
-    
+    response = _request("GET", url, headers=get_auth_headers(), params=params)
     data = response.json()
     return data.get("value", [])
 
@@ -53,8 +92,7 @@ def get_incident(incident_id: str) -> dict:
     url = f"{_BASE}/incidents/{incident_id}"
     params = {"api-version": API_VERSION}
     
-    response = requests.get(url, headers=get_auth_headers(), params=params)
-    response.raise_for_status()
+    response = _request("GET", url, headers=get_auth_headers(), params=params)
     return response.json()
 
 
@@ -65,10 +103,8 @@ def list_incident_alerts(incident_id: str) -> list[dict]:
     url = f"{_BASE}/incidents/{incident_id}/alerts"
     params = {"api-version": API_VERSION}
     
-    response = requests.post(url, headers=get_auth_headers(), params=params)
+    response = _request("POST", url, headers=get_auth_headers(), params=params)
     # Note: This is a POST, not GET. The Sentinel API uses POST for listing.
-    response.raise_for_status()
-    
     data = response.json()
     return data.get("value", [])
 
@@ -89,8 +125,7 @@ def post_incident_comment(incident_id: str, comment_text: str) -> dict:
         }
     }
     
-    response = requests.put(url, headers=get_auth_headers(), params=params, json=body)
-    response.raise_for_status()
+    response = _request("PUT", url, headers=get_auth_headers(), params=params, json=body)
     return response.json()
 
 
@@ -114,12 +149,11 @@ def update_incident_status(incident_id: str, new_status: str, classification: st
         existing["properties"]["classification"] = classification
         # classificationComment is optional but useful for audit trails
         existing["properties"]["classificationComment"] = (
-            "Auto-closed by Sentinel Triage Agent after LangGraph analysis."
+            "Closed by Sentinel Triage Agent after analyst review and approval."
         )
     
     url = f"{_BASE}/incidents/{incident_id}"
     params = {"api-version": API_VERSION}
     
-    response = requests.put(url, headers=get_auth_headers(), params=params, json=existing)
-    response.raise_for_status()
+    response = _request("PUT", url, headers=get_auth_headers(), params=params, json=existing)
     return response.json()

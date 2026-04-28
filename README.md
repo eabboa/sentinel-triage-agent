@@ -121,3 +121,14 @@ This prototype includes hardened design decisions that reflect real-world SOC en
 - Cloud APIs often throttle high-volume tools, so retry/backoff patterns are essential to remain resilient and avoid cascading failures.
 - Explicit timeout and retry handling ensures the system remains responsive rather than hanging indefinitely on external dependencies.
 - These changes align the prototype with enterprise-grade incident handling expectations rather than a purely exploratory proof-of-concept.
+
+## [0.2.0] - 2026-04-28
+
+### Added
+- **Optimistic Concurrency Control:** Implemented Azure ETag validation via the `If-Match` header in incident `PUT` requests, preventing race conditions and silent overwrites in multi-analyst environments.
+- **Asynchronous Execution:** Replaced synchronous polling with `asyncio.gather` and an `asyncio.Semaphore` in the main pipeline, enabling parallel incident processing while enforcing strict API rate limits.
+- **Secretless Authentication:** Migrated from `msal` static client secrets to `azure-identity` `DefaultAzureCredential`, enforcing identity-based access control via Managed Identities.
+
+### Changed
+- **Deterministic LLM Output:** Refactored the analyst reasoning node to utilize LangChain's `with_structured_output` and Pydantic (`AnalystVerdict`), eliminating brittle string parsing of JSON payloads.
+- **CTI Scoring Logic:** Corrected the confidence algorithm to treat missing or timed-out threat intelligence data as a neutral baseline, preventing arbitrary severity downgrades caused by transient external API failures.

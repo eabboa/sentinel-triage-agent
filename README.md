@@ -122,13 +122,16 @@ This prototype includes hardened design decisions that reflect real-world SOC en
 - Explicit timeout and retry handling ensures the system remains responsive rather than hanging indefinitely on external dependencies.
 - These changes align the prototype with enterprise-grade incident handling expectations rather than a purely exploratory proof-of-concept.
 
-## [0.2.0] - 2026-04-28
 
-### Added
-- **Optimistic Concurrency Control:** Implemented Azure ETag validation via the `If-Match` header in incident `PUT` requests, preventing race conditions and silent overwrites in multi-analyst environments.
-- **Asynchronous Execution:** Replaced synchronous polling with `asyncio.gather` and an `asyncio.Semaphore` in the main pipeline, enabling parallel incident processing while enforcing strict API rate limits.
-- **Secretless Authentication:** Migrated from `msal` static client secrets to `azure-identity` `DefaultAzureCredential`, enforcing identity-based access control via Managed Identities.
+## [0.2.0] - 2026-04-28 (Enterprise Resilience Update)
 
-### Changed
-- **Deterministic LLM Output:** Refactored the analyst reasoning node to utilize LangChain's `with_structured_output` and Pydantic (`AnalystVerdict`), eliminating brittle string parsing of JSON payloads.
-- **CTI Scoring Logic:** Corrected the confidence algorithm to treat missing or timed-out threat intelligence data as a neutral baseline, preventing arbitrary severity downgrades caused by transient external API failures.
+This release shifts the pipeline from a functional prototype to a fault-tolerant architecture by addressing concurrency, identity, and deterministic execution risks.
+
+### Architecture & Concurrency
+- **Optimistic Concurrency Control:** Implemented Azure ETag validation (`If-Match` headers) for incident `PUT` requests. This prevents race conditions and silent data overwrites when multiple SOC analysts or automation rules interact with the same incident simultaneously.
+- **Asynchronous Orchestration:** Replaced synchronous polling loops with `asyncio.gather` and `asyncio.Semaphore` in the main pipeline. This allows parallel incident processing while mathematically guaranteeing we do not exceed external API rate limits.
+
+### Identity & Determinism
+- **Secretless Authentication:** Deprecated static MSAL client secrets in favor of `azure-identity` (`DefaultAzureCredential`). This eliminates hardcoded credentials and enforces identity-based access control via Azure Managed Identities.
+- **Strict Schema Enforcement:** Replaced brittle JSON string parsing with LangChain's `with_structured_output` and Pydantic (`AnalystVerdict`), guaranteeing deterministic state transitions from the LLM. 
+- **Fail-Safe CTI Scoring:** Refactored the confidence algorithm to treat timed-out or unreachable external threat intelligence as a neutral baseline. This prevents transient third-party API failures from artificially downgrading incident severity.

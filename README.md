@@ -28,9 +28,6 @@ uv sync
 Create `.env` at the project root:
 
 ```dotenv
-TENANT_ID=
-CLIENT_ID=
-CLIENT_SECRET=
 SUBSCRIPTION_ID=
 RESOURCE_GROUP=rg-sentinel-lab
 WORKSPACE_NAME=law-sentinel-lab
@@ -43,9 +40,13 @@ ABUSEIPDB_API_KEY=
 
 1. Create a Resource Group and Log Analytics Workspace in the same region.
 2. Enable Microsoft Sentinel on the workspace.
-3. Register an app in Microsoft Entra ID → copy `CLIENT_ID` and `TENANT_ID`.
-4. Generate a client secret → copy the value as `CLIENT_SECRET`.
-5. Assign `Microsoft Sentinel Contributor` to the app at the Resource Group scope (IAM → Add role assignment). Wait ~10 minutes for propagation.
+
+#### For local development:
+- Install Azure CLI (`winget install Microsoft.AzureCLI` on Windows).
+- Run `az login` to authenticate.
+
+#### For production:
+- Assign a Managed Identity (User-Assigned or System-Assigned) to your application/service with `Microsoft Sentinel Contributor` role at the Resource Group scope (IAM → Add role assignment). Wait ~10 minutes for propagation.
 
 ---
 
@@ -77,7 +78,7 @@ sentinel-triage-agent/
 │   ├── analyst_node.py      # LLM verdict: TruePositive / FalsePositive / BenignPositive
 │   ├── kql_node.py          # Schema-gated KQL hunting query generation
 │   └── writeback_node.py    # POST comment + optional incident close
-├── sentinel_auth.py         # OAuth2 Client Credentials via MSAL
+├── sentinel_auth.py         # Azure Identity DefaultAzureCredential (Managed Identity / Azure CLI)
 ├── sentinel_api.py          # Sentinel REST API wrapper
 ├── state.py                 # LangGraph TypedDict state schema
 ├── graph.py                 # StateGraph assembly

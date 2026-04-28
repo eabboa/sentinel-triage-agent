@@ -35,6 +35,7 @@ class TriageState(TypedDict):
     # ── Write-back (writeback_node.py) ──────────────────────────────────────────
     comment_posted: bool
     incident_closed: bool
+    close_approved: bool
     
     # ── Error tracking ─────────────────────────────────────────────────────────
     errors: list[str]            # Non-fatal errors encountered during processing

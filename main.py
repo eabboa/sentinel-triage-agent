@@ -42,6 +42,7 @@ async def process_incident(incident, graph, semaphore):
         "kql_queries": [],
         "comment_posted": False,
         "incident_closed": False,
+        "close_approved": False,
         "errors": [],
     }
 

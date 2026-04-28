@@ -1,6 +1,6 @@
 """
 Authentication using Azure Identity for Azure REST API access.
-Uses DefaultAzureCredential to obtain tokens via Managed Identity or Azure CLI.
+Uses DefaultAzureCredential to obtain tokens via Managed Identity (production) or Azure CLI (local development).
 """
 
 import os
@@ -10,10 +10,11 @@ from azure.identity import DefaultAzureCredential
 # ".default" means "all permissions for this app has been granted".
 MANAGEMENT_SCOPE = "https://management.azure.com/.default"
 
+credential = DefaultAzureCredential()
+
 
 def get_access_token() -> str:
     """Get bearer token using DefaultAzureCredential."""
-    credential = DefaultAzureCredential()
     token = credential.get_token(MANAGEMENT_SCOPE)
     return token.token
 

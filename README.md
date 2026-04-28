@@ -136,3 +136,13 @@ This release shifts the pipeline from a functional prototype to a fault-tolerant
 - **Secretless Authentication:** Deprecated static MSAL client secrets in favor of `azure-identity` (`DefaultAzureCredential`). This eliminates hardcoded credentials and enforces identity-based access control via Azure Managed Identities.
 - **Strict Schema Enforcement:** Replaced brittle JSON string parsing with LangChain's `with_structured_output` and Pydantic (`AnalystVerdict`), guaranteeing deterministic state transitions from the LLM. 
 - **Fail-Safe CTI Scoring:** Refactored the confidence algorithm to treat timed-out or unreachable external threat intelligence as a neutral baseline. This prevents transient third-party API failures from artificially downgrading incident severity.
+
+## [v0.3.0] - 2026-04-28
+
+Added
+
+**Active Containment Execution (containment_node):** Introduced automated and HITL-gated remediation actions directly into the pipeline, enabling dynamic isolation of compromised entities (e.g., host isolation, IP blocking) via Azure APIs.
+
+**RAG-Based Correction Loop (learning_node):** Implemented a Retrieval-Augmented Generation feedback mechanism. The agent now stores and retrieves historical analyst corrections to iteratively refine KQL query generation and incident classification accuracy.
+
+**Conditional Graph Routing:** Upgraded the LangGraph pipeline with dynamic routing logic. The state machine now evaluates incident context mid-flight to conditionally bypass irrelevant nodes, dramatically reducing token consumption and execution latency.

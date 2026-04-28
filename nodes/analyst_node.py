@@ -5,8 +5,21 @@ We use strictly, JSON output to prevent LLM from prose and babbling.
 
 import json
 import os
+from typing import Literal
+
+from langchain.output_parsers import PydanticOutputParser
 from langchain_google_genai import ChatGoogleGenerativeAI
+from pydantic import BaseModel
 from state import TriageState
+
+
+class AnalystVerdict(BaseModel):
+    classification: Literal["TruePositive", "FalsePositive", "BenignPositive"]
+    is_true_positive: bool
+    triage_summary: str
+    mitre_analysis: str
+    confidence: int
+    recommended_action: str
 
 
 ANALYST_PROMPT_TEMPLATE = """
@@ -41,7 +54,7 @@ Return ONLY valid JSON with this exact schema. No preamble, no markdown, no expl
   "is_true_positive": true | false,
   "triage_summary": "3 sentence explanation of the verdict.",
   "mitre_analysis": "How the detected tactics map to the observed behavior. 3 sentence explanation. Each sentence under 15 words.",
-  "confidence": "CONFIDENCE SCORING: Start at 50. Add 20 for definitive CTI confirmation or verified clean status. Add 20 for multi-stage MITRE correlation. Subtract 20 for mixed or missing CTI. Subtract 10 for isolated events lacking context. Cap between 0-100, where 90-100 is Definitive, 70-89 is Probable, 40-69 is Ambiguous, and 0-39 is Insufficient Data. Output exact integer.",
+  "confidence": "CONFIDENCE SCORING: Start at 50. If CTI data is missing, empty, or failed to fetch, apply a 0 point modifier to confidence (treat as a neutral unknown). Only subtract points if there is contradictory evidence. Add points only for verified clean or verified malicious results from the CTI payload. Add 20 for multi-stage MITRE correlation. Subtract 10 for isolated events lacking context. Cap between 0-100, where 90-100 is Definitive, 70-89 is Probable, 40-69 is Ambiguous, and 0-39 is Insufficient Data. Output exact integer.",
   "recommended_action": "Brief next step for the Tier 2 analyst. 3 sentence explanation."
 }}
 """
@@ -51,11 +64,13 @@ def analyst_node(state: TriageState) -> dict:
     """
     Sends the condensed incident context to the LLM for structured triage analysis.
     """
+    output_parser = PydanticOutputParser(pydantic_object=AnalystVerdict)
+
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.5-flash",  # Use the full flash model, not lite.
         google_api_key=os.getenv("GOOGLE_API_KEY"),
         temperature=0,  # deterministic and consistent classification
-    )
+    ).with_structured_output(output_parser)
 
     prompt = ANALYST_PROMPT_TEMPLATE.format(
         condensed_summary=state.get("condensed_summary", "No summary available."),
@@ -65,15 +80,15 @@ def analyst_node(state: TriageState) -> dict:
 
     try:
         response = llm.invoke(prompt)
-        clean = response.content.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-        result = json.loads(clean)
+        verdict = getattr(response, "output_parsed", None) or getattr(response, "parsed_output", None) or response
 
-        return {
-            "classification": result.get("classification", "Undetermined"),
-            "is_true_positive": result.get("is_true_positive", False),
-            "triage_summary": result.get("triage_summary", "Analysis failed."),
-            "mitre_analysis": result.get("mitre_analysis", "No MITRE analysis available."),
-        }
+        if isinstance(verdict, AnalystVerdict):
+            return verdict.dict()
+
+        if isinstance(verdict, dict):
+            return verdict
+
+        raise ValueError("Unexpected structured output type from analyst LLM response.")
 
     except Exception as e:
         return {
@@ -81,4 +96,6 @@ def analyst_node(state: TriageState) -> dict:
             "is_true_positive": False,
             "triage_summary": f"Analyst node failed: {str(e)}",
             "mitre_analysis": "N/A",
+            "confidence": 0,
+            "recommended_action": "N/A",
         }

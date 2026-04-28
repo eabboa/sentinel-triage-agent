@@ -4,7 +4,7 @@ import logging
 import os
 import uuid
 import requests
-from requests.exceptions import RequestException
+from requests.exceptions import HTTPError, RequestException
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 from dotenv import load_dotenv
 from sentinel_auth import get_auth_headers
@@ -14,6 +14,10 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 DEFAULT_HTTP_TIMEOUT = 10
 RETRY_ATTEMPTS = 3
+
+
+class ConcurrencyConflictError(Exception):
+    """Raised when an optimistic concurrency update fails due to an ETag mismatch."""
 
 
 @retry(
@@ -93,7 +97,11 @@ def get_incident(incident_id: str) -> dict:
     params = {"api-version": API_VERSION}
     
     response = _request("GET", url, headers=get_auth_headers(), params=params)
-    return response.json()
+    incident = response.json()
+    incident_etag = incident.get("etag")
+    if incident_etag:
+        logger.debug("Fetched incident %s with ETag %s", incident_id, incident_etag)
+    return incident
 
 
 def list_incident_alerts(incident_id: str) -> list[dict]:
@@ -139,8 +147,12 @@ def update_incident_status(incident_id: str, new_status: str, classification: st
 
     It is currently vulnerable to Race Condition, requiring ETag.
     """
-    # Fetch current incident to preserve all existing fields
+    # Fetch current incident to preserve all existing fields and capture its current ETag.
     existing = get_incident(incident_id)
+    etag = existing.get("etag")
+    headers = get_auth_headers()
+    if etag:
+        headers["If-Match"] = etag
     
     # Modify only the fields you need to change
     existing["properties"]["status"] = new_status
@@ -155,5 +167,12 @@ def update_incident_status(incident_id: str, new_status: str, classification: st
     url = f"{_BASE}/incidents/{incident_id}"
     params = {"api-version": API_VERSION}
     
-    response = _request("PUT", url, headers=get_auth_headers(), params=params, json=existing)
-    return response.json()
+    try:
+        response = _request("PUT", url, headers=headers, params=params, json=existing)
+        return response.json()
+    except HTTPError as exc:
+        if exc.response is not None and exc.response.status_code == 412:
+            raise ConcurrencyConflictError(
+                f"Incident {incident_id} update failed due to concurrent modification."
+            ) from exc
+        raise

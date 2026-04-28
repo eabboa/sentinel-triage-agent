@@ -26,6 +26,7 @@ class TriageState(TypedDict):
     # ── Analysis (analyst_node.py) ─────────────────────────────────────────────
     is_true_positive: bool
     classification: str          # "TruePositive", "FalsePositive", "BenignPositive"
+    confidence: int              # 0-100 confidence score from the analyst LLM
     triage_summary: str          # Human-readable, explaining the verdict
     mitre_analysis: str          # MITRE ATT&CK tactic/technique analysis
 
@@ -36,6 +37,10 @@ class TriageState(TypedDict):
     comment_posted: bool
     incident_closed: bool
     close_approved: bool
+    containment_approved: bool       # Set to True to trigger MDE device isolation
+    
+    # ── Human review ───────────────────────────────────────────────────────────
+    human_classification: Optional[str]  # Human-provided classification after review
     
     # ── Error tracking ─────────────────────────────────────────────────────────
     errors: list[str]            # Non-fatal errors encountered during processing

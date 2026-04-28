@@ -7,10 +7,12 @@ requires-python = ">=3.13"
 dependencies = [
     "aiohttp>=3.13.5",
     "azure-identity>=1.15.0",
+    "chromadb>=0.4.0",
     "fastmcp>=3.2.4",
     "langchain-google-genai>=4.2.2",
     "langchain-mcp-adapters>=0.2.2",
     "langgraph>=1.1.9",
     "python-dotenv>=1.2.2",
     "requests>=2.33.1",
+    "sentence-transformers>=2.2.0",
 ]

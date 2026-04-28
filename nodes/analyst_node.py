@@ -3,14 +3,54 @@ The LLM-powered reasoning node. The "brain" of the pipeline.
 We use strictly, JSON output to prevent LLM from prose and babbling.
 """
 
+import asyncio
 import json
 import os
 from typing import Literal
 
+import chromadb
 from langchain.output_parsers import PydanticOutputParser
 from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel
+from sentence_transformers import SentenceTransformer
 from state import TriageState
+
+
+# Global variables for ChromaDB and embedding model
+chroma_client = None
+collection = None
+embedding_model = None
+
+
+def initialize_chroma():
+    """Initialize ChromaDB client and collection."""
+    global chroma_client, collection, embedding_model
+    if chroma_client is None:
+        # Use persistent directory
+        persist_dir = os.path.join(os.getcwd(), "chroma_db")
+        chroma_client = chromadb.PersistentClient(path=persist_dir)
+        collection = chroma_client.get_or_create_collection(name="triage_corrections")
+        embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+
+
+async def retrieve_similar_mismatches(condensed_summary: str, top_k: int = 3):
+    """Retrieve top-k similar historical mismatches."""
+    if chroma_client is None:
+        initialize_chroma()
+
+    # Embed the query
+    query_embedding = embedding_model.encode(condensed_summary).tolist()
+
+    # Query the collection
+    results = await asyncio.get_event_loop().run_in_executor(
+        None,
+        lambda: collection.query(
+            query_embeddings=[query_embedding],
+            n_results=top_k
+        )
+    )
+
+    return results
 
 
 class AnalystVerdict(BaseModel):
@@ -33,6 +73,8 @@ CTI ENRICHMENT RESULTS:
 
 DETECTED MITRE ATT&CK TACTICS:
 {tactics}
+
+{few_shot_examples}
 
 TASK:
 1. Analyze whether this incident represents a genuine threat.
@@ -60,9 +102,10 @@ Return ONLY valid JSON with this exact schema. No preamble, no markdown, no expl
 """
 
 
-def analyst_node(state: TriageState) -> dict:
+async def analyst_node(state: TriageState) -> dict:
     """
     Sends the condensed incident context to the LLM for structured triage analysis.
+    Includes RAG-retrieved few-shot examples of past mistakes.
     """
     output_parser = PydanticOutputParser(pydantic_object=AnalystVerdict)
 
@@ -72,10 +115,22 @@ def analyst_node(state: TriageState) -> dict:
         temperature=0,  # deterministic and consistent classification
     ).with_structured_output(output_parser)
 
+    # Retrieve similar historical mismatches
+    condensed_summary = state.get("condensed_summary", "No summary available.")
+    results = await retrieve_similar_mismatches(condensed_summary, top_k=3)
+
+    # Format few-shot examples
+    few_shot_examples = ""
+    if results['documents']:
+        few_shot_examples = "FEW-SHOT EXAMPLES OF PAST MISTAKES:\n"
+        for i, doc in enumerate(results['documents'][0], 1):
+            few_shot_examples += f"Example {i}:\n{doc}\n\n"
+
     prompt = ANALYST_PROMPT_TEMPLATE.format(
-        condensed_summary=state.get("condensed_summary", "No summary available."),
+        condensed_summary=condensed_summary,
         cti_results=json.dumps(state.get("cti_results", {}), indent=2),
         tactics=", ".join(state.get("incident_tactics", [])) or "None detected by Sentinel",
+        few_shot_examples=few_shot_examples,
     )
 
     try:

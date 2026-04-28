@@ -1,5 +1,6 @@
 # this script fetches and lists incidents filtered by "New", lists incident alerts granularly for IoC extraction, then agent writes comments + updates incident status.
 
+import asyncio
 import logging
 import os
 import uuid
@@ -176,3 +177,60 @@ def update_incident_status(incident_id: str, new_status: str, classification: st
                 f"Incident {incident_id} update failed due to concurrent modification."
             ) from exc
         raise
+
+
+async def isolate_mde_device(device_id: str) -> dict:
+    """
+    Isolates a Microsoft Defender for Endpoint (MDE) managed device.
+    
+    Args:
+        device_id: The device identifier (can be hostname or GUID, depending on MDE API version)
+    
+    Returns:
+        Response JSON from MDE API
+        
+    Raises:
+        RequestException: If the isolation request fails (caller should handle)
+    """
+    # Endpoint for MDE device isolation
+    # Note: Adjust endpoint based on your MDE API version
+    # This uses the beta endpoint; confirm with your org's MDE API docs
+    url = f"https://api.microsoft.com/beta/deviceManagement/managedDevices('{device_id}')/isolate"
+    
+    headers = get_auth_headers()
+    headers["Content-Type"] = "application/json"
+    
+    # MDE isolation request body
+    body = {
+        "isolationType": "Full",  # Full isolation (no network communication)
+        "comment": "Automated isolation by Sentinel Triage Agent due to detected security incident"
+    }
+    
+    response = _request("POST", url, headers=headers, json=body)
+    return response.json() if response.text else {}
+
+
+async def revoke_entra_sessions(user_id: str) -> dict:
+    """
+    Revokes all Entra ID (Azure AD) refresh tokens for a user.
+    
+    This forces the user to re-authenticate and invalidates existing sessions.
+    
+    Args:
+        user_id: The Entra ID user object ID (GUID) or UPN
+    
+    Returns:
+        Response JSON from Microsoft Graph API
+        
+    Raises:
+        RequestException: If the revocation request fails (caller should handle)
+    """
+    url = f"https://graph.microsoft.com/v1.0/users/{user_id}/revokeSignInSessions"
+    
+    headers = get_auth_headers()
+    headers["Content-Type"] = "application/json"
+    
+    body = {}  # Graph API revokeSignInSessions expects empty body
+    
+    response = _request("POST", url, headers=headers, json=body)
+    return response.json() if response.text else {}

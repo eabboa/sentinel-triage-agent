@@ -111,6 +111,7 @@ async def analyst_node(state: TriageState) -> dict:
         model="gemini-2.5-flash",  # Use the full flash model, not lite.
         google_api_key=os.getenv("GOOGLE_API_KEY"),
         temperature=0,  # deterministic and consistent classification
+        max_retries=3,  # Added max_retries to handle intermittent 503s
     ).with_structured_output(AnalystVerdict)
 
     # Retrieve similar historical mismatches

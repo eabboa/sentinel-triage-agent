@@ -51,7 +51,7 @@ def _request(method: str, url: str, *, headers=None, params=None, json=None) -> 
     try:
         return _http_request(method, url, headers=headers, params=params, json=json)
     except RequestException as exc:
-        logger.exception("HTTP request to %s failed after retries: %s", url, exc)
+        logger.error("HTTP request to %s failed after retries: %s", url, exc)
         raise
 
 SUBSCRIPTION_ID = os.getenv("SUBSCRIPTION_ID")
@@ -160,6 +160,15 @@ def update_incident_status(incident_id: str, new_status: str, classification: st
     
     if new_status == "Closed" and classification:
         existing["properties"]["classification"] = classification
+        
+        reason_map = {
+            "TruePositive": "SuspiciousActivity",
+            "FalsePositive": "IncorrectAlertLogic",
+            "BenignPositive": "SuspiciousButExpected",
+            "Undetermined": "InaccurateData"
+        }
+        existing["properties"]["classificationReason"] = reason_map.get(classification, "SuspiciousActivity")
+        
         # classificationComment is optional but useful for audit trails
         existing["properties"]["classificationComment"] = (
             "Closed by Sentinel Triage Agent after analyst review and approval."

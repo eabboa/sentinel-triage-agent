@@ -139,8 +139,6 @@ This release shifts the pipeline from a functional prototype to a fault-tolerant
 
 ## [v0.3.0] - 2026-04-28
 
-Added
-
 **Active Containment Execution (containment_node):** Introduced automated and HITL-gated remediation actions directly into the pipeline, enabling dynamic isolation of compromised entities (e.g., host isolation, IP blocking) via Azure APIs.
 
 **RAG-Based Correction Loop (learning_node):** Implemented a Retrieval-Augmented Generation feedback mechanism. The agent now stores and retrieves historical analyst corrections to iteratively refine KQL query generation and incident classification accuracy.

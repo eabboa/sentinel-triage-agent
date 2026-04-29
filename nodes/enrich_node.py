@@ -160,11 +160,11 @@ async def _run_enrichment(entities: dict) -> dict:
     }
 
 
-def enrich_node(state: TriageState) -> dict:
+async def enrich_node(state: TriageState) -> dict:
     entities = state.get("entities", {})
 
     if not any([entities.get("ips"), entities.get("urls"), entities.get("hashes")]):
         return {"cti_results": {"ip_reports": [], "url_reports": [], "hash_reports": []}}
 
-    cti_results = asyncio.run(_run_enrichment(entities))
+    cti_results = await _run_enrichment(entities)
     return {"cti_results": cti_results}

@@ -15,7 +15,7 @@ from state import TriageState
 logger = logging.getLogger(__name__)
 
 
-def containment_node(state: TriageState) -> dict:
+async def containment_node(state: TriageState) -> dict:
     """
     Orchestrates active containment: isolates MDE devices and revokes user sessions.
     
@@ -50,7 +50,7 @@ def containment_node(state: TriageState) -> dict:
     
     try:
         # Run async isolation tasks
-        results = asyncio.run(isolate_all())
+        results = await isolate_all()
         
         # Process results and capture any errors
         for hostname, result in zip(hostnames, results):
@@ -66,7 +66,7 @@ def containment_node(state: TriageState) -> dict:
                 logger.warning(f"Unexpected result type for {hostname}: {type(result)}")
         
     except Exception as e:
-        # Catch any exception from asyncio.run or task orchestration
+        # Catch any exception from task orchestration
         error_msg = f"Containment orchestration failed: {str(e)}"
         logger.error(error_msg)
         errors.append(error_msg)

@@ -10,13 +10,14 @@ Rate limit strategy:
 
 import asyncio
 from dotenv import load_dotenv
+import uuid
 from sentinel_api import list_incidents
 from graph import build_graph
 
 load_dotenv()
 
 
-async def process_incident(incident, graph, semaphore):
+async def process_incident(incident, graph, semaphore, console_lock):
     incident_id = incident["name"]  # Sentinel uses 'name' as the unique ID
     incident_title = incident["properties"]["title"]
     
@@ -46,13 +47,43 @@ async def process_incident(incident, graph, semaphore):
         "errors": [],
     }
 
+    thread_id = str(uuid.uuid4())
+    config = {"configurable": {"thread_id": thread_id}}
+
     async with semaphore: # Limit concurrent processing to respect API rate limits
         try:
-            final_state = await graph.ainvoke(initial_state) # Run the graph with the initial state and await the final state
+            state = await graph.ainvoke(initial_state, config=config)
             
-            print(f"  ✓ Classification: {final_state['classification']}")
-            print(f"  ✓ Comment posted: {final_state['comment_posted']}")
-            print(f"  ✓ Incident closed: {final_state['incident_closed']}")
+            snapshot = graph.get_state(config)
+            if snapshot.next:
+                state_vals = snapshot.values
+                
+                async with console_lock:
+                    print(f"\n--- Review Required for {incident_title} (ID: {incident_id}) ---")
+                    print(f"  ✓ Classification: {state_vals.get('classification')}")
+                    print(f"  ✓ Triage Summary: {state_vals.get('triage_summary')}")
+                    
+                    entities = state_vals.get("entities", {})
+                    hostnames = entities.get("hostnames", [])
+                    if hostnames:
+                        print(f"  [!] Containment candidate hostnames: {hostnames}")
+                        cont_approval = await asyncio.to_thread(input, "  Approve containment of hostnames? [y/N]: ")
+                        if cont_approval.strip().lower() == 'y':
+                            graph.update_state(config, {"containment_approved": True})
+                    
+                    approval = await asyncio.to_thread(input, "  Approve closure? [y/N]: ")
+                    if approval.strip().lower() == 'y':
+                        graph.update_state(config, {"close_approved": True})
+                    else:
+                        print("  Skipping closure.")
+                        
+                state = await graph.ainvoke(None, config=config)
+            
+            final_state = state
+            
+            print(f"  ✓ Classification: {final_state.get('classification')}")
+            print(f"  ✓ Comment posted: {final_state.get('comment_posted')}")
+            print(f"  ✓ Incident closed: {final_state.get('incident_closed')}")
             
             if final_state.get("errors"):
                 print(f"  ⚠ Non-fatal errors: {final_state['errors']}")
@@ -72,10 +103,11 @@ async def main():
         return
 
     print(f"Found {len(incidents)} incident(s) to triage.")
-    graph = build_graph()
+    graph, checkpointer = build_graph()
     semaphore = asyncio.Semaphore(3)
+    console_lock = asyncio.Lock()
 
-    tasks = [process_incident(incident, graph, semaphore) for incident in incidents]
+    tasks = [process_incident(incident, graph, semaphore, console_lock) for incident in incidents]
     await asyncio.gather(*tasks)
 
     print("\nBatch complete.")

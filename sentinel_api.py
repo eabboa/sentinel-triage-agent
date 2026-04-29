@@ -8,7 +8,7 @@ import requests
 from requests.exceptions import HTTPError, RequestException
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 from dotenv import load_dotenv
-from sentinel_auth import get_auth_headers
+from sentinel_auth import get_auth_headers, get_graph_token, get_mde_token
 
 load_dotenv()
 
@@ -181,29 +181,27 @@ def update_incident_status(incident_id: str, new_status: str, classification: st
 
 async def isolate_mde_device(device_id: str) -> dict:
     """
-    Isolates a Microsoft Defender for Endpoint (MDE) managed device.
+    Isolates a device using the Microsoft Defender for Endpoint machine isolation API.
     
     Args:
-        device_id: The device identifier (can be hostname or GUID, depending on MDE API version)
+        device_id: The Defender for Endpoint machine ID.
     
     Returns:
-        Response JSON from MDE API
+        Response JSON from the Defender for Endpoint isolate endpoint.
         
     Raises:
         RequestException: If the isolation request fails (caller should handle)
     """
-    # Endpoint for MDE device isolation
-    # Note: Adjust endpoint based on your MDE API version
-    # This uses the beta endpoint; confirm with your org's MDE API docs
-    url = f"https://api.microsoft.com/beta/deviceManagement/managedDevices('{device_id}')/isolate"
+    url = f"https://api.securitycenter.microsoft.com/api/machines/{device_id}/isolate"
     
-    headers = get_auth_headers()
-    headers["Content-Type"] = "application/json"
+    headers = {
+        "Authorization": f"Bearer {get_mde_token()}",
+        "Content-Type": "application/json",
+    }
     
-    # MDE isolation request body
     body = {
-        "isolationType": "Full",  # Full isolation (no network communication)
-        "comment": "Automated isolation by Sentinel Triage Agent due to detected security incident"
+        "Comment": "Automated isolation by Sentinel Triage Agent",
+        "IsolationType": "Full",
     }
     
     response = _request("POST", url, headers=headers, json=body)
@@ -227,8 +225,10 @@ async def revoke_entra_sessions(user_id: str) -> dict:
     """
     url = f"https://graph.microsoft.com/v1.0/users/{user_id}/revokeSignInSessions"
     
-    headers = get_auth_headers()
-    headers["Content-Type"] = "application/json"
+    headers = {
+        "Authorization": f"Bearer {get_graph_token()}",
+        "Content-Type": "application/json",
+    }
     
     body = {}  # Graph API revokeSignInSessions expects empty body
     

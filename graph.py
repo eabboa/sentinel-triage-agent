@@ -12,6 +12,7 @@ to writeback.
 
 from typing import Literal
 
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import StateGraph, START, END
 from state import TriageState
 from nodes.fetch_node import fetch_node
@@ -45,15 +46,12 @@ def _next_after_analyst(state: TriageState) -> Literal["escalation", "writeback"
     return "kql"
 
 
-def _next_after_writeback(state: TriageState) -> Literal["containment", "close_review", "END"]:
-    """Route based on approval status and classification.
+def _next_after_writeback(state: TriageState) -> Literal["containment", "close_review"]:
+    """Route based on approval status.
     
-    High-confidence FalsePositive bypasses review.
-    Otherwise, check if containment is approved; if so, run containment before review.
+    No autonomous closure occurs regardless of classification or confidence score.
+    If containment is approved, run containment before close_review.
     """
-    if state.get("classification") == "FalsePositive" and int(state.get("confidence", 0)) > 95:
-        return END
-    
     # If containment is approved, run containment before close_review
     if state.get("containment_approved", False):
         return "containment"
@@ -100,4 +98,9 @@ def build_graph():
     builder.add_edge("close_review", "learning")
     builder.add_edge("learning", END)
 
-    return builder.compile(interrupt_before=["close_review"])
+    checkpointer = MemorySaver()
+    compiled_graph = builder.compile(
+        interrupt_after=["writeback"],
+        checkpointer=checkpointer,
+    )
+    return compiled_graph, checkpointer

@@ -25,7 +25,7 @@ async def process_incident(incident, graph, semaphore):
     # Initialize state with only the incident_id | the fetch node gets the rest
     initial_state = {
         "incident_id": incident_id,
-        # All other fields start empty. Nodes populate them over time.
+        # All other fields start empty. Nodes fill them later over time.
         "incident_title": "",
         "incident_severity": "",
         "incident_description": "",
@@ -46,9 +46,9 @@ async def process_incident(incident, graph, semaphore):
         "errors": [],
     }
 
-    async with semaphore:
+    async with semaphore: # Limit concurrent processing to respect API rate limits
         try:
-            final_state = await graph.ainvoke(initial_state)
+            final_state = await graph.ainvoke(initial_state) # Run the graph with the initial state and await the final state
             
             print(f"  ✓ Classification: {final_state['classification']}")
             print(f"  ✓ Comment posted: {final_state['comment_posted']}")
@@ -86,7 +86,7 @@ async def main():
 # from nodes.learning_node import flush_and_shutdown
 #
 # async def on_shutdown() -> None:
-#     await flush_and_shutdown()
+#     await flush_and_shutdown() ## Flush any pending learning data and perform cleanup before shutdown
 #
 #
 # For CLI applications, use asyncio signal handlers to trigger graceful shutdown

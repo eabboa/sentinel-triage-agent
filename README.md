@@ -130,7 +130,7 @@ This release shifts the pipeline from a functional prototype to a fault-tolerant
 
 ### Architecture & Concurrency
 - **Optimistic Concurrency Control:** Implemented Azure ETag validation (`If-Match` headers) for incident `PUT` requests. This prevents race conditions and silent data overwrites when multiple SOC analysts or automation rules interact with the same incident simultaneously.
-- **Asynchronous Orchestration:** Replaced synchronous polling loops with `asyncio.gather` and `asyncio.Semaphore` in the main pipeline. This allows parallel incident processing while mathematically guaranteeing we do not exceed external API rate limits.
+- **Asynchronous Orchestration:** Replaced synchronous polling loops with `asyncio.gather` and `asyncio.Semaphore` in the main pipeline. This allows concurrent incident processing while mathematically guaranteeing we do not exceed external API rate limits.
 
 ### Identity & Determinism
 - **Secretless Authentication:** Deprecated static MSAL client secrets in favor of `azure-identity` (`DefaultAzureCredential`). This eliminates hardcoded credentials and enforces identity-based access control via Azure Managed Identities.

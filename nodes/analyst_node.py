@@ -107,7 +107,7 @@ async def analyst_node(state: TriageState) -> dict:
     Sends the condensed incident context to the LLM for structured triage analysis.
     Includes RAG-retrieved few-shot examples of past mistakes.
     """
-    output_parser = PydanticOutputParser(pydantic_object=AnalystVerdict)
+    output_parser = PydanticOutputParser(pydantic_object=AnalystVerdict) # Strictly enforce the output schema with Pydantic validation
 
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.5-flash",  # Use the full flash model, not lite.
@@ -137,7 +137,7 @@ async def analyst_node(state: TriageState) -> dict:
         response = llm.invoke(prompt)
         verdict = getattr(response, "output_parsed", None) or getattr(response, "parsed_output", None) or response
 
-        if isinstance(verdict, AnalystVerdict):
+        if isinstance(verdict, AnalystVerdict):  # If the output parser worked correctly, we get a Pydantic model instance
             return verdict.dict()
 
         if isinstance(verdict, dict):

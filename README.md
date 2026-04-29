@@ -42,8 +42,14 @@ ABUSEIPDB_API_KEY=
 2. Enable Microsoft Sentinel on the workspace.
 
 #### For local development:
-- Install Azure CLI (`winget install Microsoft.AzureCLI` on Windows).
+- Install Azure CLI (`winget install Microsoft.AzureCLI` on Windows). **Restart the terminal** upon installing to ensure the environmental variables.
 - Run `az login` to authenticate.
+- Verify your active context immediately after the browser hands back the token:
+
+`az account show --query "{subscriptionId:id, tenantId:tenantId, user:user.name}" -o table`
+- If the outputted subscription ID does not perfectly match the SUBSCRIPTION_ID defined in your .env file, you must explicitly bind the CLI to the correct boundary:
+
+`az account set --subscription <YOUR_SUBSCRIPTION_ID>`
 
 #### For production:
 - Assign a Managed Identity (User-Assigned or System-Assigned) to your application/service with `Microsoft Sentinel Contributor` role at the Resource Group scope (IAM → Add role assignment). Wait ~10 minutes for propagation.

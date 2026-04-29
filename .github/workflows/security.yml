@@ -19,25 +19,23 @@ jobs:
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          base: ${{ github.event.repository.default_branch }}
-          head: HEAD
+          extra_args: --only-verified
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
 
       - name: Bandit SAST Analysis
-        uses: shundor/python-bandit-gh-action@v2
-        with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          path: "."
-          level: high
+        run: uv tool run bandit -r . -lll
 
   dependency_audit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
-        
-      - name: Audit Dependencies
+
+      - name: Generate Requirements & Audit
         run: |
-          uv pip compile pyproject.toml -o requirements.txt
-          pipx run pip-audit -r requirements.txt --strict-return
+          uv export --format requirements-txt > requirements.txt
+          uv tool run pip-audit -r requirements.txt

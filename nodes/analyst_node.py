@@ -111,7 +111,7 @@ async def analyst_node(state: TriageState) -> dict:
         model="gemini-2.5-flash",  # Use the full flash model, not lite.
         google_api_key=os.getenv("GOOGLE_API_KEY"),
         temperature=0,  # deterministic and consistent classification
-        max_retries=3,  # Added max_retries to handle intermittent 503s
+        max_retries=0,  # Disabled internal retries to let tenacity handle backoff with jitter
     ).with_structured_output(AnalystVerdict)
 
     # Retrieve similar historical mismatches
@@ -132,7 +132,7 @@ async def analyst_node(state: TriageState) -> dict:
         few_shot_examples=few_shot_examples,
     )
 
-    from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception
+    from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception, wait_random
     from throttle import gemini_rate_limiter
 
     def _is_retryable_error(e: Exception) -> bool:
@@ -140,9 +140,10 @@ async def analyst_node(state: TriageState) -> dict:
         return "429" in err_str or "503" in err_str or "RESOURCE_EXHAUSTED" in err_str or "UNAVAILABLE" in err_str
 
     @retry(
-        wait=wait_exponential(multiplier=2, min=5, max=60),
+        wait=wait_exponential(multiplier=2, min=5, max=60) + wait_random(min=0, max=5),
         stop=stop_after_attempt(5),
-        retry=retry_if_exception(_is_retryable_error)
+        retry=retry_if_exception(_is_retryable_error),
+        reraise=True
     )
     async def _invoke_llm():
         await gemini_rate_limiter.acquire()

@@ -128,6 +128,7 @@ async def kql_node(state: TriageState) -> dict:
         model="gemini-2.5-flash-lite",  # Lite model
         google_api_key=os.getenv("GOOGLE_API_KEY"),
         temperature=0,
+        max_retries=0,
     )
 
     tactics = state.get("incident_tactics", [])
@@ -141,7 +142,7 @@ async def kql_node(state: TriageState) -> dict:
         table_schema=json.dumps(relevant_tables, indent=2),
     )
 
-    from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception
+    from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception, wait_random
     from throttle import gemini_rate_limiter
 
     def _is_retryable_error(e: Exception) -> bool:
@@ -149,9 +150,10 @@ async def kql_node(state: TriageState) -> dict:
         return "429" in err_str or "503" in err_str or "RESOURCE_EXHAUSTED" in err_str or "UNAVAILABLE" in err_str
 
     @retry(
-        wait=wait_exponential(multiplier=2, min=5, max=60),
+        wait=wait_exponential(multiplier=2, min=5, max=60) + wait_random(min=0, max=5),
         stop=stop_after_attempt(5),
-        retry=retry_if_exception(_is_retryable_error)
+        retry=retry_if_exception(_is_retryable_error),
+        reraise=True
     )
     async def _invoke_llm():
         await gemini_rate_limiter.acquire()

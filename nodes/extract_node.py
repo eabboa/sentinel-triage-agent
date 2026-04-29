@@ -44,8 +44,9 @@ async def extract_node(state: TriageState) -> dict:
 
     # ── Phase 2: LLM extraction for contextual entities ───────────────────────
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash-lite",  # Use lite model here; preserve quota for the Analyst node
+        model="gemini-1.5-flash",  # Use flash model here; preserve quota for the Analyst node
         google_api_key=os.getenv("GOOGLE_API_KEY"),
+        max_retries=0,
     )
 
     prompt = f"""
@@ -65,7 +66,7 @@ TEXT:
 {text}
 """
 
-    from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception
+    from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception, wait_random
     from throttle import gemini_rate_limiter
 
     def _is_retryable_error(e: Exception) -> bool:
@@ -73,9 +74,10 @@ TEXT:
         return "429" in err_str or "503" in err_str or "RESOURCE_EXHAUSTED" in err_str or "UNAVAILABLE" in err_str
 
     @retry(
-        wait=wait_exponential(multiplier=2, min=5, max=60),
+        wait=wait_exponential(multiplier=2, min=5, max=60) + wait_random(min=0, max=5),
         stop=stop_after_attempt(5),
-        retry=retry_if_exception(_is_retryable_error)
+        retry=retry_if_exception(_is_retryable_error),
+        reraise=True
     )
     async def _invoke_llm():
         await gemini_rate_limiter.acquire()

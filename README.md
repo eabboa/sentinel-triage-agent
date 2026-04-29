@@ -125,6 +125,22 @@ This prototype includes hardened design decisions that reflect real-world SOC en
 - Explicit timeout and retry handling ensures the system remains responsive rather than hanging indefinitely on external dependencies.
 - These changes align the prototype with enterprise-grade incident handling expectations rather than a purely exploratory proof-of-concept.
 
+## [v0.4.0] - 2026-04-29 (Security & Workflow Standardization)
+
+**Mandatory Human-in-the-Loop Routing:** Removed the autonomous "FalsePositive" closure shortcut. All incidents, regardless of confidence score or classification, are now strictly routed through the `close_review` node to enforce a mandatory human review process.
+
+**LangGraph State Persistence & Interruption:** Integrated LangGraph's human-in-the-loop interruption pattern in the main execution loop. Generated unique `thread_id` values per incident and configured `graph.ainvoke()` for state persistence, enabling the pipeline to reliably pause at the `close_review` interrupt point and await user approval before resuming execution.
+
+**Security & Stability Hardening:** Resolved critical bugs including event loop crashes in asynchronous nodes and console deadlocks. Corrected authentication logic and prevented potential prompt-injection DoS attacks by enforcing secure HITL controls throughout the triage pipeline.
+
+## [v0.3.0] - 2026-04-28
+
+**Active Containment Execution (containment_node):** Introduced automated and HITL-gated remediation actions directly into the pipeline, enabling dynamic isolation of compromised entities (e.g., host isolation, IP blocking) via Azure APIs.
+
+**RAG-Based Correction Loop (learning_node):** Implemented a Retrieval-Augmented Generation feedback mechanism. The agent now stores and retrieves historical analyst corrections to iteratively refine KQL query generation and incident classification accuracy.
+
+**Conditional Graph Routing:** Upgraded the LangGraph pipeline with dynamic routing logic. The state machine now evaluates incident context mid-flight to conditionally bypass irrelevant nodes, dramatically reducing token consumption and execution latency.
+
 
 ## [v0.2.0] - 2026-04-28 (Enterprise Resilience Update)
 
@@ -138,19 +154,3 @@ This release shifts the pipeline from a functional prototype to a fault-tolerant
 - **Secretless Authentication:** Deprecated static MSAL client secrets in favor of `azure-identity` (`DefaultAzureCredential`). This eliminates hardcoded credentials and enforces identity-based access control via Azure Managed Identities.
 - **Strict Schema Enforcement:** Replaced brittle JSON string parsing with LangChain's `with_structured_output` and Pydantic (`AnalystVerdict`), guaranteeing deterministic state transitions from the LLM. 
 - **Fail-Safe CTI Scoring:** Refactored the confidence algorithm to treat timed-out or unreachable external threat intelligence as a neutral baseline. This prevents transient third-party API failures from artificially downgrading incident severity.
-
-## [v0.3.0] - 2026-04-28
-
-**Active Containment Execution (containment_node):** Introduced automated and HITL-gated remediation actions directly into the pipeline, enabling dynamic isolation of compromised entities (e.g., host isolation, IP blocking) via Azure APIs.
-
-**RAG-Based Correction Loop (learning_node):** Implemented a Retrieval-Augmented Generation feedback mechanism. The agent now stores and retrieves historical analyst corrections to iteratively refine KQL query generation and incident classification accuracy.
-
-**Conditional Graph Routing:** Upgraded the LangGraph pipeline with dynamic routing logic. The state machine now evaluates incident context mid-flight to conditionally bypass irrelevant nodes, dramatically reducing token consumption and execution latency.
-
-## [v0.4.0] - 2026-04-29 (Security & Workflow Standardization)
-
-**Mandatory Human-in-the-Loop Routing:** Removed the autonomous "FalsePositive" closure shortcut. All incidents, regardless of confidence score or classification, are now strictly routed through the `close_review` node to enforce a mandatory human review process.
-
-**LangGraph State Persistence & Interruption:** Integrated LangGraph's human-in-the-loop interruption pattern in the main execution loop. Generated unique `thread_id` values per incident and configured `graph.ainvoke()` for state persistence, enabling the pipeline to reliably pause at the `close_review` interrupt point and await user approval before resuming execution.
-
-**Security & Stability Hardening:** Resolved critical bugs including event loop crashes in asynchronous nodes and console deadlocks. Corrected authentication logic and prevented potential prompt-injection DoS attacks by enforcing secure HITL controls throughout the triage pipeline.

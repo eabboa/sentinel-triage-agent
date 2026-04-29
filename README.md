@@ -42,7 +42,13 @@ ABUSEIPDB_API_KEY=
 2. Enable Microsoft Sentinel on the workspace.
 
 #### For local development:
-- Install Azure CLI (`winget install Microsoft.AzureCLI` on Windows).
+- Install Azure CLI (`winget install Microsoft.AzureCLI` on Windows). **Restart the terminal** upon installing to ensure the environmental variables.
+- Verify your active context immediately after the browser hands back the token:
+
+`az account show --query "{subscriptionId:id, tenantId:tenantId, user:user.name}" -o table`
+- If the outputted subscription ID does not perfectly match the SUBSCRIPTION_ID defined in your .env file, you must explicitly bind the CLI to the correct boundary:
+
+`az account set --subscription <YOUR_SUBSCRIPTION_ID>`
 - Run `az login` to authenticate.
 
 #### For production:

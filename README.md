@@ -1,6 +1,6 @@
 # sentinel-triage-agent
 
-LangGraph pipeline for autonomous Microsoft Sentinel incident triage.
+LangGraph pipeline for human-in-the-loop (HITL) Microsoft Sentinel incident triage.
 
 **Lab write-up:** [Sentinel-Native Autonomous Triage Agent](https://github.com/eabboa/eabboa/blob/main/Home-Labs/Sentinel_Native_Autonomous_Triage_Agent.md)
 
@@ -8,7 +8,7 @@ LangGraph pipeline for autonomous Microsoft Sentinel incident triage.
 
 ## Requirements
 
-- Python 3.11+
+- Python 3.13+
 - `uv` package manager
 - Azure tenant with Microsoft Sentinel enabled
 - Google AI Studio API key (Gemini)
@@ -77,7 +77,9 @@ sentinel-triage-agent/
 │   ├── enrich_node.py       # Async AbuseIPDB + VirusTotal lookups
 │   ├── analyst_node.py      # LLM verdict: TruePositive / FalsePositive / BenignPositive
 │   ├── kql_node.py          # Schema-gated KQL hunting query generation
-│   └── writeback_node.py    # POST comment + optional incident close
+│   ├── containment_node.py  # Automated and HITL-gated remediation actions (e.g. host isolation)
+│   ├── writeback_node.py    # POST comment + HITL close review logic
+│   └── learning_node.py     # RAG-Based correction loop using ChromaDB
 ├── sentinel_auth.py         # Azure Identity DefaultAzureCredential (Managed Identity / Azure CLI)
 ├── sentinel_api.py          # Sentinel REST API wrapper
 ├── state.py                 # LangGraph TypedDict state schema
@@ -105,8 +107,8 @@ This prototype includes hardened design decisions that reflect real-world SOC en
 
 ### 1. Human-in-the-loop (HITL) interrupt for incident closure
 - A dedicated `close_review` node was added to the LangGraph pipeline.
-- The graph now pauses before executing the Sentinel close action, using `interrupt_before=["close_review"]`.
-- This prevents autonomous closure of incidents classified as `BenignPositive`.
+- The graph now pauses before executing the Sentinel close action, using `interrupt_after=["writeback"]`.
+- This prevents autonomous closure of any incident. All incidents are strictly routed for human review.
 - A human analyst must approve closure by explicitly setting `close_approved` in the graph state before the incident is updated.
 - The comment posted to Sentinel includes a visible review flag: **Pending Analyst Review**.
 

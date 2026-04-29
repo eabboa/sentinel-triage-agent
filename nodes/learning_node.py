@@ -275,3 +275,22 @@ async def flush_and_shutdown(batch_size: int = 32):
         embedding_executor = None
 
     logger.info("Learning node flush and shutdown complete")
+
+async def learning_node(state: TriageState) -> dict:
+    """
+    LangGraph node: Evaluates human vs. LLM classification and queues mismatches.
+    """
+    llm_classification = state.get("classification", "")
+    # Assuming 'human_classification' is injected into the state during the HITL pause.
+    # If it is not present, default to the LLM classification to avoid false positives in the RAG loop.
+    human_classification = state.get("human_classification", llm_classification)
+
+    if human_classification and human_classification != llm_classification:
+        condensed = state.get("condensed_summary", "")
+        triage = state.get("triage_summary", "")
+        
+        # Non-blocking queue insertion
+        await embed_and_store(condensed, triage, human_classification)
+
+    # Return empty dict or update state flags as needed by your TriageState schema
+    return {}

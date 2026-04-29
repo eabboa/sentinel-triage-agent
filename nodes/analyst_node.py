@@ -9,7 +9,6 @@ import os
 from typing import Literal
 
 import chromadb
-from langchain_core.output_parsers import PydanticOutputParser
 from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
@@ -107,13 +106,12 @@ async def analyst_node(state: TriageState) -> dict:
     Sends the condensed incident context to the LLM for structured triage analysis.
     Includes RAG-retrieved few-shot examples of past mistakes.
     """
-    output_parser = PydanticOutputParser(pydantic_object=AnalystVerdict) # Strictly enforce the output schema with Pydantic validation
-
+    # Strictly enforce the output schema with Pydantic validation
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.5-flash",  # Use the full flash model, not lite.
         google_api_key=os.getenv("GOOGLE_API_KEY"),
         temperature=0,  # deterministic and consistent classification
-    ).with_structured_output(output_parser)
+    ).with_structured_output(AnalystVerdict)
 
     # Retrieve similar historical mismatches
     condensed_summary = state.get("condensed_summary", "No summary available.")

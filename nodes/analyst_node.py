@@ -9,7 +9,7 @@ import os
 from typing import Literal
 
 import chromadb
-from langchain.output_parsers import PydanticOutputParser
+from langchain_core.output_parsers import PydanticOutputParser
 from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer

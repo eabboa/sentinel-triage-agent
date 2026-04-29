@@ -81,5 +81,16 @@ async def main():
     print("\nBatch complete.")
 
 
+# Shutdown hook example:
+#
+# from nodes.learning_node import flush_and_shutdown
+#
+# async def on_shutdown() -> None:
+#     await flush_and_shutdown()
+#
+#
+# For CLI applications, use asyncio signal handlers to trigger graceful shutdown
+# and call `await flush_and_shutdown()` before exiting.
+
 if __name__ == "__main__":
     asyncio.run(main())

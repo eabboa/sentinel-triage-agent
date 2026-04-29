@@ -118,7 +118,7 @@ Generate 3 targeted queries.
 """
 
 
-def kql_node(state: TriageState) -> dict:
+async def kql_node(state: TriageState) -> dict:
     """Generates schema-validated KQL hunting queries."""
     # Skip KQL generation for false positives
     if state.get("classification") == "FalsePositive":
@@ -141,8 +141,24 @@ def kql_node(state: TriageState) -> dict:
         table_schema=json.dumps(relevant_tables, indent=2),
     )
 
+    from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception
+    from throttle import gemini_rate_limiter
+
+    def _is_retryable_error(e: Exception) -> bool:
+        err_str = str(e).upper()
+        return "429" in err_str or "503" in err_str or "RESOURCE_EXHAUSTED" in err_str or "UNAVAILABLE" in err_str
+
+    @retry(
+        wait=wait_exponential(multiplier=2, min=5, max=60),
+        stop=stop_after_attempt(5),
+        retry=retry_if_exception(_is_retryable_error)
+    )
+    async def _invoke_llm():
+        await gemini_rate_limiter.acquire()
+        return await llm.ainvoke(prompt)
+
     try:
-        response = llm.invoke(prompt)
+        response = await _invoke_llm()
         clean = response.content.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
         result = json.loads(clean)
         

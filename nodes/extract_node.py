@@ -33,7 +33,7 @@ def _is_public_ip(ip: str) -> bool:
     return not any(p.match(ip) for p in PRIVATE_IP_RANGES)
 
 
-def extract_node(state: TriageState) -> dict:
+async def extract_node(state: TriageState) -> dict:
     """Extracts IOCs from the condensed summary using regex + LLM fallback."""
     text = state["condensed_summary"]
 
@@ -65,8 +65,24 @@ TEXT:
 {text}
 """
 
+    from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception
+    from throttle import gemini_rate_limiter
+
+    def _is_retryable_error(e: Exception) -> bool:
+        err_str = str(e).upper()
+        return "429" in err_str or "503" in err_str or "RESOURCE_EXHAUSTED" in err_str or "UNAVAILABLE" in err_str
+
+    @retry(
+        wait=wait_exponential(multiplier=2, min=5, max=60),
+        stop=stop_after_attempt(5),
+        retry=retry_if_exception(_is_retryable_error)
+    )
+    async def _invoke_llm():
+        await gemini_rate_limiter.acquire()
+        return await llm.ainvoke(prompt)
+
     try:
-        response = llm.invoke(prompt)
+        response = await _invoke_llm()
         # Strip markdown fences if the model adds them despite instructions
         clean = response.content.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
         llm_entities = json.loads(clean)

@@ -2,7 +2,7 @@
 
 LangGraph pipeline for human-in-the-loop (HITL) Microsoft Sentinel incident triage.
 
-**Lab write-up:** [Sentinel-Native Autonomous Triage Agent](https://github.com/eabboa/eabboa/blob/main/Home-Labs/Sentinel_Native_Autonomous_Triage_Agent.md)
+**Lab write-up:** [Sentinel-Native AI-Augmented Triage Agent](https://github.com/eabboa/eabboa/blob/main/Home-Labs/Sentinel_Native_AI_Augmented_Triage_Agent.md)
 
 ---
 
@@ -249,7 +249,7 @@ This prototype includes hardened design decisions that reflect real-world SOC en
 ### 1. Human-in-the-loop (HITL) interrupt for incident closure
 - A dedicated `close_review` node was added to the LangGraph pipeline.
 - The graph now pauses before executing the Sentinel close action, using `interrupt_after=["writeback"]`.
-- This prevents autonomous closure of any incident. All incidents are strictly routed for human review.
+- This prevents the autonomous closure of any incident. All incidents are strictly routed for human review.
 - A human analyst must approve closure by explicitly setting `close_approved` in the graph state before the incident is updated.
 - The comment posted to Sentinel includes a visible review flag: **Pending Analyst Review**.
 
@@ -288,7 +288,7 @@ This prototype includes hardened design decisions that reflect real-world SOC en
 
 ### [v0.4.0] - 2026-04-29 (Security & Workflow Standardization)
 
-**Mandatory Human-in-the-Loop Routing:** Removed the autonomous "FalsePositive" closure shortcut. All incidents, regardless of confidence score or classification, are now strictly routed through the `close_review` node to enforce a mandatory human review process.
+**Mandatory Human-in-the-Loop Routing:** Removed the Autonomous "FalsePositive" closure shortcut. All incidents, regardless of confidence score or classification, are now strictly routed through the `close_review` node to enforce a mandatory human review process.
 
 **LangGraph State Persistence & Interruption:** Integrated LangGraph's human-in-the-loop interruption pattern in the main execution loop. Generated unique `thread_id` values per incident and configured `graph.ainvoke()` for state persistence, enabling the pipeline to reliably pause at the `close_review` interrupt point and await user approval before resuming execution.
 

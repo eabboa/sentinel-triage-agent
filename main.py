@@ -104,7 +104,7 @@ async def main():
 
     print(f"Found {len(incidents)} incident(s) to triage.")
     graph, checkpointer = build_graph()
-    semaphore = asyncio.Semaphore(3)
+    semaphore = asyncio.Semaphore(1)
     console_lock = asyncio.Lock()
 
     tasks = [process_incident(incident, graph, semaphore, console_lock) for incident in incidents]

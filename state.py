@@ -29,6 +29,13 @@ class TriageState(TypedDict):
     confidence: int              # 0-100 confidence score from the analyst LLM
     triage_summary: str          # Human-readable, explaining the verdict
     mitre_analysis: str          # MITRE ATT&CK tactic/technique analysis
+    """
+    TODO: Add `mitre_techniques` field to `TriageState` as a list of dictionaries: 
+    `[{"technique_id": "T1098", 
+    "name": "Account Manipulation", 
+    "confidence": 90}]`.
+    
+    """
 
     # ── Hunting (kql_node.py) ──────────────────────────────────────────────────
     kql_queries: list[str]       # Syntactically valid KQL hunting queries

@@ -60,6 +60,14 @@ class AnalystVerdict(BaseModel):
     confidence: int
     recommended_action: str
 
+"""
+TODO: 
+- Update `AnalystVerdict` Pydantic model to include `mitre_techniques`.
+- Refine `ANALYST_PROMPT_TEMPLATE` to:
+- Explicitly define the "Kill Chain" logic for severity.
+- Instruct the LLM to map the Sentinel `incident_tactics` (why) to specific `mitre_techniques` (how) based on the alert entities and descriptions.
+- Provide a "Cheat Sheet" of common techniques for Azure/Cloud tactics within the prompt.
+"""
 
 ANALYST_PROMPT_TEMPLATE = """
 You are a Tier 2 SOC analyst performing incident triage in Microsoft Sentinel.

@@ -103,6 +103,10 @@ WORKSPACE_NAME=law-sentinel-lab
 GOOGLE_API_KEY=
 VT_API_KEY=
 ABUSEIPDB_API_KEY=
+
+# CTI enrichment thresholds — tunable per environment (see .env.example for rationale)
+VT_MALICIOUS_THRESHOLD=5
+ABUSEIPDB_MALICIOUS_THRESHOLD=75
 ```
 
 ### Azure prerequisites
@@ -182,13 +186,28 @@ Deterministic (no LLM). Truncates descriptions and alert payloads to a condensed
 
 ### enrich_node
 Concurrent CTI lookups utilizing a global `aiohttp` connection pool:
-- **AbuseIPDB** — IP reputation scores (abuse confidence, ISP, geolocation).
-- **VirusTotal** — URL and file hash analysis stats. VT calls are fully concurrent, throttled by a Token Bucket rate limiter (`aiolimiter`) to strictly enforce the free-tier limit of 4 requests per minute without blocking the thread.
+- **AbuseIPDB v2** — IP reputation via Bayesian-weighted community abuse reports. Returns `abuse_score`, `total_reports`, ISP, country, and usage type.
+- **VirusTotal v3** — URL and file hash multi-engine analysis. VT calls are fully concurrent, throttled by a Token Bucket rate limiter (`aiolimiter`) to strictly enforce the free-tier limit of 4 requests per minute without blocking the thread.
 
 All external calls use `tenacity` retries with exponential backoff on transient HTTP errors (429, 503, 504).
 
+**Pre-computed verdict fields.** Each CTI result includes a `verdict` field resolved by the enrichment layer before the LLM sees it — removing threshold inference from the model entirely:
+
+| Verdict | VirusTotal condition | AbuseIPDB condition |
+|---|---|---|
+| `malicious` | `malicious >= VT_MALICIOUS_THRESHOLD` (default 5) | `score >= ABUSEIPDB_MALICIOUS_THRESHOLD` (default 75) |
+| `suspicious` | `2 <= malicious < threshold` | `25 <= score < threshold` |
+| `clean` | `malicious <= 1` | `score < 25` |
+| `not_found_in_vt` | Hash absent from VT database | — |
+
+Thresholds are tunable via environment variables (`VT_MALICIOUS_THRESHOLD`, `ABUSEIPDB_MALICIOUS_THRESHOLD`).
+
+**Architectural neutral baseline.** Failed CTI lookups (timeouts, HTTP errors, exhausted retries) are stripped from `cti_results` entirely and written to the graph's `errors` list instead. The LLM prompt contains only verified signals — a missing IOC entry is a true null, not an ambiguous error object the model could misinterpret (e.g. inferring a timeout implies the IP is blocking scanners).
+
 ### analyst_node
 The reasoning core. Sends the condensed summary, CTI results, and MITRE ATT&CK tactics to `gemini-2.5-flash` via `with_structured_output(AnalystVerdict)`. The Pydantic schema enforces deterministic JSON: `classification`, `is_true_positive`, `triage_summary`, `mitre_analysis`, `confidence` (0–100), and `recommended_action`.
+
+**Verdict-driven confidence scoring.** The prompt instructs the LLM to use the pre-computed `verdict` field from `enrich_node` as the authoritative CTI signal. Raw vote counts are available as supporting context only. Confidence modifiers are verdict-based (`+25` for `malicious`, `+10` for `suspicious`, `-10` if all verdicts are `clean`). Missing or failed lookups apply a `0` modifier — enforced architecturally by stripping error results before they reach the prompt.
 
 **RAG few-shot injection:** Before each invocation, the node queries ChromaDB for historical analyst corrections similar to the current incident. Matched mismatches are injected into the prompt as few-shot examples, steering the model away from previously observed mistakes.
 
@@ -224,6 +243,7 @@ Compares the LLM's classification against the human-provided classification. If 
 ### CTI (VirusTotal / AbuseIPDB)
 - Global `aiohttp.ClientSession` connection pooling with `ClientTimeout(total=10)` and `tenacity` retries (3 attempts) on `ClientError`, `TimeoutError`, and transient HTTP codes.
 - VirusTotal requests are processed concurrently but throttled by `aiolimiter.AsyncLimiter(4, 60)` to rigorously enforce 4 requests/minute.
+- Failed lookups after exhausted retries are stripped from `cti_results` and appended to the `errors` list — ensuring the analyst LLM never receives ambiguous error payloads.
 
 ---
 
@@ -268,6 +288,10 @@ This prototype includes hardened design decisions that reflect real-world SOC en
 - No static secrets or MSAL client credentials. All authentication flows through `azure-identity`'s `DefaultAzureCredential`, supporting Managed Identity (production) and Azure CLI (development) transparently.
 - Tokens are cached module-level with 5-minute expiry buffer to avoid unnecessary round-trip latency.
 
+### 5. CTI signal integrity
+- **Configurable detection thresholds.** VirusTotal's `last_analysis_stats.malicious` is a raw vote count across ~70 AV engines. A `1/70` detection is frequently a heuristic false positive from a single engine. The pipeline applies a configurable threshold (`VT_MALICIOUS_THRESHOLD`, default 5) to classify results as `clean` / `suspicious` / `malicious` before they reach the LLM. AbuseIPDB's Bayesian confidence score is similarly banded (`ABUSEIPDB_MALICIOUS_THRESHOLD`, default 75).
+- **Architectural neutral baseline.** A failed CTI lookup (timeout, connection error, API outage) is architecturally neutral: the IOC is removed from the `cti_results` payload entirely and logged to `errors`. The LLM receives no entry for that IOC, so its confidence score receives a true `0` modifier — not a `score=0` result that would be indistinguishable from a clean IP with no reports.
+
 ### Why this matters for production SOCs
 - SOC automation must fail safely: false positives should not trigger irreversible actions without human review.
 - Cloud APIs often throttle high-volume tools, so retry/backoff patterns are essential to remain resilient and avoid cascading failures.
@@ -278,13 +302,19 @@ This prototype includes hardened design decisions that reflect real-world SOC en
 
 ## Changelog
 
-### [v0.6.0] - 2026-05-05 (Asynchronous Performance & Rate Limiting)
+### [v0.6.0] - 2026-05-05 (CTI Semantic Hardening & Async Performance)
+
+**Configurable CTI Detection Thresholds:** VirusTotal returns a raw vote count across ~70 AV engines — a `1/70` detection is typically a heuristic false positive, while `5/70` represents genuine engine consensus. `enrich_node` now pre-computes a `verdict` field (`clean` / `suspicious` / `malicious`) using a configurable threshold (`VT_MALICIOUS_THRESHOLD`, default 5). AbuseIPDB's Bayesian confidence score is similarly banded by `ABUSEIPDB_MALICIOUS_THRESHOLD` (default 75). Both are tunable via environment variables without code changes.
+
+**Verdict-Driven LLM Scoring:** The analyst prompt now instructs the LLM to treat the pre-computed `verdict` field as authoritative, using raw counts only as supporting context. Confidence modifiers are explicit and verdict-based (`+25` for `malicious`, `+10` for `suspicious`, `-10` if all verdicts `clean`). This removes threshold inference from the model, making classification determinism a code-level guarantee rather than a prompt-level suggestion.
+
+**Architectural Neutral Baseline:** Failed CTI lookups (timeouts, HTTP errors, exhausted retries) are stripped from `cti_results` entirely before the LLM prompt is constructed, and appended to the graph's `errors` list instead. Previously, error objects were present in the CTI payload, creating a risk of the LLM inferring threat signals from the mere presence of a failure (e.g. timeout interpreted as the IP actively blocking scanners). The neutral baseline is now enforced at the architecture layer, not the prompt layer.
 
 **True Rate Limiting & Concurrency:** Replaced manual `asyncio.sleep` serialization with a proper Token Bucket rate limiter (`aiolimiter`) for VirusTotal CTI lookups. This allows AbuseIPDB and VirusTotal API calls to execute fully concurrently without violating 4 requests/minute constraints.
 
 **Session Lifecycle Management:** Implemented a global lazy-initialized `aiohttp.ClientSession` pool in `enrich_node` to reuse TCP connections across batch processing, heavily reducing TLS handshake latency.
 
-**Pipeline Error Isolation:** Upgraded the main event loop `asyncio.gather` with `return_exceptions=True`, mathematically guaranteeing that a fatal unhandled exception in one incident's execution thread will not crash the orchestration of the remaining incident batch.
+**Pipeline Error Isolation:** Upgraded `asyncio.gather` with `return_exceptions=True`, mathematically guaranteeing that a fatal exception in one incident's execution thread will not crash the orchestration of the remaining incident batch.
 
 ### [v0.5.0] - 2026-04-29 (Rate Limiting & Stability)
 

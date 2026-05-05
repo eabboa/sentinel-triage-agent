@@ -78,22 +78,33 @@ INCIDENT SUMMARY:
 CTI ENRICHMENT RESULTS:
 {cti_results}
 
-DETECTED MITRE ATT&CK TACTICS:
-{tactics}
+CTI RESULT INTERPRETATION:
+Each CTI result includes a pre-computed "verdict" field. Use this as your authoritative
+signal. Raw counts (malicious, suspicious, total) are supporting context only.
+  - "verdict": "malicious"    → IOC confirmed malicious at configured engine threshold.
+  - "verdict": "suspicious"   → Weak signal (2-4 engines). Escalate, do not auto-close.
+  - "verdict": "clean"        → 0-1 engine detections. Treat as not malicious.
+  - "verdict": "not_found_in_vt" → Hash has no VirusTotal history. Treat as unknown,
+    not clean. Novel malware is often absent from VT. Correlate with other signals.
+  - No verdict field present  → IP/URL/hash lookup failed or returned an error.
+    Treat this IOC as UNKNOWN — apply a 0 point confidence modifier. Do NOT infer
+    threat signals from the absence of a result (e.g. timeout is not IP blocking scanners).
+
+DETECTED MITRE ATT&CK TACTICS: {tactics}
 
 {few_shot_examples}
 
 TASK:
 1. Analyze whether this incident represents a genuine threat.
-2. Correlate the CTI results with the MITRE ATT&CK tactics.
+2. Correlate the CTI verdicts with the MITRE ATT&CK tactics.
 3. Determine the classification.
 4. Explain your reasoning clearly for a Tier 1 analyst who will read this.
 
 CLASSIFICATION RULES:
-- TruePositive: Confirmed malicious activity. At least one IOC is confirmed malicious
-  by CTI AND the behavior matches the detected tactics.
-- FalsePositive: Alert fired incorrectly. IOCs are clean, behavior is explainable
-  as legitimate activity, detection rule likely needs tuning.
+- TruePositive: Confirmed malicious activity. At least one IOC verdict is "malicious"
+  AND the behavior matches the detected tactics.
+- FalsePositive: Alert fired incorrectly. All IOC verdicts are "clean", behavior is
+  explainable as legitimate activity, detection rule likely needs tuning.
 - BenignPositive: Alert fired correctly (the rule worked), but the activity is
   authorized or expected (e.g., a pentest, a known admin behavior, a whitelisted scanner).
 
@@ -103,7 +114,7 @@ Return ONLY valid JSON with this exact schema. No preamble, no markdown, no expl
   "is_true_positive": true | false,
   "triage_summary": "3 sentence explanation of the verdict.",
   "mitre_analysis": "How the detected tactics map to the observed behavior. 3 sentence explanation. Each sentence under 15 words.",
-  "confidence": "CONFIDENCE SCORING: Start at 50. If CTI data is missing, empty, or failed to fetch, apply a 0 point modifier to confidence (treat as a neutral unknown). Only subtract points if there is contradictory evidence. Add points only for verified clean or verified malicious results from the CTI payload. Add 20 for multi-stage MITRE correlation. Subtract 10 for isolated events lacking context. Cap between 0-100, where 90-100 is Definitive, 70-89 is Probable, 40-69 is Ambiguous, and 0-39 is Insufficient Data. Output exact integer.",
+  "confidence": "CONFIDENCE SCORING: Start at 50. Add/subtract based on CTI verdicts only (not raw counts). +25 if any IOC verdict is 'malicious'. +10 if any IOC verdict is 'suspicious'. -10 if all IOC verdicts are 'clean'. Apply 0 modifier for missing/failed lookups (treat as neutral unknown, not clean). Add 20 for multi-stage MITRE correlation. Subtract 10 for isolated events lacking context. Cap between 0-100, where 90-100 is Definitive, 70-89 is Probable, 40-69 is Ambiguous, and 0-39 is Insufficient Data. Output exact integer.",
   "recommended_action": "Brief next step for the Tier 2 analyst. 3 sentence explanation."
 }}
 """

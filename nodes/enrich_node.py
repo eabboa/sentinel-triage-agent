@@ -6,6 +6,7 @@ import asyncio
 import logging
 import os
 import aiohttp
+from aiolimiter import AsyncLimiter
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 from state import TriageState
 
@@ -16,7 +17,16 @@ RETRY_ATTEMPTS = 3
 VT_API_KEY = os.getenv("VT_API_KEY")
 ABUSEIPDB_API_KEY = os.getenv("ABUSEIPDB_API_KEY")
 
-VT_RATE_LIMIT_SLEEP = 15
+# Global instances for connection pooling and rate limiting
+_client_session: aiohttp.ClientSession | None = None
+vt_rate_limiter = AsyncLimiter(4, 60)
+
+async def get_session() -> aiohttp.ClientSession:
+    global _client_session
+    if _client_session is None or _client_session.closed:
+        timeout = aiohttp.ClientTimeout(total=DEFAULT_HTTP_TIMEOUT)
+        _client_session = aiohttp.ClientSession(timeout=timeout)
+    return _client_session
 
 
 class TransientHTTPError(Exception):
@@ -112,46 +122,71 @@ async def _check_abuseipdb(session: aiohttp.ClientSession, ip: str) -> dict:
 
 async def _run_enrichment(entities: dict) -> dict:
     """
-    Runs all CTI lookups concurrently with rate limiting.
-    VT calls are serialized (rate limited)
-    AbuseIPDB calls are concurrent.
+    Runs all CTI lookups concurrently.
+    VT calls are rate limited to 4 req/min using aiolimiter.
     """
     ip_reports = []
     url_reports = []
     hash_reports = []
 
-    timeout = aiohttp.ClientTimeout(total=DEFAULT_HTTP_TIMEOUT)
-    async with aiohttp.ClientSession(timeout=timeout) as session:
-        # AbuseIPDB
-        ip_tasks = [_check_abuseipdb(session, ip) for ip in entities.get("ips", [])]
-        if ip_tasks:
-            ip_results = await asyncio.gather(*ip_tasks, return_exceptions=True)
-            for ip, result in zip(entities.get("ips", []), ip_results):
-                if isinstance(result, Exception):
-                    logger.exception("AbuseIPDB enrichment failed for %s", ip)
-                    ip_reports.append({"ioc": ip, "type": "ip", "error": str(result)})
-                else:
-                    ip_reports.append(result)
+    session = await get_session()
 
-        # VirusTotal URLs
-        for url in entities.get("urls", []):
+    # Prepare AbuseIPDB tasks
+    ip_tasks = [_check_abuseipdb(session, ip) for ip in entities.get("ips", [])]
+
+    # Prepare VirusTotal URL tasks with rate limit wrapper
+    async def fetch_vt_url(url: str):
+        async with vt_rate_limiter:
             try:
-                result = await _check_vt_url(session, url)
+                return await _check_vt_url(session, url)
             except Exception as exc:
                 logger.exception("VirusTotal URL enrichment failed for %s", url)
-                result = {"ioc": url, "type": "url", "error": str(exc)}
-            url_reports.append(result)
-            await asyncio.sleep(VT_RATE_LIMIT_SLEEP)
+                return {"ioc": url, "type": "url", "error": str(exc)}
 
-        # VirusTotal Hashes
-        for file_hash in entities.get("hashes", []):
+    url_tasks = [fetch_vt_url(url) for url in entities.get("urls", [])]
+
+    # Prepare VirusTotal Hash tasks with rate limit wrapper
+    async def fetch_vt_hash(file_hash: str):
+        async with vt_rate_limiter:
             try:
-                result = await _check_vt_hash(session, file_hash)
+                return await _check_vt_hash(session, file_hash)
             except Exception as exc:
                 logger.exception("VirusTotal hash enrichment failed for %s", file_hash)
-                result = {"ioc": file_hash, "type": "hash", "error": str(exc)}
-            hash_reports.append(result)
-            await asyncio.sleep(VT_RATE_LIMIT_SLEEP)
+                return {"ioc": file_hash, "type": "hash", "error": str(exc)}
+
+    hash_tasks = [fetch_vt_hash(h) for h in entities.get("hashes", [])]
+
+    # Run all tasks concurrently
+    all_tasks = ip_tasks + url_tasks + hash_tasks
+    if all_tasks:
+        results = await asyncio.gather(*all_tasks, return_exceptions=True)
+        
+        # Unpack results based on task counts
+        ip_len = len(ip_tasks)
+        url_len = len(url_tasks)
+        
+        ip_results = results[:ip_len]
+        url_results = results[ip_len:ip_len+url_len]
+        hash_results = results[ip_len+url_len:]
+        
+        for ip, result in zip(entities.get("ips", []), ip_results):
+            if isinstance(result, Exception):
+                logger.exception("AbuseIPDB enrichment failed for %s", ip)
+                ip_reports.append({"ioc": ip, "type": "ip", "error": str(result)})
+            else:
+                ip_reports.append(result)
+                
+        for result in url_results:
+            if isinstance(result, Exception):
+                url_reports.append({"ioc": "unknown", "type": "url", "error": str(result)})
+            else:
+                url_reports.append(result)
+                
+        for result in hash_results:
+            if isinstance(result, Exception):
+                hash_reports.append({"ioc": "unknown", "type": "hash", "error": str(result)})
+            else:
+                hash_reports.append(result)
 
     return {
         "ip_reports": ip_reports,

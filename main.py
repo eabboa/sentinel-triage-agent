@@ -108,7 +108,7 @@ async def main():
     console_lock = asyncio.Lock()
 
     tasks = [process_incident(incident, graph, semaphore, console_lock) for incident in incidents]
-    await asyncio.gather(*tasks)
+    await asyncio.gather(*tasks, return_exceptions=True) # return_exceptions=True allows other tasks to continue running even if one fails
 
     print("\nBatch complete.")
 

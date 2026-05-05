@@ -181,9 +181,9 @@ Deterministic (no LLM). Truncates descriptions and alert payloads to a condensed
 **Hybrid extraction.** Regex captures IPs, SHA-256/MD5 hashes, and URLs. A secondary LLM call (`gemini-1.5-flash`) extracts contextual entities, usernames, hostnames, and domains that regex cannot reliably parse.
 
 ### enrich_node
-Concurrent CTI lookups via `aiohttp`:
+Concurrent CTI lookups utilizing a global `aiohttp` connection pool:
 - **AbuseIPDB** — IP reputation scores (abuse confidence, ISP, geolocation).
-- **VirusTotal** — URL and file hash analysis stats. VT calls are serialized with a 15-second sleep to respect the free-tier rate limit.
+- **VirusTotal** — URL and file hash analysis stats. VT calls are fully concurrent, throttled by a Token Bucket rate limiter (`aiolimiter`) to strictly enforce the free-tier limit of 4 requests per minute without blocking the thread.
 
 All external calls use `tenacity` retries with exponential backoff on transient HTTP errors (429, 503, 504).
 
@@ -222,8 +222,8 @@ Compares the LLM's classification against the human-provided classification. If 
 - Shared HTTP wrapper (`sentinel_api._http_request`) with `timeout=10` and `tenacity` retries (3 attempts, exponential 1–10s) on transient failures (429, 503, 504).
 
 ### CTI (VirusTotal / AbuseIPDB)
-- `aiohttp` with `ClientTimeout(total=10)` and `tenacity` retries (3 attempts) on `ClientError`, `TimeoutError`, and transient HTTP codes.
-- VirusTotal calls are serialized with a 15-second inter-request sleep.
+- Global `aiohttp.ClientSession` connection pooling with `ClientTimeout(total=10)` and `tenacity` retries (3 attempts) on `ClientError`, `TimeoutError`, and transient HTTP codes.
+- VirusTotal requests are processed concurrently but throttled by `aiolimiter.AsyncLimiter(4, 60)` to rigorously enforce 4 requests/minute.
 
 ---
 
@@ -277,6 +277,14 @@ This prototype includes hardened design decisions that reflect real-world SOC en
 ---
 
 ## Changelog
+
+### [v0.6.0] - 2026-05-05 (Asynchronous Performance & Rate Limiting)
+
+**True Rate Limiting & Concurrency:** Replaced manual `asyncio.sleep` serialization with a proper Token Bucket rate limiter (`aiolimiter`) for VirusTotal CTI lookups. This allows AbuseIPDB and VirusTotal API calls to execute fully concurrently without violating 4 requests/minute constraints.
+
+**Session Lifecycle Management:** Implemented a global lazy-initialized `aiohttp.ClientSession` pool in `enrich_node` to reuse TCP connections across batch processing, heavily reducing TLS handshake latency.
+
+**Pipeline Error Isolation:** Upgraded the main event loop `asyncio.gather` with `return_exceptions=True`, mathematically guaranteeing that a fatal unhandled exception in one incident's execution thread will not crash the orchestration of the remaining incident batch.
 
 ### [v0.5.0] - 2026-04-29 (Rate Limiting & Stability)
 

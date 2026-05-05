@@ -29,13 +29,13 @@ def get_access_token(scope: str = MANAGEMENT_SCOPE) -> str:
     """
     global _cached_tokens
 
-    cached = _cached_tokens.get(scope)
+    cached = _cached_tokens.get(scope) # Check cache for token 
     if (cached is None or
         cached["expires_on"] is None or
-        time.time() + 300 >= cached["expires_on"]):
+        time.time() + 300 >= cached["expires_on"]): # Refresh if missing or within 5 minutes of expiration
         token = credential.get_token(scope)
         _cached_tokens[scope] = {
-            "token": token.token,
+            "token": token.token, # JWT access token string
             "expires_on": token.expires_on,
         }
 

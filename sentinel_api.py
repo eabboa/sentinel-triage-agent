@@ -145,8 +145,6 @@ def update_incident_status(incident_id: str, new_status: str, classification: st
     Valid statuses: "New", "Active", "Closed"
     Valid classifications (required when closing):
         "TruePositive", "FalsePositive", "BenignPositive", "Undetermined"
-
-    It is currently vulnerable to Race Condition, requiring ETag.
     """
     # Fetch current incident to preserve all existing fields and capture its current ETag.
     existing = get_incident(incident_id)

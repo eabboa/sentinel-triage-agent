@@ -1,3 +1,9 @@
+"""
+This module contains a basic rate limiter for the Gemini API.
+It is used to limit the number of requests to the Gemini API to be slightly under the 15 RPM Free Tier limit.
+WARNING: It is only intended for development testing. Production should use the rate limiting provided by the API provider.
+"""
+
 import asyncio
 import time
 

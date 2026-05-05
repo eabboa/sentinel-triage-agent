@@ -282,6 +282,8 @@ async def learning_node(state: TriageState) -> dict:
     """
     llm_classification = state.get("classification", "")
     # Assuming 'human_classification' is injected into the state during the HITL pause.
+    # As of version 0.5.0, there are no human classifications. Currently, we only ask for Y/N.
+    # TODO: Add a more detailed classification for training the LLM and remove this simple boolean workaround.
     # If it is not present, default to the LLM classification to avoid false positives in the RAG loop.
     human_classification = state.get("human_classification", llm_classification)
 

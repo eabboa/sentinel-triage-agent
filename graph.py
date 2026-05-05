@@ -2,7 +2,7 @@
 Assembles all nodes into the LangGraph StateGraph.
 
 Node execution order:
-  fetch → summarize → extract → enrich → analyst → kql → writeback
+  fetch → summarize → extract → enrich → analyst → kql → writeback → containment → close_review → learning
 
 Future branching opportunity: after analyst_node, branch on severity.
 High-severity incidents could trigger an additional "escalation" node that

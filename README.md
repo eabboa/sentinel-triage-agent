@@ -2,7 +2,7 @@
 
 LangGraph pipeline for human-in-the-loop (HITL) Microsoft Sentinel incident triage.
 
-**Lab write-up:** [Sentinel-Native AI-Augmented Triage Agent](https://github.com/eabboa/eabboa/blob/main/Home-Labs/Sentinel_Native_AI_Augmented_Triage_Agent.md)
+**Lab write-up:** [Sentinel-Native-Autonomous-Triage-Agent](https://enesardabaydas.dev/Engineering-Projects/Sentinel-Native-Autonomous-Triage-Agent)
 
 ---
 

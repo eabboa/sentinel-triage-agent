@@ -10,6 +10,7 @@ from typing import Literal
 
 import chromadb
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.messages import SystemMessage, HumanMessage
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 from state import TriageState
@@ -69,14 +70,10 @@ TODO:
 - Provide a "Cheat Sheet" of common techniques for Azure/Cloud tactics within the prompt.
 """
 
-ANALYST_PROMPT_TEMPLATE = """
+ANALYST_SYSTEM_PROMPT = """
 You are a Tier 2 SOC analyst performing incident triage in Microsoft Sentinel.
 
-INCIDENT SUMMARY:
-{condensed_summary}
-
-CTI ENRICHMENT RESULTS:
-{cti_results}
+Your goal is to evaluate the provided incident summary and CTI enrichment results to determine if an alert is a True Positive, False Positive, or Benign Positive.
 
 CTI RESULT INTERPRETATION:
 Each CTI result includes a pre-computed "verdict" field. Use this as your authoritative
@@ -89,10 +86,6 @@ signal. Raw counts (malicious, suspicious, total) are supporting context only.
   - No verdict field present  → IP/URL/hash lookup failed or returned an error.
     Treat this IOC as UNKNOWN — apply a 0 point confidence modifier. Do NOT infer
     threat signals from the absence of a result (e.g. timeout is not IP blocking scanners).
-
-DETECTED MITRE ATT&CK TACTICS: {tactics}
-
-{few_shot_examples}
 
 TASK:
 1. Analyze whether this incident represents a genuine threat.
@@ -109,14 +102,30 @@ CLASSIFICATION RULES:
   authorized or expected (e.g., a pentest, a known admin behavior, a whitelisted scanner).
 
 Return ONLY valid JSON with this exact schema. No preamble, no markdown, no explanation outside the JSON:
-{{
+{
   "classification": "TruePositive" | "FalsePositive" | "BenignPositive",
   "is_true_positive": true | false,
   "triage_summary": "3 sentence explanation of the verdict.",
   "mitre_analysis": "How the detected tactics map to the observed behavior. 3 sentence explanation. Each sentence under 15 words.",
   "confidence": "CONFIDENCE SCORING: Start at 50. Add/subtract based on CTI verdicts only (not raw counts). +25 if any IOC verdict is 'malicious'. +10 if any IOC verdict is 'suspicious'. -10 if all IOC verdicts are 'clean'. Apply 0 modifier for missing/failed lookups (treat as neutral unknown, not clean). Add 20 for multi-stage MITRE correlation. Subtract 10 for isolated events lacking context. Cap between 0-100, where 90-100 is Definitive, 70-89 is Probable, 40-69 is Ambiguous, and 0-39 is Insufficient Data. Output exact integer.",
   "recommended_action": "Brief next step for the Tier 2 analyst. 3 sentence explanation."
-}}
+}
+"""
+
+USER_DATA_TEMPLATE = """
+UNTRUSTED INCIDENT DATA FOR ANALYSIS:
+--------------------------------------
+INCIDENT SUMMARY:
+{condensed_summary}
+
+CTI ENRICHMENT RESULTS:
+{cti_results}
+
+DETECTED MITRE ATT&CK TACTICS: {tactics}
+
+{few_shot_examples}
+--------------------------------------
+Evaluate the data above according to your system instructions.
 """
 
 
@@ -144,12 +153,15 @@ async def analyst_node(state: TriageState) -> dict:
         for i, doc in enumerate(results['documents'][0], 1):
             few_shot_examples += f"Example {i}:\n{doc}\n\n"
 
-    prompt = ANALYST_PROMPT_TEMPLATE.format(
-        condensed_summary=condensed_summary,
-        cti_results=json.dumps(state.get("cti_results", {}), indent=2),
-        tactics=", ".join(state.get("incident_tactics", [])) or "None detected by Sentinel",
-        few_shot_examples=few_shot_examples,
-    )
+    messages = [
+        SystemMessage(content=ANALYST_SYSTEM_PROMPT),
+        HumanMessage(content=USER_DATA_TEMPLATE.format(
+            condensed_summary=condensed_summary,
+            cti_results=json.dumps(state.get("cti_results", {}), indent=2),
+            tactics=", ".join(state.get("incident_tactics", [])) or "None detected by Sentinel",
+            few_shot_examples=few_shot_examples,
+        ))
+    ]
 
     from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception, wait_random
     from throttle import gemini_rate_limiter
@@ -166,7 +178,7 @@ async def analyst_node(state: TriageState) -> dict:
     )
     async def _invoke_llm():
         await gemini_rate_limiter.acquire()
-        return await llm.ainvoke(prompt)
+        return await llm.ainvoke(messages)
 
     try:
         response = await _invoke_llm()

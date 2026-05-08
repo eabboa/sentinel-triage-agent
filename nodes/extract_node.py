@@ -80,8 +80,8 @@ TEXT:
         reraise=True
     )
     async def _invoke_llm():
-        await gemini_rate_limiter.acquire()
-        return await llm.ainvoke(prompt)
+        async with gemini_rate_limiter:
+            return await llm.ainvoke(prompt)
 
     try:
         response = await _invoke_llm()

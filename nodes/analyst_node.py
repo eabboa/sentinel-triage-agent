@@ -177,8 +177,8 @@ async def analyst_node(state: TriageState) -> dict:
         reraise=True
     )
     async def _invoke_llm():
-        await gemini_rate_limiter.acquire()
-        return await llm.ainvoke(messages)
+        async with gemini_rate_limiter:
+            return await llm.ainvoke(messages)
 
     try:
         response = await _invoke_llm()

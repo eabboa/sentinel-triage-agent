@@ -21,8 +21,12 @@ class ConcurrencyConflictError(Exception):
     """Raised when an optimistic concurrency update fails due to an ETag mismatch."""
 
 
+class TransientHTTPError(RequestException):
+    """Raised for transient HTTP errors (429, 503, 504) to trigger tenacity retries."""
+
+
 @retry(
-    retry=retry_if_exception_type(RequestException),
+    retry=retry_if_exception_type(TransientHTTPError),
     wait=wait_exponential(multiplier=1, min=1, max=10),
     stop=stop_after_attempt(RETRY_ATTEMPTS),
     reraise=True,
@@ -39,7 +43,10 @@ def _http_request(method: str, url: str, *, headers=None, params=None, json=None
         )
         if response.status_code in (429, 503, 504):
             logger.warning("Transient HTTP %s for %s; retrying", response.status_code, url)
-            response.raise_for_status()
+            raise TransientHTTPError(
+                f"Transient HTTP {response.status_code} for {url}",
+                response=response,
+            )
         response.raise_for_status()
         return response
     except RequestException as exc:

@@ -158,16 +158,19 @@ sentinel-triage-agent/
 │   ├── kql_node.py           # Schema-gated KQL hunting query generation
 │   ├── containment_node.py   # HITL-gated MDE device isolation
 │   ├── writeback_node.py     # POST comment + close_review_node (HITL closure gate)
-│   └── learning_node.py      # RAG correction loop using ChromaDB
+│   ├── learning_node.py      # RAG correction loop using ChromaDB
+│   └── mitre_utils.py        # Utilities for validating and enriching MITRE tactics
 ├── sentinel_auth.py          # DefaultAzureCredential (Managed Identity / Azure CLI)
 ├── sentinel_api.py           # Sentinel + MDE + Graph REST API wrapper
 ├── state.py                  # LangGraph TypedDict state schema (TriageState)
 ├── graph.py                  # StateGraph assembly with conditional routing
+├── llm_utils.py              # Centralized LLM retry logic and helpers
 ├── throttle.py               # Sliding-window async rate limiter for Gemini
 ├── main.py                   # Entry point (async batch processing with HITL prompts)
 ├── test_model.py             # Smoke test for Gemini connectivity
 ├── .env.example              # Template environment variables
 ├── pyproject.toml            # uv/pip project metadata and dependencies
+├── uv.lock                   # Pinned dependency versions for uv
 └── .env                      # (gitignored) secrets
 ```
 
@@ -182,7 +185,7 @@ Retrieves the full incident object and associated alerts from the Sentinel REST 
 Deterministic (no LLM). Truncates descriptions and alert payloads to a condensed, token-efficient format before sending to the analyst LLM.
 
 ### extract_node
-**Hybrid extraction.** Regex captures IPs, SHA-256/MD5 hashes, and URLs. A secondary LLM call (`gemini-1.5-flash`) extracts contextual entities, usernames, hostnames, and domains that regex cannot reliably parse.
+**Hybrid extraction.** Regex captures IPs, SHA-256/MD5 hashes, and URLs. A secondary LLM call (`gemini-2.5-flash`) extracts contextual entities, usernames, hostnames, and domains that regex cannot reliably parse.
 
 ### enrich_node
 Concurrent CTI lookups utilizing a global `aiohttp` connection pool:
@@ -213,6 +216,9 @@ The reasoning core. Sends the condensed summary, CTI results, and MITRE ATT&CK t
 
 **RAG few-shot injection:** Before each invocation, the node queries ChromaDB for historical analyst corrections similar to the current incident. Matched mismatches are injected into the prompt as few-shot examples, steering the model away from previously observed mistakes.
 
+### escalation_node
+Placeholder node for high-confidence TruePositive incidents. Currently sets an `escalation_triggered` flag and skips KQL generation to go directly to writeback. This can be expanded to page on-call analysts via webhooks.
+
 ### kql_node
 Generates 3 schema-validated KQL hunting queries using `gemini-2.5-flash-lite`. The prompt includes an explicit table schema map (SecurityAlert, SigninLogs, AuditLogs, SecurityEvent, OfficeActivity) with approved column names. Tables are filtered by detected MITRE ATT&CK tactics before prompt construction. Skipped entirely for FalsePositive classifications.
 
@@ -236,7 +242,7 @@ Compares the LLM's classification against the human-provided classification. If 
 - **Sliding-window rate limiter** (`throttle.py`): Caps requests to 14 RPM, slightly under the Gemini free-tier limit of 15 RPM.
 - **Batch sizing**: `main.py` fetches at most 5 incidents per run (5 incidents × ~3 LLM calls = 15 calls).
 - **Concurrency**: `asyncio.Semaphore(3)` limits parallel incident processing.
-- **Per-node retry**: Each LLM node wraps its invocation with `tenacity` (exponential backoff 5–60s + random jitter, 5 attempts) on `429 RESOURCE_EXHAUSTED` and `503 UNAVAILABLE`.
+- **Centralized LLM retry**: Each LLM node wraps its invocation with a shared `@llm_retry` decorator (`llm_utils.py`) using `tenacity` (exponential backoff 5–60s + random jitter, 5 attempts) on transient errors like `429 RESOURCE_EXHAUSTED` and `503 UNAVAILABLE`.
 - **Internal retries disabled**: `max_retries=0` on all `ChatGoogleGenerativeAI` instances to prevent double-retry loops (tenacity manages all backoff).
 
 ### Azure Sentinel REST

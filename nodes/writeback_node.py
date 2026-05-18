@@ -44,6 +44,21 @@ def _format_comment(state: TriageState) -> str:
                 f"{flag} URL {url_report['ioc'][:60]}: {mal}/{url_report.get('total', '?')} VT detections"
             )
 
+    # Build MITRE techniques list
+    mitre_tech_lines = []
+    mitre_techniques = state.get("mitre_techniques", [])
+    if mitre_techniques:
+        mitre_tech_lines.append("| Tactic | Technique ID | Technique Name | Confidence | Status |")
+        mitre_tech_lines.append("| :--- | :--- | :--- | :--- | :--- |")
+        for tech in mitre_techniques:
+            status_flag = "⚠️ Unverified" if tech.get("unverified") else "✅ Verified"
+            tactic_name = tech.get("tactic", "Unknown")
+            mitre_tech_lines.append(
+                f"| {tactic_name} | `{tech['technique_id']}` | {tech['name']} | {tech['confidence']}% | {status_flag} |"
+            )
+    else:
+        mitre_tech_lines.append("_No specific MITRE techniques mapped._")
+
     review_tag = ""
     if state.get("classification") == "BenignPositive":
         review_tag = "\n\n**Review status:** Pending Analyst Review"
@@ -61,6 +76,9 @@ def _format_comment(state: TriageState) -> str:
 ### MITRE ATT&CK Analysis
 {state.get('mitre_analysis', 'No MITRE analysis available.')}
 
+#### Mapped MITRE ATT&CK Techniques
+{chr(10).join(mitre_tech_lines)}
+
 ---
 
 ### Extracted Entities
@@ -76,7 +94,7 @@ Copy and run these in Sentinel → Logs:
 
 ```kql
 {chr(10).join(kql_queries[:2]) or "No queries generated."}
-````
+```
 
 ---
 
@@ -90,7 +108,7 @@ def writeback_node(state: TriageState) -> dict:
     incident_id = state["incident_id"]
     comment_posted = False
     incident_closed = False
-    errors = list(state.get("errors", []))
+    errors = []
 
     # ── Post the triage comment ────────────────────────────────────────────────
     try:
@@ -113,7 +131,7 @@ def close_review_node(state: TriageState) -> dict:
     The graph is paused before this node so an analyst can confirm the decision.
     """
     incident_closed = False
-    errors = list(state.get("errors", []))
+    errors = []
 
     if state.get("classification") == "BenignPositive" and state.get("close_approved"):
         try:

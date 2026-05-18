@@ -23,7 +23,7 @@ async def containment_node(state: TriageState) -> dict:
     Parses hostnames from entities and triggers isolation concurrently.
     All API failures are appended to errors list without crashing the pipeline.
     """
-    errors = state.get("errors", []).copy()
+    errors = []
     
     # Guard clause: only execute if containment is approved
     if not state.get("containment_approved", False):

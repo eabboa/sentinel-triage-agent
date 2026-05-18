@@ -2,7 +2,8 @@
 Defines the LangGraph state using TypedDict.
 """
 
-from typing import TypedDict, Optional
+from typing import TypedDict, Optional, Annotated
+import operator
 
 
 class TriageState(TypedDict):
@@ -29,13 +30,7 @@ class TriageState(TypedDict):
     confidence: int              # 0-100 confidence score from the analyst LLM
     triage_summary: str          # Human-readable, explaining the verdict
     mitre_analysis: str          # MITRE ATT&CK tactic/technique analysis
-    """
-    TODO: Add `mitre_techniques` field to `TriageState` as a list of dictionaries: 
-    `[{"technique_id": "T1098", 
-    "name": "Account Manipulation", 
-    "confidence": 90}]`.
-    
-    """
+    mitre_techniques: list[dict] # Detailed techniques, e.g., [{"technique_id": "T1098", "name": "Account Manipulation", "confidence": 90}]
 
     # ── Hunting (kql_node.py) ──────────────────────────────────────────────────
     kql_queries: list[str]       # Syntactically valid KQL hunting queries
@@ -50,22 +45,4 @@ class TriageState(TypedDict):
     human_classification: Optional[str]  # Human-provided classification after review
     
     # ── Error tracking ─────────────────────────────────────────────────────────
-    errors: list[str]            # Non-fatal errors encountered during processing
-    """
-    Currently, it will only contain the single error string from the very last node.
-    TODO: Make it store all errors from all nodes. This is not critical since the
-    graph will be stopped if an error occurs, but it would be nice to have.
-
-    To make it actually append, you have to tell LangGraph to use a "reducer"
-    (a function that combines the old state with the new state) using Python's
-    Annotated type.
-
-    Example:
-    import operator
-    from typing import Annotated
-
-    class TriageState(TypedDict):
-        # ... other fields
-        errors: Annotated[list[str], add_messages]
-    """
-    
+    errors: Annotated[list[str], operator.add]   # Non-fatal errors encountered during processing

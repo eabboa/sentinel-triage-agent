@@ -11,8 +11,12 @@ Rate limit strategy:
 import asyncio
 from dotenv import load_dotenv
 import uuid
+import logging
 from sentinel_api import list_incidents
 from graph import build_graph
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -21,7 +25,7 @@ async def process_incident(incident, graph, semaphore, console_lock):
     incident_id = incident["name"]  # Sentinel uses 'name' as the unique ID
     incident_title = incident["properties"]["title"]
     
-    print(f"Processing: {incident_title} (ID: {incident_id})")
+    logger.info(f"Processing: {incident_title} (ID: {incident_id})")
 
     # Initialize state with only the incident_id | the fetch node gets the rest
     initial_state = {
@@ -84,36 +88,36 @@ async def process_incident(incident, graph, semaphore, console_lock):
             
             final_state = state
             
-            print(f"  ✓ Classification: {final_state.get('classification')}")
-            print(f"  ✓ Comment posted: {final_state.get('comment_posted')}")
-            print(f"  ✓ Incident closed: {final_state.get('incident_closed')}")
+            logger.info(f"  ✓ Classification: {final_state.get('classification')}")
+            logger.info(f"  ✓ Comment posted: {final_state.get('comment_posted')}")
+            logger.info(f"  ✓ Incident closed: {final_state.get('incident_closed')}")
             
             if final_state.get("errors"):
-                print(f"  ⚠ Non-fatal errors: {final_state['errors']}")
+                logger.warning(f"  ⚠ Non-fatal errors: {final_state['errors']}")
 
         except Exception as e:
-            print(f"  ✗ Pipeline failed for {incident_id}: {e}")
+            logger.error(f"  ✗ Pipeline failed for {incident_id}: {e}")
 
 
 async def main():
-    print("Sentinel Triage Agent starting...")
+    logger.info("Sentinel Triage Agent starting...")
     
     # Fetch new, unprocessed incidents
     incidents = list_incidents(status_filter="New", max_results=5)
     
     if not incidents:
-        print("No new incidents found. Exiting.")
+        logger.info("No new incidents found. Exiting.")
         return
 
-    print(f"Found {len(incidents)} incident(s) to triage.")
+    logger.info(f"Found {len(incidents)} incident(s) to triage.")
     graph, checkpointer = build_graph()
-    semaphore = asyncio.Semaphore(1)
+    semaphore = asyncio.Semaphore(3)
     console_lock = asyncio.Lock()
 
     tasks = [process_incident(incident, graph, semaphore, console_lock) for incident in incidents]
     await asyncio.gather(*tasks, return_exceptions=True) # return_exceptions=True allows other tasks to continue running even if one fails
 
-    print("\nBatch complete.")
+    logger.info("\nBatch complete.")
 
 
 # Shutdown hook example:

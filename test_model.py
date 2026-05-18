@@ -1,4 +1,3 @@
-import os
 from langchain_google_genai import ChatGoogleGenerativeAI
 try:
     llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", max_retries=0)

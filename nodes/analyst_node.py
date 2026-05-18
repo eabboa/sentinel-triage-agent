@@ -6,7 +6,7 @@ We use strictly, JSON output to prevent LLM from prose and babbling.
 import asyncio
 import json
 import os
-from typing import Literal
+from typing import Literal, Optional
 
 import chromadb
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -14,6 +14,9 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 from state import TriageState
+from nodes.mitre_utils import MITRE_CATALOG
+
+mitre_catalog_str = json.dumps(MITRE_CATALOG, indent=2)
 
 
 # Global variables for ChromaDB and embedding model
@@ -53,22 +56,21 @@ async def retrieve_similar_mismatches(condensed_summary: str, top_k: int = 3):
     return results
 
 
+class MitreTechnique(BaseModel):
+    technique_id: str
+    name: str
+    confidence: int
+    tactic: Optional[str] = None
+
+
 class AnalystVerdict(BaseModel):
     classification: Literal["TruePositive", "FalsePositive", "BenignPositive"]
     is_true_positive: bool
     triage_summary: str
     mitre_analysis: str
+    mitre_techniques: list[MitreTechnique]
     confidence: int
     recommended_action: str
-
-"""
-TODO: 
-- Update `AnalystVerdict` Pydantic model to include `mitre_techniques`.
-- Refine `ANALYST_PROMPT_TEMPLATE` to:
-- Explicitly define the "Kill Chain" logic for severity.
-- Instruct the LLM to map the Sentinel `incident_tactics` (why) to specific `mitre_techniques` (how) based on the alert entities and descriptions.
-- Provide a "Cheat Sheet" of common techniques for Azure/Cloud tactics within the prompt.
-"""
 
 ANALYST_SYSTEM_PROMPT = """
 You are a Tier 2 SOC analyst performing incident triage in Microsoft Sentinel.
@@ -90,8 +92,20 @@ signal. Raw counts (malicious, suspicious, total) are supporting context only.
 TASK:
 1. Analyze whether this incident represents a genuine threat.
 2. Correlate the CTI verdicts with the MITRE ATT&CK tactics.
-3. Determine the classification.
-4. Explain your reasoning clearly for a Tier 1 analyst who will read this.
+3. Map the Sentinel `incident_tactics` (why) to specific `mitre_techniques` (how) based on alert entities and descriptions.
+4. Determine the classification.
+5. Explain your reasoning clearly for a Tier 2 analyst who will read this.
+
+KILL CHAIN SEVERITY LOGIC:
+- If multiple tactics represent progression through the kill chain (e.g., Initial Access -> Credential Access -> Lateral Movement), severity and confidence should be elevated.
+
+MITRE ATT&CK MAPPING GUIDELINES:
+Map the detected incident tactics to precise and standard MITRE ATT&CK technique IDs and names.
+You must choose from the provided reference catalog below to prevent hallucination.
+Ensure the techniques correspond logically to the observed incident behavior. Do not invent fake technique IDs or guess name pairings, as your output will be verified programmatically against the official MITRE framework catalog.
+
+REFERENCE CATALOG:
+""" + mitre_catalog_str + """
 
 CLASSIFICATION RULES:
 - TruePositive: Confirmed malicious activity. At least one IOC verdict is "malicious"
@@ -107,6 +121,7 @@ Return ONLY valid JSON with this exact schema. No preamble, no markdown, no expl
   "is_true_positive": true | false,
   "triage_summary": "3 sentence explanation of the verdict.",
   "mitre_analysis": "How the detected tactics map to the observed behavior. 3 sentence explanation. Each sentence under 15 words.",
+  "mitre_techniques": [{"technique_id": "TXXXX", "name": "", "confidence": 90, "tactic": ""}],
   "confidence": "CONFIDENCE SCORING: Start at 50. Add/subtract based on CTI verdicts only (not raw counts). +25 if any IOC verdict is 'malicious'. +10 if any IOC verdict is 'suspicious'. -10 if all IOC verdicts are 'clean'. Apply 0 modifier for missing/failed lookups (treat as neutral unknown, not clean). Add 20 for multi-stage MITRE correlation. Subtract 10 for isolated events lacking context. Cap between 0-100, where 90-100 is Definitive, 70-89 is Probable, 40-69 is Ambiguous, and 0-39 is Insufficient Data. Output exact integer.",
   "recommended_action": "Brief next step for the Tier 2 analyst. 3 sentence explanation."
 }
@@ -163,19 +178,10 @@ async def analyst_node(state: TriageState) -> dict:
         ))
     ]
 
-    from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception, wait_random
     from throttle import gemini_rate_limiter
+    from llm_utils import llm_retry
 
-    def _is_retryable_error(e: Exception) -> bool:
-        err_str = str(e).upper()
-        return "429" in err_str or "503" in err_str or "RESOURCE_EXHAUSTED" in err_str or "UNAVAILABLE" in err_str
-
-    @retry(
-        wait=wait_exponential(multiplier=2, min=5, max=60) + wait_random(min=0, max=5),
-        stop=stop_after_attempt(5),
-        retry=retry_if_exception(_is_retryable_error),
-        reraise=True
-    )
+    @llm_retry
     async def _invoke_llm():
         async with gemini_rate_limiter:
             return await llm.ainvoke(messages)
@@ -184,13 +190,25 @@ async def analyst_node(state: TriageState) -> dict:
         response = await _invoke_llm()
         verdict = getattr(response, "output_parsed", None) or getattr(response, "parsed_output", None) or response
 
-        if isinstance(verdict, AnalystVerdict):  # If the output parser worked correctly, we get a Pydantic model instance
-            return verdict.dict()
+        verdict_dict = {}
+        if isinstance(verdict, AnalystVerdict):
+            verdict_dict = verdict.dict()
+        elif isinstance(verdict, dict):
+            verdict_dict = verdict
+        else:
+            raise ValueError("Unexpected structured output type from analyst LLM response.")
 
-        if isinstance(verdict, dict):
-            return verdict
-
-        raise ValueError("Unexpected structured output type from analyst LLM response.")
+        # Programmatically validate and enrich MITRE techniques
+        suggested_techs = verdict_dict.get("mitre_techniques", [])
+        incident_tactics = state.get("incident_tactics", [])
+        from nodes.mitre_utils import validate_and_enrich_techniques
+        verified_techs, warnings = validate_and_enrich_techniques(suggested_techs, incident_tactics)
+        
+        verdict_dict["mitre_techniques"] = verified_techs
+        if warnings:
+            verdict_dict["errors"] = warnings
+            
+        return verdict_dict
 
     except Exception as e:
         return {
@@ -200,4 +218,5 @@ async def analyst_node(state: TriageState) -> dict:
             "mitre_analysis": "N/A",
             "confidence": 0,
             "recommended_action": "N/A",
+            "errors": [f"Analyst node failed: {str(e)}"]
         }

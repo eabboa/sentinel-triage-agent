@@ -304,6 +304,16 @@ This prototype includes hardened design decisions that reflect real-world SOC en
 
 ## Changelog
 
+### [v0.7.0] - 2026-05-18 (Architecture Optimization & MITRE Logic Hardening)
+
+**LangGraph State Reducers:** Refactored `TriageState` to utilize LangGraph reducers (`Annotated[list, operator.add]`), ensuring errors and results are appended rather than overwritten. This enables robust error aggregation across concurrent nodes without data loss.
+
+**Centralized LLM Invocation:** Deduplicated repetitive LLM invocation and `tenacity` retry logic into a centralized utility function, improving code maintainability and standardizing backoff behavior across all reasoning nodes.
+
+**MITRE ATT&CK Validation Hardening:** Enhanced `analyst_node.py` logic to improve the reliability and accuracy of MITRE ATT&CK technique mapping. Implemented `validate_and_enrich_techniques` to parse, validate, and structure the LLM's raw output, preventing hallucinated or improperly formatted tactics from reaching the writeback layer.
+
+**Dependency Indicator Fixes:** Resolved visual linting errors and import warnings (such as the `aiolimiter` library in `enrich_node.py`), ensuring clean workspace state and correct dependency resolution for concurrent rate limiting.
+
 ### [v0.6.0] - 2026-05-05 (CTI Semantic Hardening & Async Performance)
 
 **Configurable CTI Detection Thresholds:** VirusTotal returns a raw vote count across ~70 AV engines — a `1/70` detection is typically a heuristic false positive, while `5/70` represents genuine engine consensus. `enrich_node` now pre-computes a `verdict` field (`clean` / `suspicious` / `malicious`) using a configurable threshold (`VT_MALICIOUS_THRESHOLD`, default 5). AbuseIPDB's Bayesian confidence score is similarly banded by `ABUSEIPDB_MALICIOUS_THRESHOLD` (default 75). Both are tunable via environment variables without code changes.

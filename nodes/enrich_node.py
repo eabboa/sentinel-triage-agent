@@ -295,8 +295,6 @@ async def enrich_node(state: TriageState) -> dict:
 
     update: dict = {"cti_results": cti_results}
     if enrichment_errors:
-        # Append to existing errors list rather than overwriting
-        existing_errors = list(state.get("errors", []) or [])
-        update["errors"] = existing_errors + enrichment_errors
+        update["errors"] = enrichment_errors
 
     return update

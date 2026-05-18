@@ -86,7 +86,7 @@ signal. Raw counts (malicious, suspicious, total) are supporting context only.
   - "verdict": "not_found_in_vt" → Hash has no VirusTotal history. Treat as unknown,
     not clean. Novel malware is often absent from VT. Correlate with other signals.
   - No verdict field present  → IP/URL/hash lookup failed or returned an error.
-    Treat this IOC as UNKNOWN — apply a 0 point confidence modifier. Do NOT infer
+    Treat this IOC as UNKNOWN - apply a 0 point confidence modifier. Do NOT infer
     threat signals from the absence of a result (e.g. timeout is not IP blocking scanners).
 
 TASK:
@@ -98,6 +98,11 @@ TASK:
 
 KILL CHAIN SEVERITY LOGIC:
 - If multiple tactics represent progression through the kill chain (e.g., Initial Access -> Credential Access -> Lateral Movement), severity and confidence should be elevated.
+- If INTERNAL IPs (RFC 1918) are present in the data, treat them as lateral movement indicators.
+  Relevant techniques include: T1021 (Remote Services), T1570 (Lateral Tool Transfer),
+  T1550 (Use Alternate Authentication Material), T1563 (Remote Service Session Hijacking).
+  Even without external CTI verdicts, internal-to-internal traffic between unexpected hosts is
+  a strong signal of post-compromise activity. Weight this in your confidence score.
 
 MITRE ATT&CK MAPPING GUIDELINES:
 Map the detected incident tactics to precise and standard MITRE ATT&CK technique IDs and names.
@@ -136,6 +141,9 @@ INCIDENT SUMMARY:
 CTI ENRICHMENT RESULTS:
 {cti_results}
 
+INTERNAL IPs (Lateral Movement Candidates — no external CTI available):
+{internal_ips}
+
 DETECTED MITRE ATT&CK TACTICS: {tactics}
 
 {few_shot_examples}
@@ -151,7 +159,7 @@ async def analyst_node(state: TriageState) -> dict:
     """
     # Strictly enforce the output schema with Pydantic validation
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",  # Use the full flash model, not lite.
+        model="gemini-2.5-flash",  # Use a powerful model for production
         google_api_key=os.getenv("GOOGLE_API_KEY"),
         temperature=0,  # deterministic and consistent classification
         max_retries=0,  # Disabled internal retries to let tenacity handle backoff with jitter
@@ -173,6 +181,9 @@ async def analyst_node(state: TriageState) -> dict:
         HumanMessage(content=USER_DATA_TEMPLATE.format(
             condensed_summary=condensed_summary,
             cti_results=json.dumps(state.get("cti_results", {}), indent=2),
+            internal_ips=json.dumps(
+                state.get("entities", {}).get("internal_ips", []), indent=2
+            ) or "None detected",
             tactics=", ".join(state.get("incident_tactics", [])) or "None detected by Sentinel",
             few_shot_examples=few_shot_examples,
         ))

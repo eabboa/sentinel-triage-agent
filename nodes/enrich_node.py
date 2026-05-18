@@ -1,5 +1,7 @@
 """
 Queries VirusTotal and AbuseIPDB concurrently for all extracted IOCs.
+Internal (RFC 1918) IPs are NOT sent to external CTI services; they are
+tagged as lateral_movement candidates and passed through for the analyst.
 
 Threshold semantics:
   VT_MALICIOUS_THRESHOLD (default 5):
@@ -21,7 +23,7 @@ Threshold semantics:
 Neutral baseline guarantee:
     If a CTI lookup fails (timeout, HTTP error, exception), the IOC result is stripped
     from cti_results entirely and appended to the graph errors list instead.
-    The LLM never sees an error object in the cti_results payload — it only receives
+    The LLM never sees an error object in the cti_results payload - it only receives
     verified signals. This prevents the LLM from inferring threat signals from the
     mere presence of a failed lookup (e.g. "timeout = IP blocking scanners").
 """
@@ -41,7 +43,7 @@ RETRY_ATTEMPTS = 3
 VT_API_KEY = os.getenv("VT_API_KEY")
 ABUSEIPDB_API_KEY = os.getenv("ABUSEIPDB_API_KEY")
 
-# Configurable thresholds — override via environment variables in production.
+# Configurable thresholds - override via environment variables in production.
 # See module docstring for threshold semantics and rationale.
 VT_MALICIOUS_THRESHOLD: int = int(os.getenv("VT_MALICIOUS_THRESHOLD", "5"))
 ABUSEIPDB_MALICIOUS_THRESHOLD: int = int(os.getenv("ABUSEIPDB_MALICIOUS_THRESHOLD", "75"))
@@ -136,7 +138,7 @@ async def _check_vt_hash(session: aiohttp.ClientSession, file_hash: str) -> dict
                 "threshold_used": VT_MALICIOUS_THRESHOLD,
             }
         elif resp.status == 404:
-            # Not in VT database — genuinely unknown, not clean.
+            # Not in VT database - genuinely unknown, not clean.
             # Returned as a valid (non-error) result so the LLM can reason about novelty.
             return {"ioc": file_hash, "type": "hash", "verdict": "not_found_in_vt"}
         return {"ioc": file_hash, "type": "hash", "error": f"HTTP {resp.status}"}
@@ -202,6 +204,16 @@ async def _run_enrichment(entities: dict) -> tuple[dict, list[str]]:
     hash_reports = []
     enrichment_errors: list[str] = []
 
+    internal_ip_reports = [
+        {
+            "ioc": ip,
+            "type": "internal_ip",
+            "verdict": "lateral_movement_candidate",
+            "note": "RFC 1918 address – not submitted to external CTI. Investigate for host-to-host pivoting.",
+        }
+        for ip in entities.get("internal_ips", [])
+    ]
+
     session = await get_session()
 
     # Prepare AbuseIPDB tasks
@@ -248,7 +260,7 @@ async def _run_enrichment(entities: dict) -> tuple[dict, list[str]]:
                 logger.exception(msg)
                 enrichment_errors.append(msg)
             elif _is_error_result(result):
-                # HTTP error from the API (e.g. 403, 422) — strip from CTI payload
+                # HTTP error from the API (e.g. 403, 422) - strip from CTI payload
                 msg = f"enrich_node: AbuseIPDB returned error for {ip}: {result['error']}"
                 logger.warning(msg)
                 enrichment_errors.append(msg)
@@ -280,7 +292,12 @@ async def _run_enrichment(entities: dict) -> tuple[dict, list[str]]:
                 hash_reports.append(result)
 
     return (
-        {"ip_reports": ip_reports, "url_reports": url_reports, "hash_reports": hash_reports},
+        {
+            "ip_reports": ip_reports,
+            "url_reports": url_reports,
+            "hash_reports": hash_reports,
+            "internal_ip_reports": internal_ip_reports,  # Lateral movement candidates
+        },
         enrichment_errors,
     )
 
@@ -288,8 +305,8 @@ async def _run_enrichment(entities: dict) -> tuple[dict, list[str]]:
 async def enrich_node(state: TriageState) -> dict:
     entities = state.get("entities", {})
 
-    if not any([entities.get("ips"), entities.get("urls"), entities.get("hashes")]):
-        return {"cti_results": {"ip_reports": [], "url_reports": [], "hash_reports": []}}
+    if not any([entities.get("ips"), entities.get("urls"), entities.get("hashes"), entities.get("internal_ips")]):
+        return {"cti_results": {"ip_reports": [], "url_reports": [], "hash_reports": [], "internal_ip_reports": []}}
 
     cti_results, enrichment_errors = await _run_enrichment(entities)
 

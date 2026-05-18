@@ -2,13 +2,14 @@
 Containment node: Isolates compromised devices and revokes user sessions.
 
 Executes only if containment_approved is True.
-Uses the entities (hostnames) to trigger MDE device isolation concurrently.
+Uses the entities (hostnames + internal_ips) to trigger MDE device isolation concurrently.
+Internal IPs found during lateral movement detection are treated as additional isolation
+targets, since MDE accepts both hostnames and IP addresses for device lookup.
 All API failures are captured as non-fatal errors in the errors list.
 """
 
 import asyncio
 import logging
-from requests.exceptions import RequestException
 from sentinel_api import isolate_mde_device
 from state import TriageState
 
@@ -32,19 +33,23 @@ async def containment_node(state: TriageState) -> dict:
     
     logger.info("Containment approved; proceeding with device isolation")
     
-    # Extract hostnames from entities
+    # Extract isolation targets: named hostnames + internal IPs (lateral movement candidates)
     entities = state.get("entities", {}) or {}
     hostnames = entities.get("hostnames", []) or []
-    
-    if not hostnames:
-        logger.info("No hostnames found in entities; skipping MDE isolation")
+    internal_ips = entities.get("internal_ips", []) or []
+
+    # Merge and deduplicate; hostnames take priority but IPs are valid MDE targets too
+    isolation_targets = list(dict.fromkeys(hostnames + internal_ips))
+
+    if not isolation_targets:
+        logger.info("No hostnames or internal IPs found in entities; skipping MDE isolation")
         return {"errors": errors}
+
+    logger.info(f"Attempting to isolate {len(isolation_targets)} targets: {isolation_targets}")
     
-    logger.info(f"Attempting to isolate {len(hostnames)} devices: {hostnames}")
-    
-    # Create isolation tasks for each hostname
+    # Create isolation tasks for each target
     async def isolate_all():
-        tasks = [isolate_mde_device(hostname) for hostname in hostnames]
+        tasks = [isolate_mde_device(target) for target in isolation_targets]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         return results
     
@@ -53,17 +58,15 @@ async def containment_node(state: TriageState) -> dict:
         results = await isolate_all()
         
         # Process results and capture any errors
-        for hostname, result in zip(hostnames, results):
+        for target, result in zip(isolation_targets, results):
             if isinstance(result, Exception):
-                error_msg = f"MDE isolation failed for {hostname}: {str(result)}"
+                error_msg = f"MDE isolation failed for {target}: {str(result)}"
                 logger.error(error_msg)
                 errors.append(error_msg)
             elif isinstance(result, dict):
-                # Successful response from MDE API
-                logger.info(f"Successfully isolated device {hostname}")
+                logger.info(f"Successfully isolated target {target}")
             else:
-                # Unexpected result type
-                logger.warning(f"Unexpected result type for {hostname}: {type(result)}")
+                logger.warning(f"Unexpected result type for {target}: {type(result)}")
         
     except Exception as e:
         # Catch any exception from task orchestration

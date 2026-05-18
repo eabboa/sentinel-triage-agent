@@ -33,12 +33,21 @@ def _is_public_ip(ip: str) -> bool:
     return not any(p.match(ip) for p in PRIVATE_IP_RANGES)
 
 
+def _is_internal_ip(ip: str) -> bool:
+    """Returns True if the IP is a private/RFC-1918 address (lateral movement candidate)."""
+    return any(p.match(ip) for p in PRIVATE_IP_RANGES)
+
+
 async def extract_node(state: TriageState) -> dict:
     """Extracts IOCs from the condensed summary using regex + LLM fallback."""
     text = state["condensed_summary"]
 
     # ── Phase 1: Regex extraction ──────────────────────────────────────────────
-    ips = list(set(ip for ip in IP_PATTERN.findall(text) if _is_public_ip(ip)))
+    all_ips = IP_PATTERN.findall(text)
+    # Public IPs → threat-intel enrichment (VirusTotal, etc.)
+    ips = list(set(ip for ip in all_ips if _is_public_ip(ip)))
+    # Internal IPs → kept for lateral movement / host containment; NOT sent to VirusTotal
+    internal_ips = list(set(ip for ip in all_ips if _is_internal_ip(ip)))
     hashes = list(set(HASH_SHA256.findall(text) + HASH_MD5.findall(text)))
     urls = list(set(URL_PATTERN.findall(text)))
 
@@ -84,7 +93,8 @@ TEXT:
         llm_entities = {"usernames": [], "hostnames": [], "domains": []}
 
     entities = {
-        "ips": ips,
+        "ips": ips,                                          # Public IPs – enriched via threat intel
+        "internal_ips": internal_ips,                        # Private IPs – lateral movement candidates
         "urls": urls,
         "hashes": hashes,
         "usernames": llm_entities.get("usernames", []),

@@ -132,7 +132,7 @@ def post_incident_comment(incident_id: str, comment_text: str) -> dict:
     Posts an analyst comment on a Sentinel incident.
     
     The comment_id must be a valid GUID (UUID4). Azure uses it as a unique key.
-    Generating it locally ensures idempotency — if your agent crashes and retries, use the same comment_id and Azure will not create a duplicate.
+    Generating it locally ensures idempotency - if your agent crashes and retries, use the same comment_id and Azure will not create a duplicate.
     """
     comment_id = str(uuid.uuid4())
     url = f"{_BASE}/incidents/{incident_id}/comments/{comment_id}"

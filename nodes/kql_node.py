@@ -122,7 +122,7 @@ async def kql_node(state: TriageState) -> dict:
     """Generates schema-validated KQL hunting queries."""
     # Skip KQL generation for false positives
     if state.get("classification") == "FalsePositive":
-        return {"kql_queries": ["# No hunting queries generated — classified as FalsePositive"]}
+        return {"kql_queries": ["# No hunting queries generated - classified as FalsePositive"]}
 
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.5-flash-lite",  # Lite model

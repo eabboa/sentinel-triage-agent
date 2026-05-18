@@ -18,8 +18,8 @@ class TriageState(TypedDict):
 
     # ── Extraction (summarize_node.py + extract_node.py) ────────────────────────
     condensed_summary: str       # Pre-processed, token-efficient summary for the LLM
-    entities: dict               # {"ips": [...], "urls": [...], "hashes": [...],
-                                 #  "usernames": [...], "hostnames": [...]}
+    entities: dict               # {"ips": [...], "internal_ips": [...], "urls": [...], "hashes": [...],
+                                 #  "usernames": [...], "hostnames": [...], "domains": [...]}
 
     # ── Enrichment (enrich_node.py) ────────────────────────────────────────────
     cti_results: dict            # {"ip_reports": [...], "url_reports": [...], "hash_reports": [...]}

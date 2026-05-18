@@ -141,7 +141,7 @@ INCIDENT SUMMARY:
 CTI ENRICHMENT RESULTS:
 {cti_results}
 
-INTERNAL IPs (Lateral Movement Candidates — no external CTI available):
+INTERNAL IPs (Lateral Movement Candidates - no external CTI available):
 {internal_ips}
 
 DETECTED MITRE ATT&CK TACTICS: {tactics}

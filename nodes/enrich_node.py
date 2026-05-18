@@ -32,6 +32,7 @@ import asyncio
 import logging
 import os
 import aiohttp
+# pyrefly: ignore [missing-import]
 from aiolimiter import AsyncLimiter
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 from state import TriageState
@@ -209,7 +210,7 @@ async def _run_enrichment(entities: dict) -> tuple[dict, list[str]]:
             "ioc": ip,
             "type": "internal_ip",
             "verdict": "lateral_movement_candidate",
-            "note": "RFC 1918 address – not submitted to external CTI. Investigate for host-to-host pivoting.",
+            "note": "RFC 1918 address - not submitted to external CTI. Investigate for host-to-host pivoting.",
         }
         for ip in entities.get("internal_ips", [])
     ]

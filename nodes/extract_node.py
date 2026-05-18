@@ -59,17 +59,24 @@ async def extract_node(state: TriageState) -> dict:
     )
 
     prompt = f"""
-You are an IOC extraction specialist. Extract the following entity types from the text below.
-Return ONLY valid JSON. No preamble, no explanation, no markdown.
+You are a security analyst extracting Indicators of Compromise (IOCs) from a Microsoft Sentinel incident summary.
 
-JSON schema:
+RULES:
+- Extract ONLY entities that are explicitly present in the TEXT below. Do NOT infer, guess, or generate values.
+- If an entity type is not present in the text, return an empty list for that key.
+- Output ONLY a raw JSON object. No markdown, no code fences, no explanation.
+
+FIELD DEFINITIONS:
+- "usernames": Account names, UPNs (user@domain.com), SAM account names (DOMAIN\\user), or service accounts observed performing or targeted by the suspicious activity. Exclude generic system accounts (e.g., SYSTEM, NT AUTHORITY).
+- "hostnames": Device hostnames, NetBIOS names, or FQDNs (e.g., WKSTN-042, srv01.corp.local) that are sources or targets of the activity. Exclude cloud service endpoints and URLs.
+- "domains": Second-level domains (e.g., evil.com, c2-domain.net) associated with command-and-control, phishing, or malware delivery. Exclude known-legitimate domains (e.g., microsoft.com, windows.com, office.com) unless they are clearly being abused (e.g., typosquatted). Strip to bare domain only - no protocols, no paths.
+
+OUTPUT FORMAT (strict):
 {{
-  "usernames": ["list of user accounts, UPNs, or email addresses"],
-  "hostnames": ["list of device names, computer names, or FQDNs"],
-  "domains": ["list of suspicious domains (not full URLs)"]
+  "usernames": [],
+  "hostnames": [],
+  "domains": []
 }}
-
-If no entities of a type are found, return an empty list for that key.
 
 TEXT:
 {text}
@@ -93,8 +100,8 @@ TEXT:
         llm_entities = {"usernames": [], "hostnames": [], "domains": []}
 
     entities = {
-        "ips": ips,                                          # Public IPs – enriched via threat intel
-        "internal_ips": internal_ips,                        # Private IPs – lateral movement candidates
+        "ips": ips,                                          # Public IPs - enriched via threat intel
+        "internal_ips": internal_ips,                        # Private IPs - lateral movement candidates
         "urls": urls,
         "hashes": hashes,
         "usernames": llm_entities.get("usernames", []),

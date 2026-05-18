@@ -1,10 +1,18 @@
 """
 Authentication using Azure Identity for Azure REST API access.
 Uses DefaultAzureCredential to obtain tokens via Managed Identity (production) or Azure CLI (local development).
+
+DefaultAzureCredential (singleton)
+        │
+        ▼
+get_access_token(scope)  ←── _cached_tokens dict (check the cache first, and refresh if needed)
+        │
+        ├── get_graph_token()       → Microsoft Graph API
+        ├── get_mde_token()         → Defender for Endpoint API
+        └── get_auth_headers()      → Azure Management API (default)
 """
 
-import os
-from datetime import datetime, timedelta
+import time
 from azure.identity import DefaultAzureCredential
 
 # The scope for Azure Resource Manager API (management.azure.com)
@@ -17,16 +25,13 @@ credential = DefaultAzureCredential()
 _cached_tokens = {}
 
 
-import time
-
 def get_access_token(scope: str = MANAGEMENT_SCOPE) -> str:
     """
     Get cached bearer token using DefaultAzureCredential.
-    
     This architecture is strictly secretless, relying on Managed Identity (prod) and Azure CLI (local).
     Tokens are cached locally to avoid unnecessary function call overhead and potential round-trip latency.
     The token is refreshed only if missing or within 5 minutes of expiration.
-    """
+    """ 
     global _cached_tokens
 
     cached = _cached_tokens.get(scope) # Check cache for token 
@@ -42,15 +47,18 @@ def get_access_token(scope: str = MANAGEMENT_SCOPE) -> str:
     return _cached_tokens[scope]["token"]
 
 
+"""
+Facade wrappers hides URI complexity from the callers. 
+Instead of writing the URLs every time, we define functions to do this.
+"""
+
 def get_graph_token() -> str:
     """Get a token scoped to Microsoft Graph."""
     return get_access_token("https://graph.microsoft.com/.default")
 
-
 def get_mde_token() -> str:
     """Get a token scoped to Microsoft Defender for Endpoint."""
     return get_access_token("https://api.securitycenter.microsoft.com/.default")
-
 
 def get_auth_headers() -> dict:
     """Return authorization headers with Bearer token."""

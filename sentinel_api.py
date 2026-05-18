@@ -16,14 +16,11 @@ logger = logging.getLogger(__name__)
 DEFAULT_HTTP_TIMEOUT = 10
 RETRY_ATTEMPTS = 3
 
-
 class ConcurrencyConflictError(Exception):
     """Raised when an optimistic concurrency update fails due to an ETag mismatch."""
 
-
 class TransientHTTPError(RequestException):
     """Raised for transient HTTP errors (429, 503, 504) to trigger tenacity retries."""
-
 
 @retry(
     retry=retry_if_exception_type(TransientHTTPError),
@@ -31,6 +28,7 @@ class TransientHTTPError(RequestException):
     stop=stop_after_attempt(RETRY_ATTEMPTS),
     reraise=True,
 )
+
 def _http_request(method: str, url: str, *, headers=None, params=None, json=None) -> requests.Response:
     try:
         response = requests.request(
@@ -55,9 +53,13 @@ def _http_request(method: str, url: str, *, headers=None, params=None, json=None
 
 
 def _request(method: str, url: str, *, headers=None, params=None, json=None) -> requests.Response:
+    # A wrapper around _http_request that provides centralized error logging and failure handling.
+    # It catches any ultimate RequestException if all retries are exhausted.
     try:
+        # Delegate the request execution to the retry-enabled _http_request helper.
         return _http_request(method, url, headers=headers, params=params, json=json)
     except RequestException as exc:
+        # Log the ultimate failure after all tenacity retry attempts have been exhausted.
         logger.error("HTTP request to %s failed after retries: %s", url, exc)
         raise
 
@@ -219,21 +221,24 @@ async def isolate_mde_device(device_id: str) -> dict:
     }
     
     response = _request("POST", url, headers=headers, json=body)
-    return response.json() if response.text else {}
+    
+    # Check if the server returned any text response
+    if response.text:
+        # Convert the raw text response into a Python dictionary
+        return response.json()
+    else:
+        # If the response was empty (no text), return an empty dictionary
+        return {}
 
 
 async def revoke_entra_sessions(user_id: str) -> dict:
     """
     Revokes all Entra ID (Azure AD) refresh tokens for a user.
-    
     This forces the user to re-authenticate and invalidates existing sessions.
-    
     Args:
         user_id: The Entra ID user object ID (GUID) or UPN
-    
     Returns:
         Response JSON from Microsoft Graph API
-        
     Raises:
         RequestException: If the revocation request fails (caller should handle)
     """
@@ -247,4 +252,8 @@ async def revoke_entra_sessions(user_id: str) -> dict:
     body = {}  # Graph API revokeSignInSessions expects empty body
     
     response = _request("POST", url, headers=headers, json=body)
-    return response.json() if response.text else {}
+    
+    if response.text:
+        return response.json()
+    else:
+        return {}

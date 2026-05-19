@@ -1,13 +1,6 @@
 """
 Generates syntactically valid KQL hunting queries for analyst follow-up.
 
-THE CRITICAL PROBLEM: LLMs hallucinate KQL.
-They invent table names, reference columns that do not exist, and mix up
-table schemas across different Sentinel data connectors. A query with
-`DeviceProcessEvents` will fail if Defender for Endpoint is not connected.
-A query referencing `SigninLogs` will fail if Azure AD Diagnostics is not enabled.
-
-THE SOLUTION: Schema-Aware Prompting + Table Existence Gating.
 1. Provide the LLM with an explicit table schema map in the prompt.
 2. Instruct it to ONLY use tables from the provided map.
 3. Include the canonical column names for each table in the prompt.
@@ -23,7 +16,10 @@ from state import TriageState
 
 
 # ── Schema Map: The KQL Reliability Layer ─────────────────────────────────────
-# Columns listed are the most commonly queried.
+# Columns listed are the most commonly queried. 
+# NOTE: This schema MUST be updated 
+# according to the specific tables and columns available in the connected data connectors.
+
 SENTINEL_TABLE_SCHEMA = {
     "SecurityAlert": {
         "description": "Microsoft Sentinel-generated security alerts",

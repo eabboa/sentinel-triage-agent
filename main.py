@@ -14,6 +14,7 @@ import uuid
 import logging
 from sentinel_api import list_incidents
 from graph import build_graph
+from nodes.learning_node import flush_and_shutdown
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -47,6 +48,8 @@ async def process_incident(incident, graph, semaphore, console_lock):
         "kql_queries": [],
         "confidence": 0,
         "containment_approved": False,
+        "escalation_triggered": False,
+        "escalation_summary": "",
         "human_classification": None,
         "comment_posted": False,
         "incident_closed": False,
@@ -83,7 +86,23 @@ async def process_incident(incident, graph, semaphore, console_lock):
                         graph.update_state(config, {"close_approved": True})
                     else:
                         print("  Skipping closure.")
-                        
+
+                    # ── Human reclassification for RAG learning ───────────────────
+                    llm_classification = state_vals.get('classification', '')
+                    VALID_CLASSIFICATIONS = {"TruePositive", "FalsePositive", "BenignPositive"}
+                    reclassify = await asyncio.to_thread(
+                        input,
+                        f"  Reclassify? LLM said '{llm_classification}'. "
+                        f"Enter correct label [TruePositive/FalsePositive/BenignPositive] or press Enter to agree: "
+                    )
+                    reclassify = reclassify.strip()
+                    if reclassify in VALID_CLASSIFICATIONS and reclassify != llm_classification:
+                        graph.update_state(config, {"human_classification": reclassify})
+                        print(f"  ✓ Reclassification '{reclassify}' recorded for learning.")
+                    elif reclassify and reclassify not in VALID_CLASSIFICATIONS:
+                        print(f"  ⚠ Invalid label '{reclassify}' — must be one of {VALID_CLASSIFICATIONS}. Skipping.")
+                    # ─────────────────────────────────────────────────────────────
+
                 state = await graph.ainvoke(None, config=config)
             
             final_state = state
@@ -101,10 +120,10 @@ async def process_incident(incident, graph, semaphore, console_lock):
 
 async def main():
     logger.info("Sentinel Triage Agent starting...")
-    
+
     # Fetch new, unprocessed incidents
     incidents = list_incidents(status_filter="New", max_results=5)
-    
+
     if not incidents:
         logger.info("No new incidents found. Exiting.")
         return
@@ -114,22 +133,17 @@ async def main():
     semaphore = asyncio.Semaphore(3)
     console_lock = asyncio.Lock()
 
-    tasks = [process_incident(incident, graph, semaphore, console_lock) for incident in incidents]
-    await asyncio.gather(*tasks, return_exceptions=True) # return_exceptions=True allows other tasks to continue running even if one fails
+    try:
+        tasks = [process_incident(incident, graph, semaphore, console_lock) for incident in incidents]
+        await asyncio.gather(*tasks, return_exceptions=True)  # return_exceptions=True allows other tasks to continue running even if one fails
+        logger.info("\nBatch complete.")
+    finally:
+        logger.info("Flushing learning queue before exit...")
+        await flush_and_shutdown()
 
-    logger.info("\nBatch complete.")
 
-
-# Shutdown hook example:
-#
-# from nodes.learning_node import flush_and_shutdown
-#
-# async def on_shutdown() -> None:
-#     await flush_and_shutdown() ## Flush any pending learning data and perform cleanup before shutdown
-#
-#
-# For CLI applications, use asyncio signal handlers to trigger graceful shutdown
-# and call `await flush_and_shutdown()` before exiting.
+# flush_and_shutdown() is called automatically in main() via a try/finally block.
+# It drains all pending ChromaDB writes and shuts down the process pool executor cleanly.
 
 if __name__ == "__main__":
     asyncio.run(main())

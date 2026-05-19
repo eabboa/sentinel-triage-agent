@@ -41,6 +41,10 @@ class TriageState(TypedDict):
     close_approved: bool
     containment_approved: bool       # Set to True to trigger MDE device isolation
     
+    # ── Escalation (graph.py) ──────────────────────────────────────────────────
+    escalation_triggered: bool
+    escalation_summary: str
+
     # ── Human review ───────────────────────────────────────────────────────────
     human_classification: Optional[str]  # Human-provided classification after review
     

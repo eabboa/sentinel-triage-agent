@@ -98,7 +98,7 @@ async def _check_vt_url(session: aiohttp.ClientSession, url: str) -> dict:
         if resp.status == 200:
             raw_data = resp.json()
             try:
-                # validate first. extra="ignore".
+                # validate first. extra="ignore" -> we ignore extra fields come from VT.
                 validated = VirusTotalResponse.model_validate(raw_data)
                 # use validated data for malicious/suspicious counts
                 malicious_count: int = validated.data.attributes.last_analysis_stats.malicious
@@ -106,11 +106,9 @@ async def _check_vt_url(session: aiohttp.ClientSession, url: str) -> dict:
             except ValidationError as exc:
                 logger.error("VirusTotal response failed for schema validation. Raw response: %s", raw_data)
                 raise VirusTotalResponseValidationError(
-                    message=f"VT URL scheam mismatch: {str(exc)}",
+                    message=f"VT URL schema mismatch: {str(exc)}",
                     raw_data=raw_data
                 ) from exc
-            total = 0
-
             if malicious_count >= VT_MALICIOUS_THRESHOLD:
                 verdict = "malicious"
             elif malicious_count >= 2:
@@ -122,7 +120,6 @@ async def _check_vt_url(session: aiohttp.ClientSession, url: str) -> dict:
                 "type": "url",
                 "malicious": malicious_count,
                 "suspicious": suspicious_count,
-                "total": total,
                 "verdict": verdict,
                 "threshold_used": VT_MALICIOUS_THRESHOLD,
             }
@@ -156,7 +153,6 @@ async def _check_vt_hash(session: aiohttp.ClientSession, file_hash: str) -> dict
                     message=f"VT URL scheam mismatch: {str(exc)}",
                     raw_data=raw_data
                 ) from exc
-            total = 0
             if malicious_count >= VT_MALICIOUS_THRESHOLD:
                 verdict = "malicious"
             elif malicious_count >= 2:
@@ -168,7 +164,6 @@ async def _check_vt_hash(session: aiohttp.ClientSession, file_hash: str) -> dict
                 "type": "hash",
                 "malicious": malicious_count,
                 "suspicious": suspicious_count,
-                "total": total,
                 "verdict": verdict,
                 "threshold_used": VT_MALICIOUS_THRESHOLD,
             }
@@ -350,7 +345,7 @@ async def _run_enrichment(entities: dict) -> tuple[dict, list[str]]:
 
 
 async def enrich_node(state: TriageState) -> dict:
-    entities = state.get("entities", {})
+    entities = state.get("entities", {}) or {}
 
     if not any([entities.get("ips"), entities.get("urls"), entities.get("hashes"), entities.get("internal_ips")]):
         return {"cti_results": {"ip_reports": [], "url_reports": [], "hash_reports": [], "internal_ip_reports": []}}

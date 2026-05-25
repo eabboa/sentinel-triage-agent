@@ -85,7 +85,7 @@ Your goal is to evaluate the provided incident summary and CTI enrichment result
 
 CTI RESULT INTERPRETATION:
 Each CTI result includes a pre-computed "verdict" field. Use this as your authoritative
-signal. Raw counts (malicious, suspicious, total) are supporting context only.
+signal. Raw counts (malicious, suspicious) are supporting context only.
   - "verdict": "malicious"    → IOC confirmed malicious at configured engine threshold.
   - "verdict": "suspicious"   → Weak signal (2-4 engines). Escalate, do not auto-close.
   - "verdict": "clean"        → 0-1 engine detections. Treat as not malicious.

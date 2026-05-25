@@ -41,7 +41,7 @@ def _format_comment(state: TriageState) -> str:
             mal = url_report.get("malicious", 0)
             flag = "🔴" if mal > 3 else ("🟡" if mal > 0 else "🟢")
             cti_lines.append(
-                f"{flag} URL {url_report['ioc'][:60]}: {mal}/{url_report.get('total', '?')} VT detections"
+                f"{flag} URL {url_report['ioc'][:60]}: {mal} VT detections"
             )
 
     # Build MITRE techniques list

@@ -126,6 +126,7 @@ ABUSEIPDB_MALICIOUS_THRESHOLD=75
 
 #### For production:
 - Assign a Managed Identity (User-Assigned or System-Assigned) to your application/service with `Microsoft Sentinel Contributor` role at the Resource Group scope (IAM → Add role assignment). Wait ~10 minutes for propagation.
+- **Defender for Endpoint (MDE) API Permissions**: To use the automated containment node, the identity must have the `Machine.Read.All` and `Machine.Isolate` application permissions in the Microsoft Defender ATP API, with admin consent granted.
 
 ---
 
@@ -141,6 +142,16 @@ uv run python -c "from sentinel_api import list_incidents; print(list_incidents(
 # Run full pipeline
 uv run python main.py
 ```
+
+---
+
+## Testing & CI/CD
+
+The repository includes a publication-grade testing framework designed to meet SOC engineering standards.
+
+- **Automated Test Suite**: Execute the full test suite using `uv run pytest`. The suite covers unit, integration, concurrency, and failure modes across all modules.
+- **CI/CD Pipeline**: GitHub Actions workflows are configured to automatically enforce quality gates (e.g., >80% coverage) and perform security audits on every pull request.
+- **Dependency Security**: Transitive dependency vulnerabilities flagged by `uv` are actively pinned to patched versions within `pyproject.toml` using `constraint-dependencies` to ensure a secure CI pipeline.
 
 ---
 
@@ -226,13 +237,13 @@ Generates 3 schema-validated KQL hunting queries using `gemini-2.5-flash-lite`. 
 Posts a formatted triage report to the Sentinel incident as a comment. Includes verdict, MITRE analysis, extracted entities, CTI enrichment, and KQL queries. **Does not close the incident**, closure is deferred to `close_review_node`.
 
 ### close_review_node
-Executes the Sentinel close action **only after human approval**. The graph pauses after `writeback` (`interrupt_after=["writeback"]`) so an analyst can review the verdict, optionally approve containment, and then approve or deny closure.
+Executes the Sentinel close action **only after human approval**. The graph pauses after `writeback` (`interrupt_after=["writeback"]`) so an analyst can review the verdict, optionally approve containment, provide qualitative feedback (`human_classification_reason`), and then approve or deny closure.
 
 ### containment_node
-HITL-gated. If `containment_approved` is set during the human review, isolates compromised devices via the Microsoft Defender for Endpoint machine isolation API. All API failures are captured as non-fatal errors.
+HITL-gated. If `containment_approved` is set during the human review, isolates compromised devices via the Microsoft Defender for Endpoint machine isolation API. It dynamically resolves raw hostnames/IPs to valid 40-character MDE machine IDs using OData filters on the Defender API before issuing the isolation command. All API failures or unresolvable IDs are captured as non-fatal errors.
 
 ### learning_node
-Compares the LLM's classification against the human-provided classification. If they diverge, the mismatch (condensed summary + triage summary + human correction) is embedded via `all-MiniLM-L6-v2` and stored in ChromaDB. These records are later retrieved as few-shot examples by `analyst_node` to iteratively improve classification accuracy.
+Compares the LLM's classification against the human-provided classification. If they diverge, the mismatch (condensed summary + triage summary + human classification + `human_classification_reason`) is embedded via `all-MiniLM-L6-v2` and stored in ChromaDB. Capturing the analyst's explicit rationale provides high-value context that is later retrieved as few-shot examples by `analyst_node` to iteratively correct reasoning flaws.
 
 ---
 
@@ -300,11 +311,23 @@ This prototype includes hardened design decisions that reflect real-world SOC en
 - **Configurable detection thresholds.** VirusTotal's `last_analysis_stats.malicious` is a raw vote count across ~70 AV engines. A `1/70` detection is frequently a heuristic false positive from a single engine. The pipeline applies a configurable threshold (`VT_MALICIOUS_THRESHOLD`, default 5) to classify results as `clean` / `suspicious` / `malicious` before they reach the LLM. AbuseIPDB's Bayesian confidence score is similarly banded (`ABUSEIPDB_MALICIOUS_THRESHOLD`, default 75).
 - **Architectural neutral baseline.** A failed CTI lookup (timeout, connection error, API outage) is architecturally neutral: the IOC is removed from the `cti_results` payload entirely and logged to `errors`. The LLM receives no entry for that IOC, so its confidence score receives a true `0` modifier - not a `score=0` result that would be indistinguishable from a clean IP with no reports.
 
+### 6. Thread Safety and Concurrency Locks
+- **Authentication Caching**: Token retrieval via `DefaultAzureCredential` is guarded by a `threading.Lock()` module-level cache (`sentinel_auth.py`). This prevents race conditions where multiple asynchronous tasks could simultaneously request new tokens if the cache expires.
+- **Asynchronous Rate Limiting**: The sliding-window rate limiter (`throttle.py`) utilizes an asynchronous context manager (`__aenter__`) and implements sleep operations *outside* of the asyncio lock. This ensures thread-safe capacity checking while preventing deadlocks that would block other coroutines from proceeding.
+
 ### Why this matters for production SOCs
 - SOC automation must fail safely: false positives should not trigger irreversible actions without human review.
 - Cloud APIs often throttle high-volume tools, so retry/backoff patterns are essential to remain resilient and avoid cascading failures.
 - Explicit timeout and retry handling ensures the system remains responsive rather than hanging indefinitely on external dependencies.
 - These changes align the prototype with enterprise-grade incident handling expectations rather than a purely exploratory proof-of-concept.
+
+---
+
+## Data Validation & Type Safety
+
+To ensure predictable failure modes and protect against malformed data, the pipeline moves away from trusting raw API responses by enforcing strict type safety at the boundaries:
+- **Pydantic Schemas**: All external data (Sentinel incident payloads, VirusTotal responses, and LLM structured outputs) is strictly validated against explicitly defined Pydantic models.
+- **Custom Exceptions & Logging**: The implementation includes mandatory logging of raw inputs upon validation failure. Rather than raising generic errors, the system emits custom, typed exceptions to ensure the LangGraph pipeline can handle formatting anomalies gracefully and provide actionable debugging context.
 
 ---
 

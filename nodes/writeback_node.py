@@ -133,12 +133,13 @@ def close_review_node(state: TriageState) -> dict:
     incident_closed = False
     errors = []
 
-    if state.get("classification") == "BenignPositive" and state.get("close_approved"):
+    if state.get("close_approved"):
+        classification = state.get("classification", "Undetermined")
         try:
             update_incident_status(
                 incident_id=state["incident_id"],
                 new_status="Closed",
-                classification="BenignPositive",
+                classification=classification,
             )
             incident_closed = True
         except Exception as e:

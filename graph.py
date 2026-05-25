@@ -69,7 +69,7 @@ def escalation_node(state: TriageState) -> dict:
 
 def build_graph():
     """Constructs and compiles the triage graph."""
-    builder = StateGraph(TriageState)
+    builder = StateGraph(TriageState)  # type: ignore
 
     # Register all nodes
     builder.add_node("fetch", fetch_node)

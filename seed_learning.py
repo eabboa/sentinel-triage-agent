@@ -8,13 +8,16 @@ Usage:
     python seed_learning.py --csv incidents.csv [--batch-size 32] [--dry-run]
 
 CSV format (UTF-8, with header row):
-    condensed_summary, triage_summary, human_classification
+    condensed_summary, triage_summary, human_classification, human_classification_reason
 
     human_classification must be one of:
         TruePositive | FalsePositive | BenignPositive
 
+    human_classification_reason is optional but strongly recommended.
+    It should explain WHY the analyst classified the incident this way.
+
 Example row:
-    "User executed mimikatz.exe on DC01","LM/NTLM hash dump detected on domain controller. Confirmed credential dumping.",TruePositive
+    "User executed mimikatz.exe on DC01","LM/NTLM hash dump detected on domain controller. Confirmed credential dumping.",TruePositive,"LSASS memory dump confirmed via Sysmon EventID 10. Known attacker tooling."
 """
 
 import argparse
@@ -23,6 +26,7 @@ import logging
 import sys
 import uuid
 from pathlib import Path
+from typing import Any, cast
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("seed_learning")
@@ -39,6 +43,7 @@ def load_csv(path: Path) -> list[dict]:
             raise ValueError(
                 f"CSV must have columns: {required}. Found: {reader.fieldnames}"
             )
+        has_reason = "human_classification_reason" in (reader.fieldnames or [])
         for i, row in enumerate(reader, start=2):  # row 1 is header
             classification = row["human_classification"].strip()
             if classification not in VALID_CLASSIFICATIONS:
@@ -53,21 +58,24 @@ def load_csv(path: Path) -> list[dict]:
             if not row["condensed_summary"].strip() or not row["triage_summary"].strip():
                 logger.warning("Row %d skipped — empty summary field.", i)
                 continue
-            rows.append(
-                {
-                    "condensed_summary": row["condensed_summary"].strip(),
-                    "triage_summary": row["triage_summary"].strip(),
-                    "human_classification": classification,
-                }
-            )
+            entry = {
+                "condensed_summary": row["condensed_summary"].strip(),
+                "triage_summary": row["triage_summary"].strip(),
+                "human_classification": classification,
+            }
+            if has_reason:
+                entry["human_classification_reason"] = row.get("human_classification_reason", "").strip()
+            rows.append(entry)
     return rows
 
 
 def build_document(payload: dict) -> str:
+    reason = payload.get('human_classification_reason', '')
     return (
-        f"Condensed Summary: {payload['condensed_summary']}\n"
-        f"Triage Summary: {payload['triage_summary']}\n"
-        f"Human Classification: {payload['human_classification']}"
+        f"Incident Context: {payload['condensed_summary']}\n"
+        f"Incorrect LLM Reasoning: {payload['triage_summary']}\n"
+        f"Human Correction Reason: {reason or 'No reason provided.'}\n"
+        f"Correct Label: {payload['human_classification']}"
     )
 
 
@@ -117,7 +125,7 @@ def seed(csv_path: Path, batch_size: int, dry_run: bool) -> None:
         collection.add(
             documents=documents,
             embeddings=embeddings,
-            metadatas=metadatas,
+            metadatas=cast(Any, metadatas),
             ids=ids,
         )
         total += len(batch)

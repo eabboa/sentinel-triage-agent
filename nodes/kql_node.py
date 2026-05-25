@@ -120,6 +120,9 @@ async def kql_node(state: TriageState) -> dict:
     if state.get("classification") == "FalsePositive":
         return {"kql_queries": ["# No hunting queries generated - classified as FalsePositive"]}
 
+    if not os.getenv("GOOGLE_API_KEY"):
+        raise ValueError("NO API KEY: GOOGLE_API_KEY")
+
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.5-flash-lite",  # Lite model
         google_api_key=os.getenv("GOOGLE_API_KEY"),

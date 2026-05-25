@@ -2,7 +2,7 @@
 Defines the LangGraph state using TypedDict.
 """
 
-from typing import TypedDict, Optional, Annotated
+from typing import TypedDict, Annotated
 import operator
 
 
@@ -46,7 +46,8 @@ class TriageState(TypedDict):
     escalation_summary: str
 
     # ── Human review ───────────────────────────────────────────────────────────
-    human_classification: Optional[str]  # Human-provided classification after review
+    human_classification: str | None  # Human-provided classification after review
+    human_classification_reason: str | None  # Why the analyst reclassified (out-of-band context)
     
     # ── Error tracking ─────────────────────────────────────────────────────────
     errors: Annotated[list[str], operator.add]   # Non-fatal errors encountered during processing

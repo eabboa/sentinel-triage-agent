@@ -36,13 +36,18 @@ import aiohttp
 from aiolimiter import AsyncLimiter
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 from state import TriageState
+from pydantic import ValidationError
+from models.validation import AbuseIPDBResponse
+from models.exceptions import AbuseIPDBResponseValidationError
+from models.exceptions import VirusTotalResponseValidationError
+from models.validation import VirusTotalResponse
 
 logger = logging.getLogger(__name__)
 DEFAULT_HTTP_TIMEOUT = 10
 RETRY_ATTEMPTS = 3
 
-VT_API_KEY = os.getenv("VT_API_KEY")
-ABUSEIPDB_API_KEY = os.getenv("ABUSEIPDB_API_KEY")
+VT_API_KEY = os.getenv("VT_API_KEY", "")
+ABUSEIPDB_API_KEY = os.getenv("ABUSEIPDB_API_KEY", "")
 
 # Configurable thresholds - override via environment variables in production.
 # See module docstring for threshold semantics and rationale.
@@ -60,6 +65,14 @@ async def get_session() -> aiohttp.ClientSession:
         timeout = aiohttp.ClientTimeout(total=DEFAULT_HTTP_TIMEOUT)
         _client_session = aiohttp.ClientSession(timeout=timeout)
     return _client_session
+
+
+async def close_session():
+    """Close the global aiohttp session. Call during shutdown."""
+    global _client_session
+    if _client_session is not None and not _client_session.closed:
+        await _client_session.close()
+        _client_session = None
 
 
 class TransientHTTPError(Exception):
@@ -83,10 +96,21 @@ async def _check_vt_url(session: aiohttp.ClientSession, url: str) -> dict:
         if resp.status in (429, 503, 504):
             raise TransientHTTPError(f"VirusTotal URL lookup transient HTTP {resp.status} for {url}")
         if resp.status == 200:
-            data = await resp.json()
-            stats = data["data"]["attributes"]["last_analysis_stats"]
-            malicious_count = stats.get("malicious", 0)
-            total = sum(stats.values())
+            raw_data = resp.json()
+            try:
+                # validate first. extra="ignore".
+                validated = VirusTotalResponse.model_validate(raw_data)
+                # use validated data for malicious/suspicious counts
+                malicious_count: int = validated.data.attributes.last_analysis_stats.malicious
+                suspicious_count: int = validated.data.attributes.last_analysis_stats.suspicious
+            except ValidationError as exc:
+                logger.error("VirusTotal response failed for schema validation. Raw response: %s", raw_data)
+                raise VirusTotalResponseValidationError(
+                    message=f"VT URL scheam mismatch: {str(exc)}",
+                    raw_data=raw_data
+                ) from exc
+            total = 0
+
             if malicious_count >= VT_MALICIOUS_THRESHOLD:
                 verdict = "malicious"
             elif malicious_count >= 2:
@@ -97,7 +121,7 @@ async def _check_vt_url(session: aiohttp.ClientSession, url: str) -> dict:
                 "ioc": url,
                 "type": "url",
                 "malicious": malicious_count,
-                "suspicious": stats.get("suspicious", 0),
+                "suspicious": suspicious_count,
                 "total": total,
                 "verdict": verdict,
                 "threshold_used": VT_MALICIOUS_THRESHOLD,
@@ -119,10 +143,20 @@ async def _check_vt_hash(session: aiohttp.ClientSession, file_hash: str) -> dict
         if resp.status in (429, 503, 504):
             raise TransientHTTPError(f"VirusTotal hash lookup transient HTTP {resp.status} for {file_hash}")
         if resp.status == 200:
-            data = await resp.json()
-            stats = data["data"]["attributes"]["last_analysis_stats"]
-            malicious_count = stats.get("malicious", 0)
-            total = sum(stats.values())
+            raw_data = resp.json()
+            try:
+                # validate first. extra="ignore".
+                validated = VirusTotalResponse.model_validate(raw_data)
+                # use validated data for malicious/suspicious counts
+                malicious_count: int = validated.data.attributes.last_analysis_stats.malicious
+                suspicious_count: int = validated.data.attributes.last_analysis_stats.suspicious
+            except ValidationError as exc:
+                logger.error("VirusTotal response failed for schema validation. Raw response: %s", raw_data)
+                raise VirusTotalResponseValidationError(
+                    message=f"VT URL scheam mismatch: {str(exc)}",
+                    raw_data=raw_data
+                ) from exc
+            total = 0
             if malicious_count >= VT_MALICIOUS_THRESHOLD:
                 verdict = "malicious"
             elif malicious_count >= 2:
@@ -133,7 +167,7 @@ async def _check_vt_hash(session: aiohttp.ClientSession, file_hash: str) -> dict
                 "ioc": file_hash,
                 "type": "hash",
                 "malicious": malicious_count,
-                "suspicious": stats.get("suspicious", 0),
+                "suspicious": suspicious_count,
                 "total": total,
                 "verdict": verdict,
                 "threshold_used": VT_MALICIOUS_THRESHOLD,
@@ -161,25 +195,37 @@ async def _check_abuseipdb(session: aiohttp.ClientSession, ip: str) -> dict:
         if resp.status in (429, 503, 504):
             raise TransientHTTPError(f"AbuseIPDB lookup transient HTTP {resp.status} for {ip}")
         if resp.status == 200:
-            data = await resp.json()
-            d = data["data"]
-            score = d.get("abuseConfidenceScore", 0)
+            raw_data = await resp.json()
+            
+            try:
+                parsed = AbuseIPDBResponse.model_validate(raw_data)
+                d_obj = parsed.data
+                score = d_obj.abuseConfidenceScore
+                
+            except ValidationError as exc:
+                logger.error("AbuseIPDB response failed schema validation. Raw response: %s", raw_data)
+                raise AbuseIPDBResponseValidationError(
+                    message=f"AbuseIPDB schema mismatch: {str(exc)}", 
+                    raw_data=raw_data
+                ) from exc
+                
             if score >= ABUSEIPDB_MALICIOUS_THRESHOLD:
                 verdict = "malicious"
             elif score >= ABUSEIPDB_SUSPICIOUS_THRESHOLD:
                 verdict = "suspicious"
             else:
                 verdict = "clean"
+                
             return {
                 "ioc": ip,
                 "type": "ip",
                 "abuse_score": score,
                 "verdict": verdict,
                 "threshold_used": ABUSEIPDB_MALICIOUS_THRESHOLD,
-                "total_reports": d.get("totalReports", 0),
-                "country": d.get("countryCode", "Unknown"),
-                "isp": d.get("isp", "Unknown"),
-                "usage_type": d.get("usageType", "Unknown"),
+                "total_reports": d_obj.totalReports,
+                "country": d_obj.countryCode,
+                "isp": d_obj.isp,
+                "usage_type": d_obj.usageType,
             }
         return {"ioc": ip, "type": "ip", "error": f"HTTP {resp.status}"}
 
@@ -256,40 +302,40 @@ async def _run_enrichment(entities: dict) -> tuple[dict, list[str]]:
         hash_results = results[ip_len + url_len:]
 
         for ip, result in zip(entities.get("ips", []), ip_results):
-            if isinstance(result, Exception):
+            if isinstance(result, BaseException):
                 msg = f"enrich_node: AbuseIPDB lookup failed for {ip}: {result}"
                 logger.exception(msg)
                 enrichment_errors.append(msg)
-            elif _is_error_result(result):
+            elif isinstance(result, dict) and _is_error_result(result):
                 # HTTP error from the API (e.g. 403, 422) - strip from CTI payload
                 msg = f"enrich_node: AbuseIPDB returned error for {ip}: {result['error']}"
                 logger.warning(msg)
                 enrichment_errors.append(msg)
-            else:
+            elif isinstance(result, dict):
                 ip_reports.append(result)
 
         for result in url_results:
-            if isinstance(result, Exception):
+            if isinstance(result, BaseException):
                 msg = f"enrich_node: VirusTotal URL lookup failed: {result}"
                 logger.exception(msg)
                 enrichment_errors.append(msg)
-            elif _is_error_result(result):
+            elif isinstance(result, dict) and _is_error_result(result):
                 msg = f"enrich_node: VirusTotal URL returned error for {result.get('ioc', '?')}: {result['error']}"
                 logger.warning(msg)
                 enrichment_errors.append(msg)
-            else:
+            elif isinstance(result, dict):
                 url_reports.append(result)
 
         for result in hash_results:
-            if isinstance(result, Exception):
+            if isinstance(result, BaseException):
                 msg = f"enrich_node: VirusTotal hash lookup failed: {result}"
                 logger.exception(msg)
                 enrichment_errors.append(msg)
-            elif _is_error_result(result):
+            elif isinstance(result, dict) and _is_error_result(result):
                 msg = f"enrich_node: VirusTotal hash returned error for {result.get('ioc', '?')}: {result['error']}"
                 logger.warning(msg)
                 enrichment_errors.append(msg)
-            else:
+            elif isinstance(result, dict):
                 hash_reports.append(result)
 
     return (
@@ -308,6 +354,11 @@ async def enrich_node(state: TriageState) -> dict:
 
     if not any([entities.get("ips"), entities.get("urls"), entities.get("hashes"), entities.get("internal_ips")]):
         return {"cti_results": {"ip_reports": [], "url_reports": [], "hash_reports": [], "internal_ip_reports": []}}
+
+    if entities.get("ips") and not ABUSEIPDB_API_KEY:
+        raise ValueError("NO API KEY: ABUSEIPDB_API_KEY")
+    if (entities.get("urls") or entities.get("hashes")) and not VT_API_KEY:
+        raise ValueError("NO API KEY: VT_API_KEY")
 
     cti_results, enrichment_errors = await _run_enrichment(entities)
 

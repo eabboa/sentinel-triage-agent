@@ -43,11 +43,11 @@ learning_queue: asyncio.Queue[dict[str, str]] = asyncio.Queue(maxsize=1000)
 class ChromaSingleton:
     """Thread-safe singleton for ChromaDB client, collection, and embedding model."""
 
-    _instance = None
-    _lock = threading.Lock()
-    _init_error = None
-    _circuit_open_until = 0
-    _failure_count = 0
+    _instance: "ChromaSingleton | None" = None
+    _lock: threading.Lock = threading.Lock()
+    _init_error: Exception | None = None
+    _circuit_open_until: float = 0.0
+    _failure_count: int = 0
 
     def __init__(self):
         host = os.environ.get('CHROMA_HOST', 'localhost')
@@ -58,9 +58,6 @@ class ChromaSingleton:
             self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
         except Exception as exc:
             logger.exception("Failed to initialize ChromaDB singleton for learning node")
-            self.client = None
-            self.collection = None
-            self.embedding_model = None
             self.__class__._init_error = exc
             raise
 
@@ -87,10 +84,12 @@ class ChromaSingleton:
 
 
 def _build_document(payload: dict[str, str]) -> str:
+    reason = payload.get('human_classification_reason', '')
     return (
-        f"Condensed Summary: {payload['condensed_summary']}\n"
-        f"Triage Summary: {payload['triage_summary']}\n"
-        f"Human Classification: {payload['human_classification']}"
+        f"Incident Context: {payload['condensed_summary']}\n"
+        f"Incorrect LLM Reasoning: {payload['triage_summary']}\n"
+        f"Human Correction Reason: {reason or 'No reason provided.'}\n"
+        f"Correct Label: {payload['human_classification']}"
     )
 
 
@@ -100,12 +99,18 @@ def _encode_batch(documents: list[str]) -> list[list[float]]:
     return worker_embedding_model.encode(documents).tolist()
 
 
-async def embed_and_store(condensed_summary: str, triage_summary: str, human_classification: str):
+async def embed_and_store(
+    condensed_summary: str,
+    triage_summary: str,
+    human_classification: str,
+    human_classification_reason: str = "",
+):
     """Queue learning payload for batched embedding and storage."""
     payload = {
         "condensed_summary": condensed_summary,
         "triage_summary": triage_summary,
         "human_classification": human_classification,
+        "human_classification_reason": human_classification_reason,
     }
     try:
         learning_queue.put_nowait(payload)
@@ -262,7 +267,7 @@ async def flush_and_shutdown(batch_size: int = 32):
         )
 
     try:
-        await loop.run_in_executor(None, learning_queue.join)
+        await learning_queue.join()
     except Exception:
         logger.exception("Error waiting for learning_queue task completion during shutdown")
 
@@ -281,18 +286,17 @@ async def learning_node(state: TriageState) -> dict:
     LangGraph node: Evaluates human vs. LLM classification and queues mismatches.
     """
     llm_classification = state.get("classification", "")
-    # Assuming 'human_classification' is injected into the state during the HITL pause.
-    # As of version 0.5.0, there are no human classifications. Currently, we only ask for Y/N.
-    # TODO: Add a more detailed classification for training the LLM and remove this simple boolean workaround.
-    # If it is not present, default to the LLM classification to avoid false positives in the RAG loop.
+    # 'human_classification' is injected into state during the HITL pause.
+    # Defaults to llm_classification when absent to avoid false positives in the RAG loop.
     human_classification = state.get("human_classification", llm_classification)
 
     if human_classification and human_classification != llm_classification:
         condensed = state.get("condensed_summary", "")
         triage = state.get("triage_summary", "")
+        reason = state.get("human_classification_reason") or ""
         
         # Non-blocking queue insertion
-        await embed_and_store(condensed, triage, human_classification)
+        await embed_and_store(condensed, triage, human_classification, reason)
 
     # Return empty dict or update state flags as needed by your TriageState schema
     return {}

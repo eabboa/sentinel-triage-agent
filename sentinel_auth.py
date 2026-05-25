@@ -12,7 +12,9 @@ get_access_token(scope)  ←── _cached_tokens dict (check the cache first, a
         └── get_auth_headers()      → Azure Management API (default)
 """
 
+import threading
 import time
+from typing import Any
 from azure.identity import DefaultAzureCredential
 
 # The scope for Azure Resource Manager API (management.azure.com)
@@ -22,7 +24,8 @@ MANAGEMENT_SCOPE = "https://management.azure.com/.default"
 credential = DefaultAzureCredential()
 
 # Module-level cache for tokens by scope
-_cached_tokens = {}
+_cached_tokens: dict[str, dict[str, Any]] = {}
+_token_lock = threading.Lock()
 
 
 def get_access_token(scope: str = MANAGEMENT_SCOPE) -> str:
@@ -32,19 +35,18 @@ def get_access_token(scope: str = MANAGEMENT_SCOPE) -> str:
     Tokens are cached locally to avoid unnecessary function call overhead and potential round-trip latency.
     The token is refreshed only if missing or within 5 minutes of expiration.
     """ 
-    global _cached_tokens
+    with _token_lock:
+        cached = _cached_tokens.get(scope) # Check cache for token 
+        if (cached is None or
+            cached["expires_on"] is None or
+            time.time() + 300 >= cached["expires_on"]): # Refresh if missing or within 5 minutes of expiration
+            token = credential.get_token(scope)
+            _cached_tokens[scope] = {
+                "token": token.token, # JWT access token string
+                "expires_on": token.expires_on,
+            }
 
-    cached = _cached_tokens.get(scope) # Check cache for token 
-    if (cached is None or
-        cached["expires_on"] is None or
-        time.time() + 300 >= cached["expires_on"]): # Refresh if missing or within 5 minutes of expiration
-        token = credential.get_token(scope)
-        _cached_tokens[scope] = {
-            "token": token.token, # JWT access token string
-            "expires_on": token.expires_on,
-        }
-
-    return _cached_tokens[scope]["token"]
+        return _cached_tokens[scope]["token"]
 
 
 """

@@ -1,10 +1,15 @@
 """
 Fetches a Sentinel incident and its associated alerts.
 """
-
+import logging
+from pydanticy import ValidationError
+from models.validation import SentinelAlert
+from models.exceptions import SentinelAlertValidationError
+from typing import Any
 from sentinel_api import get_incident, list_incident_alerts
 from state import TriageState
 
+logger = logging.getLogger(__name__)
 
 def fetch_node(state: TriageState) -> dict:
     """
@@ -12,11 +17,11 @@ def fetch_node(state: TriageState) -> dict:
     the graph is invoked), then fetches the full incident and its alerts.
     """
     incident_id = state["incident_id"]
-    errors = []
+    errors: list[str] = []
 
     # Single canonical result with safe defaults - avoids duplicating
     # the same dict structure in both the happy path and the except block.
-    result = {
+    result: dict[str, Any] = {
         "incident_title": "Unknown",
         "incident_severity": "Unknown",
         "incident_description": "",
@@ -43,9 +48,24 @@ def fetch_node(state: TriageState) -> dict:
         return result
 
     try:
-        result["raw_alerts"] = list_incident_alerts(incident_id)
-    except Exception as e:
-        # Alert fetch failure is non-fatal so proceed with incident-level data.
-        errors.append(f"Alert fetch failed: {str(e)}")
+        # 1. Fetch the raw list of dictionaries from the API
+        raw_alerts_list = list_incident_alerts(incident_id)      
+        valid_alerts = []
+        
+        for raw_alert in raw_alerts_list:
+            try:
+                valid_alert = SentinelAlert.model_validate(raw_alert)
+                valid_alerts.append(valid_alert.model_dump())
+                
+            except ValidationError as exc:
+                logger.error("Sentinel alert validation failed. Raw input: %s", raw_alert)
+                raise SentinelAlertValidationError(
+                    message=f"Alert schema mismatch: {str(exc)}",
+                    raw_data=raw_alert
+                ) from exc
+        result["raw_alerts"] = valid_alerts
 
-    return result
+    except SentinelAlertValidationError as e:
+        errors.append(f"Alert validation failed: {str(e)}")
+    except Exception as e:
+        errors.append(f"Alert fetch failed: {str(e)}")

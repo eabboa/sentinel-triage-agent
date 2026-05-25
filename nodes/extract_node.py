@@ -40,6 +40,8 @@ def _is_internal_ip(ip: str) -> bool:
 
 async def extract_node(state: TriageState) -> dict:
     """Extracts IOCs from the condensed summary using regex + LLM fallback."""
+    if not os.getenv("GOOGLE_API_KEY"):
+        raise ValueError("NO API KEY: GOOGLE_API_KEY")
     text = state["condensed_summary"]
 
     # ── Phase 1: Regex extraction ──────────────────────────────────────────────

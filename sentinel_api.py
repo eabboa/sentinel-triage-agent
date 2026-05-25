@@ -3,7 +3,9 @@
 import asyncio
 import logging
 import os
+import re
 import uuid
+from typing import Any
 import requests
 from requests.exceptions import HTTPError, RequestException
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
@@ -63,19 +65,47 @@ def _request(method: str, url: str, *, headers=None, params=None, json=None) -> 
         logger.error("HTTP request to %s failed after retries: %s", url, exc)
         raise
 
-SUBSCRIPTION_ID = os.getenv("SUBSCRIPTION_ID")
-RESOURCE_GROUP = os.getenv("RESOURCE_GROUP")
-WORKSPACE_NAME = os.getenv("WORKSPACE_NAME")
 API_VERSION = "2023-02-01" ## stable version. do not change this.
 
-# Base path used in every URL. Stored once and centralized. Change variables only from here.
-_BASE = (
-    f"https://management.azure.com"
-    f"/subscriptions/{SUBSCRIPTION_ID}"
-    f"/resourceGroups/{RESOURCE_GROUP}"
-    f"/providers/Microsoft.OperationalInsights/workspaces/{WORKSPACE_NAME}"
-    f"/providers/Microsoft.SecurityInsights"
-)
+# Lazy-initialized module state — deferred from import time so that test
+# fixtures can inject env vars before the first real API call.
+_BASE: str | None = None
+
+
+def _get_base() -> str:
+    """Return the Sentinel API base URL, validating config on first call."""
+    global _BASE
+    if _BASE is not None:
+        return _BASE
+
+    subscription_id = os.getenv("SUBSCRIPTION_ID")
+    resource_group = os.getenv("RESOURCE_GROUP")
+    workspace_name = os.getenv("WORKSPACE_NAME")
+
+    _required = {
+        "SUBSCRIPTION_ID": subscription_id,
+        "RESOURCE_GROUP": resource_group,
+        "WORKSPACE_NAME": workspace_name,
+    }
+    _missing = [k for k, v in _required.items() if not v]
+    if _missing:
+        raise EnvironmentError(
+            f"Missing required environment variables: {', '.join(_missing)}. "
+            "Set them in .env or the deployment environment."
+        )
+
+    _BASE = (
+        f"https://management.azure.com"
+        f"/subscriptions/{subscription_id}"
+        f"/resourceGroups/{resource_group}"
+        f"/providers/Microsoft.OperationalInsights/workspaces/{workspace_name}"
+        f"/providers/Microsoft.SecurityInsights"
+    )
+    return _BASE
+
+
+
+VALID_INCIDENT_STATUSES = {"New", "Active", "Closed"}
 
 
 def list_incidents(status_filter: str = "New", max_results: int = 5) -> list[dict]:
@@ -86,7 +116,11 @@ def list_incidents(status_filter: str = "New", max_results: int = 5) -> list[dic
     Free tier rate limit protection. The Gemini free tier allows 15 RPM.
     5 incidents x 3 LLM calls each = 15 calls. This is inside the safe limits.
     """
-    url = f"{_BASE}/incidents"
+    if status_filter not in VALID_INCIDENT_STATUSES:
+        raise ValueError(
+            f"Invalid status_filter {status_filter!r}. Must be one of {VALID_INCIDENT_STATUSES}."
+        )
+    url = f"{_get_base()}/incidents"
     params = {
         "api-version": API_VERSION,
         "$filter": f"properties/status eq '{status_filter}'",
@@ -103,7 +137,7 @@ def get_incident(incident_id: str) -> dict:
     """
     Fetches a single incident by its ID. full incident object, including all properties and entity mappings.
     """
-    url = f"{_BASE}/incidents/{incident_id}"
+    url = f"{_get_base()}/incidents/{incident_id}"
     params = {"api-version": API_VERSION}
     
     response = _request("GET", url, headers=get_auth_headers(), params=params)
@@ -118,7 +152,7 @@ def list_incident_alerts(incident_id: str) -> list[dict]:
     """
     Fetches all alerts associated with an incident.
     """
-    url = f"{_BASE}/incidents/{incident_id}/alerts"
+    url = f"{_get_base()}/incidents/{incident_id}/alerts"
     params = {"api-version": API_VERSION}
     
     response = _request("POST", url, headers=get_auth_headers(), params=params)
@@ -135,7 +169,7 @@ def post_incident_comment(incident_id: str, comment_text: str) -> dict:
     Generating it locally ensures idempotency - if your agent crashes and retries, use the same comment_id and Azure will not create a duplicate.
     """
     comment_id = str(uuid.uuid4())
-    url = f"{_BASE}/incidents/{incident_id}/comments/{comment_id}"
+    url = f"{_get_base()}/incidents/{incident_id}/comments/{comment_id}"
     params = {"api-version": API_VERSION}
     body = {
         "properties": {
@@ -147,13 +181,21 @@ def post_incident_comment(incident_id: str, comment_text: str) -> dict:
     return response.json()
 
 
-def update_incident_status(incident_id: str, new_status: str, classification: str = None) -> dict:
+@retry(
+    retry=retry_if_exception_type(ConcurrencyConflictError),
+    wait=wait_exponential(multiplier=1, min=1, max=10),
+    stop=stop_after_attempt(3),
+    reraise=True,
+)
+def update_incident_status(incident_id: str, new_status: str, classification: str | None = None) -> dict:
     """
     Updates a Sentinel incident's status.
     
     Valid statuses: "New", "Active", "Closed"
     Valid classifications (required when closing):
         "TruePositive", "FalsePositive", "BenignPositive", "Undetermined"
+    
+    Retries automatically on ETag 412 conflicts by re-fetching the incident.
     """
     # Fetch current incident to preserve all existing fields and capture its current ETag.
     existing = get_incident(incident_id)
@@ -181,7 +223,7 @@ def update_incident_status(incident_id: str, new_status: str, classification: st
             "Closed by Sentinel Triage Agent after analyst review and approval."
         )
     
-    url = f"{_BASE}/incidents/{incident_id}"
+    url = f"{_get_base()}/incidents/{incident_id}"
     params = {"api-version": API_VERSION}
     
     try:
@@ -195,19 +237,54 @@ def update_incident_status(incident_id: str, new_status: str, classification: st
         raise
 
 
+# Pattern for valid MDE machine IDs (40-character hex strings)
+_MDE_MACHINE_ID_PATTERN = re.compile(r"^[0-9a-fA-F]{40}$")
+
+
+async def resolve_mde_machine_id(hostname_or_ip: str) -> str | None:
+    """
+    Resolves a hostname or IP to an MDE machine ID via the MDE API.
+    Returns None if the device is not found in MDE.
+    """
+    url = "https://api.securitycenter.microsoft.com/api/machines"
+    headers = {
+        "Authorization": f"Bearer {get_mde_token()}",
+        "Content-Type": "application/json",
+    }
+    # OData filter — single-quote escaping prevents injection
+    safe_value = hostname_or_ip.replace("'", "''")
+    params = {
+        "$filter": f"computerDnsName eq '{safe_value}' or lastIpAddress eq '{safe_value}'",
+        "$top": "1",
+    }
+    response = _request("GET", url, headers=headers, params=params)
+    data = response.json()
+    machines = data.get("value", [])
+    if machines:
+        return machines[0].get("id")
+    return None
+
+
 async def isolate_mde_device(device_id: str) -> dict:
     """
     Isolates a device using the Microsoft Defender for Endpoint machine isolation API.
     
     Args:
-        device_id: The Defender for Endpoint machine ID.
+        device_id: The Defender for Endpoint machine ID (40-character hex string).
     
     Returns:
         Response JSON from the Defender for Endpoint isolate endpoint.
         
     Raises:
+        ValueError: If device_id is not a valid MDE machine ID format.
         RequestException: If the isolation request fails (caller should handle)
     """
+    if not _MDE_MACHINE_ID_PATTERN.match(device_id):
+        raise ValueError(
+            f"Invalid MDE machine ID format: {device_id!r}. "
+            "Expected 40-character hex string. Use resolve_mde_machine_id() first."
+        )
+
     url = f"https://api.securitycenter.microsoft.com/api/machines/{device_id}/isolate"
     
     headers = {
@@ -249,7 +326,7 @@ async def revoke_entra_sessions(user_id: str) -> dict:
         "Content-Type": "application/json",
     }
     
-    body = {}  # Graph API revokeSignInSessions expects empty body
+    body: dict[str, Any] = {}  # Graph API revokeSignInSessions expects empty body
     
     response = _request("POST", url, headers=headers, json=body)
     

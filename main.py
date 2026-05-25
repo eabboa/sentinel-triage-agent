@@ -12,14 +12,87 @@ import asyncio
 from dotenv import load_dotenv
 import uuid
 import logging
+from typing import Any
 from sentinel_api import list_incidents
 from graph import build_graph
 from nodes.learning_node import flush_and_shutdown
+from nodes.enrich_node import close_session as close_enrich_session
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 load_dotenv()
+
+
+async def _collect_human_decisions(
+    state_vals: dict,
+    incident_title: str,
+    incident_id: str,
+    console_lock: asyncio.Lock,
+) -> dict:
+    """
+    Collect analyst decisions via console prompts.
+
+    Returns a dict of state updates to apply.  Performs NO graph mutations;
+    if this function raises, the checkpoint remains clean.
+    """
+    updates: dict[str, Any] = {}
+
+    async with console_lock:
+        print(f"\n--- Review Required for {incident_title} (ID: {incident_id}) ---")
+        print(f"  ✓ Classification: {state_vals.get('classification')}")
+        print(f"  ✓ Triage Summary: {state_vals.get('triage_summary')}")
+
+        entities = state_vals.get("entities", {})
+        hostnames = entities.get("hostnames", [])
+        if hostnames:
+            print(f"  [!] Containment candidate hostnames: {hostnames}")
+            cont_approval = await asyncio.to_thread(
+                input, "  Approve containment of hostnames? [y/N]: "
+            )
+            if cont_approval.strip().lower() == 'y':
+                updates["containment_approved"] = True
+
+        approval = await asyncio.to_thread(
+            input, "  Approve closure? [y/N]: "
+        )
+        if approval.strip().lower() == 'y':
+            updates["close_approved"] = True
+        else:
+            print("  Skipping closure.")
+
+        # ── Human reclassification for RAG learning ───────────────────
+        llm_classification = state_vals.get('classification', '')
+        VALID_CLASSIFICATIONS = {"TruePositive", "FalsePositive", "BenignPositive"}
+        while True:
+            reclassify = await asyncio.to_thread(
+                input,
+                f"  Reclassify? LLM said '{llm_classification}'. "
+                f"Enter correct label [TruePositive/FalsePositive/BenignPositive] "
+                f"or press Enter to agree: "
+            )
+            reclassify = reclassify.strip()
+            if not reclassify:
+                break  # Analyst agrees with LLM
+            if reclassify not in VALID_CLASSIFICATIONS:
+                print(f"  ⚠ Invalid label '{reclassify}' — must be one of {VALID_CLASSIFICATIONS}. Try again.")
+                continue
+            if reclassify == llm_classification:
+                break  # Explicitly typed the same label — treat as agreement
+            updates["human_classification"] = reclassify
+            reclassify_reason = await asyncio.to_thread(
+                input, "  Provide reason for reclassification (the 'WHY'): "
+            )
+            reclassify_reason = reclassify_reason.strip()
+            if reclassify_reason:
+                updates["human_classification_reason"] = reclassify_reason
+            else:
+                updates["human_classification_reason"] = "No reason provided by analyst."
+            print(f"  ✓ Reclassification '{reclassify}' recorded for learning.")
+            break
+        # ─────────────────────────────────────────────────────────────
+
+    return updates
 
 
 async def process_incident(incident, graph, semaphore, console_lock):
@@ -51,71 +124,98 @@ async def process_incident(incident, graph, semaphore, console_lock):
         "escalation_triggered": False,
         "escalation_summary": "",
         "human_classification": None,
+        "human_classification_reason": None,
         "comment_posted": False,
         "incident_closed": False,
         "close_approved": False,
         "errors": [],
     }
 
-    thread_id = str(uuid.uuid4())
+    # Deterministic thread_id enables HITL resume after crash with persistent checkpointer
+    thread_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"sentinel-triage:{incident_id}"))
     config = {"configurable": {"thread_id": thread_id}}
 
     async with semaphore: # Limit concurrent processing to respect API rate limits
+
+        # ── Phase 1: Graph engine pre-HITL execution ──────────────────────
         try:
             state = await graph.ainvoke(initial_state, config=config)
-            
-            snapshot = graph.get_state(config)
-            if snapshot.next:
-                state_vals = snapshot.values
-                
-                async with console_lock:
-                    print(f"\n--- Review Required for {incident_title} (ID: {incident_id}) ---")
-                    print(f"  ✓ Classification: {state_vals.get('classification')}")
-                    print(f"  ✓ Triage Summary: {state_vals.get('triage_summary')}")
-                    
-                    entities = state_vals.get("entities", {})
-                    hostnames = entities.get("hostnames", [])
-                    if hostnames:
-                        print(f"  [!] Containment candidate hostnames: {hostnames}")
-                        cont_approval = await asyncio.to_thread(input, "  Approve containment of hostnames? [y/N]: ")
-                        if cont_approval.strip().lower() == 'y':
-                            graph.update_state(config, {"containment_approved": True})
-                    
-                    approval = await asyncio.to_thread(input, "  Approve closure? [y/N]: ")
-                    if approval.strip().lower() == 'y':
-                        graph.update_state(config, {"close_approved": True})
-                    else:
-                        print("  Skipping closure.")
-
-                    # ── Human reclassification for RAG learning ───────────────────
-                    llm_classification = state_vals.get('classification', '')
-                    VALID_CLASSIFICATIONS = {"TruePositive", "FalsePositive", "BenignPositive"}
-                    reclassify = await asyncio.to_thread(
-                        input,
-                        f"  Reclassify? LLM said '{llm_classification}'. "
-                        f"Enter correct label [TruePositive/FalsePositive/BenignPositive] or press Enter to agree: "
-                    )
-                    reclassify = reclassify.strip()
-                    if reclassify in VALID_CLASSIFICATIONS and reclassify != llm_classification:
-                        graph.update_state(config, {"human_classification": reclassify})
-                        print(f"  ✓ Reclassification '{reclassify}' recorded for learning.")
-                    elif reclassify and reclassify not in VALID_CLASSIFICATIONS:
-                        print(f"  ⚠ Invalid label '{reclassify}' — must be one of {VALID_CLASSIFICATIONS}. Skipping.")
-                    # ─────────────────────────────────────────────────────────────
-
-                state = await graph.ainvoke(None, config=config)
-            
-            final_state = state
-            
-            logger.info(f"  ✓ Classification: {final_state.get('classification')}")
-            logger.info(f"  ✓ Comment posted: {final_state.get('comment_posted')}")
-            logger.info(f"  ✓ Incident closed: {final_state.get('incident_closed')}")
-            
-            if final_state.get("errors"):
-                logger.warning(f"  ⚠ Non-fatal errors: {final_state['errors']}")
-
+            snapshot = await asyncio.get_running_loop().run_in_executor(
+                None, graph.get_state, config
+            )
         except Exception as e:
-            logger.error(f"  ✗ Pipeline failed for {incident_id}: {e}")
+            logger.critical(
+                "Graph engine failed for %s during pre-HITL execution: %s",
+                incident_id, e, exc_info=True,
+            )
+            return  # Nothing to resume — no state was committed
+
+        if not snapshot.next:
+            # Graph completed without hitting the HITL interrupt — no review needed
+            final_state = state
+        else:
+            # ── Phase 2: Human-in-the-loop console interaction ────────────
+            try:
+                human_decisions = await _collect_human_decisions(
+                    snapshot.values, incident_title, incident_id, console_lock,
+                )
+            except (EOFError, KeyboardInterrupt):
+                logger.warning(
+                    "Analyst session lost for %s (EOF/interrupt). "
+                    "Incident is paused at HITL checkpoint and can be resumed.",
+                    incident_id,
+                )
+                return  # Checkpoint is clean — no state mutations occurred
+            except OSError as e:
+                logger.error(
+                    "Console I/O failure for %s: %s. "
+                    "Incident is paused at HITL checkpoint.",
+                    incident_id, e,
+                )
+                return
+
+            # ── Phase 3a: Apply human decisions to graph state ────────────
+            try:
+                if human_decisions:
+                    graph.update_state(config, human_decisions)
+            except Exception as e:
+                logger.critical(
+                    "State mutation failed for %s after analyst approved actions %s: %s. "
+                    "MANUAL INTERVENTION REQUIRED — checkpoint may be inconsistent.",
+                    incident_id, list(human_decisions.keys()), e,
+                    exc_info=True,
+                )
+                return  # Do NOT resume the graph with potentially partial state
+
+            # ── Phase 3b: Resume the graph post-HITL ─────────────────────
+            containment_was_approved = human_decisions.get("containment_approved", False)
+            try:
+                state = await graph.ainvoke(None, config=config)
+            except Exception as e:
+                if containment_was_approved:
+                    logger.critical(
+                        "Graph resumption failed for %s: %s. "
+                        "containment_approved=True — "
+                        "CONTAINMENT MAY NOT HAVE EXECUTED — verify manually.",
+                        incident_id, e, exc_info=True,
+                    )
+                else:
+                    logger.error(
+                        "Graph resumption failed for %s: %s. "
+                        "Incident remains at post-HITL checkpoint.",
+                        incident_id, e, exc_info=True,
+                    )
+                return
+
+            final_state = state
+
+        # ── Phase 4: Final state logging (unguarded — crash = bug) ────────
+        logger.info(f"  ✓ Classification: {final_state.get('classification')}")
+        logger.info(f"  ✓ Comment posted: {final_state.get('comment_posted')}")
+        logger.info(f"  ✓ Incident closed: {final_state.get('incident_closed')}")
+
+        if final_state.get("errors"):
+            logger.warning(f"  ⚠ Non-fatal errors: {final_state['errors']}")
 
 
 async def main():
@@ -135,11 +235,20 @@ async def main():
 
     try:
         tasks = [process_incident(incident, graph, semaphore, console_lock) for incident in incidents]
-        await asyncio.gather(*tasks, return_exceptions=True)  # return_exceptions=True allows other tasks to continue running even if one fails
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for incident, result in zip(incidents, results):
+            if isinstance(result, Exception):
+                logger.error(
+                    "Pipeline failed for %s: %s",
+                    incident.get("name", "unknown"),
+                    result,
+                    exc_info=result,
+                )
         logger.info("\nBatch complete.")
     finally:
         logger.info("Flushing learning queue before exit...")
         await flush_and_shutdown()
+        await close_enrich_session()
 
 
 # flush_and_shutdown() is called automatically in main() via a try/finally block.

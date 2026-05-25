@@ -151,6 +151,19 @@ for tactic_name, techniques in MITRE_CATALOG.items():
             INVERSE_LOOKUP[tech_id] = (name, tactic_name)
 
 
+def _resolve_id_by_name(raw_name: str) -> tuple[str, str] | None:
+    """Search the catalog for a technique matching *raw_name* (case-insensitive).
+
+    Returns (technique_id, official_name) on match, or None.
+    """
+    target = raw_name.lower()
+    for _tactic, techs in MITRE_CATALOG.items():
+        for tid, name in techs.items():
+            if name.lower() == target:
+                return tid, name
+    return None
+
+
 def normalize_tactic(raw_tactic: str) -> str:
     """
     Standardizes a Sentinel or raw tactic name to official MITRE ATT&CK spelling.
@@ -200,20 +213,11 @@ def validate_and_enrich_techniques(suggested_techniques: list[dict], incident_ta
         
         # Validate ID pattern
         if not TECHNIQUE_ID_PATTERN.match(raw_id):
-            # Attempt to resolve by name match if ID is malformed/missing
-            found_by_name = False
-            for cat_tactic, cat_techs in MITRE_CATALOG.items():
-                for cat_id, cat_name in cat_techs.items():
-                    if cat_name.lower() == raw_name.lower():
-                        raw_id = cat_id
-                        raw_name = cat_name
-                        found_by_name = True
-                        logger.info("Resolved technique ID %s for name '%s'", raw_id, raw_name)
-                        break
-                if found_by_name:
-                    break
-            
-            if not found_by_name:
+            resolved = _resolve_id_by_name(raw_name)
+            if resolved:
+                raw_id, raw_name = resolved
+                logger.info("Resolved technique ID %s for name '%s'", raw_id, raw_name)
+            else:
                 msg = f"MITRE Warning: Discarded technique '{raw_name}' with invalid ID format '{raw_id}'"
                 logger.warning(msg)
                 warnings.append(msg)

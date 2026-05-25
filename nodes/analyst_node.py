@@ -7,8 +7,10 @@ import asyncio
 import json
 import os
 from typing import Literal, Optional
-import logger
+import logging
 import chromadb
+
+logger = logging.getLogger(__name__)
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from pydantic import BaseModel, ValidationError

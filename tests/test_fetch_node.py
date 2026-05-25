@@ -34,7 +34,17 @@ def test_fetch_node_success(empty_triage_state):
                 "additionalData": {"tactics": ["InitialAccess"]}
             }
         }
-        mock_list_alerts.return_value = [{"name": "alert1"}]
+        mock_list_alerts.return_value = [{
+            "id": "alert-123",
+            "name": "alert1",
+            "properties": {
+                "alertDisplayName": "Test Alert",
+                "severity": "High",
+                "startTimeUtc": "2023-10-25T14:30:00Z",
+                "endTimeUtc": "2023-10-25T14:35:00Z",
+                "entities": []
+            }
+        }]
         
         state = empty_triage_state.copy()
         result = fetch_node(state)

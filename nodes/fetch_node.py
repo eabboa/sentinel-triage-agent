@@ -2,7 +2,7 @@
 Fetches a Sentinel incident and its associated alerts.
 """
 import logging
-from pydanticy import ValidationError
+from pydantic import ValidationError
 from models.validation import SentinelAlert
 from models.exceptions import SentinelAlertValidationError
 from typing import Any
@@ -69,3 +69,5 @@ def fetch_node(state: TriageState) -> dict:
         errors.append(f"Alert validation failed: {str(e)}")
     except Exception as e:
         errors.append(f"Alert fetch failed: {str(e)}")
+    
+    return result

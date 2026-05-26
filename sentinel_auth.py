@@ -21,7 +21,19 @@ from azure.identity import DefaultAzureCredential
 # ".default" means "all permissions for this app has been granted".
 MANAGEMENT_SCOPE = "https://management.azure.com/.default"
 
-credential = DefaultAzureCredential()
+_credential: DefaultAzureCredential | None = None
+_credential_lock = threading.Lock()
+
+
+def _get_credential() -> DefaultAzureCredential:
+    """Return the shared DefaultAzureCredential, creating it on first use."""
+    global _credential
+    if _credential is None:
+        with _credential_lock:
+            if _credential is None:
+                _credential = DefaultAzureCredential()
+    return _credential
+
 
 # Module-level cache for tokens by scope
 _cached_tokens: dict[str, dict[str, Any]] = {}
@@ -40,7 +52,7 @@ def get_access_token(scope: str = MANAGEMENT_SCOPE) -> str:
         if (cached is None or
             cached["expires_on"] is None or
             time.time() + 300 >= cached["expires_on"]): # Refresh if missing or within 5 minutes of expiration
-            token = credential.get_token(scope)
+            token = _get_credential().get_token(scope)
             _cached_tokens[scope] = {
                 "token": token.token, # JWT access token string
                 "expires_on": token.expires_on,

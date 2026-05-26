@@ -14,7 +14,7 @@ Concurrency Invariants:
 
 import pytest
 import time
-from sentinel_auth import get_access_token, get_auth_headers, _cached_tokens
+from sentinel_auth import get_access_token, get_auth_headers, _cached_tokens, _get_credential
 
 def test_get_auth_headers_format(monkeypatch):
     """Asserts auth headers are correctly formatted."""
@@ -40,12 +40,16 @@ def test_get_access_token_caching(monkeypatch):
         call_count += 1
         return MockToken("fresh_token", time.time() + 3600)
     
-    monkeypatch.setattr("sentinel_auth.credential.get_token", mock_get_token)
+    from unittest.mock import MagicMock
+
+    mock_credential = MagicMock()
+    mock_credential.get_token = mock_get_token
+    monkeypatch.setattr("sentinel_auth._get_credential", lambda: mock_credential)
     
     # Clear cache before test
     _cached_tokens.clear()
     
-    # First call should hit the 'credential.get_token'
+    # First call should hit the credential's get_token
     token1 = get_access_token("mock_scope")
     assert token1 == "fresh_token"
     assert call_count == 1

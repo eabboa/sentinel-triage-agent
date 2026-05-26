@@ -98,7 +98,7 @@ async def test_analyst_node_validation_failure_fallback(empty_triage_state):
 
 
 @pytest.mark.asyncio
-async def test_analyst_node_chromadb_unavailable_degrades_gracefully():
+async def test_analyst_node_chromadb_unavailable_degrades_gracefully(empty_triage_state):
     """Asserts ChromaDB connection failure degrades to Undetermined instead of crashing.
 
     Previously (DEFECT-001), retrieve_similar_mismatches() was called outside the
@@ -106,13 +106,8 @@ async def test_analyst_node_chromadb_unavailable_degrades_gracefully():
     After the fix, the call is inside the try block and the node returns a safe
     Undetermined fallback.
     """
-    state = {
-        "incident_id": "test_id",
-        "condensed_summary": "Some incident",
-        "cti_results": {},
-        "entities": {},
-        "incident_tactics": [],
-    }
+    state = empty_triage_state.copy()
+    state["condensed_summary"] = "Some incident"
 
     mock_rag = AsyncMock(side_effect=ValueError("Could not connect to Chroma server"))
 

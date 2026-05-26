@@ -220,7 +220,9 @@ def test_update_incident_status_classification_reasons():
         result = update_incident_status("123", "Closed", classification)
         # Verify the PUT body contained the correct classificationReason
         import json
-        put_body = json.loads(responses.calls[-1].request.body)
+        body = responses.calls[-1].request.body
+        assert body is not None
+        put_body = json.loads(body)
         assert put_body["properties"]["classificationReason"] == expected_reason
 
 

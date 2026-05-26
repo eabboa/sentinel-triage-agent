@@ -127,7 +127,7 @@ def test_validate_unknown_catalog_technique():
 def test_validate_non_dict_item():
     """Non-dict entries in the list are silently skipped."""
     techs = ["not a dict", 42, None]
-    verified, warnings = validate_and_enrich_techniques(techs, [])
+    verified, warnings = validate_and_enrich_techniques(techs, [])  # type: ignore[arg-type]
 
     assert len(verified) == 0
     assert len(warnings) == 0

@@ -24,7 +24,8 @@ _TEST_ENV_VARS = {
 }
 
 for key, value in _TEST_ENV_VARS.items():
-    os.environ.setdefault(key, value)
+    if not os.environ.get(key):
+        os.environ[key] = value
 
 # ── Now safe to import application modules ──────────────────────────────────────
 import pytest

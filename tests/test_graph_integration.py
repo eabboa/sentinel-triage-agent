@@ -214,3 +214,70 @@ async def test_graph_hitl_rejection_no_closure():
 
             # The critical assertion: update_incident_status must NOT have been called
             mock_update_status.assert_not_called()
+
+
+# ── Routing function unit tests ───────────────────────────────────────────────
+
+from graph import _next_after_extract, _next_after_analyst, _next_after_writeback, escalation_node
+
+
+def test_next_after_extract_with_entities():
+    """Entities with IPs routes to 'enrich'."""
+    state = {"entities": {"ips": ["8.8.8.8"], "hashes": [], "urls": []}}
+    assert _next_after_extract(state) == "enrich"
+
+
+def test_next_after_extract_with_hashes():
+    """Entities with hashes routes to 'enrich'."""
+    state = {"entities": {"ips": [], "hashes": ["abc123"], "urls": []}}
+    assert _next_after_extract(state) == "enrich"
+
+
+def test_next_after_extract_with_urls():
+    """Entities with URLs routes to 'enrich'."""
+    state = {"entities": {"ips": [], "hashes": [], "urls": ["http://evil.com"]}}
+    assert _next_after_extract(state) == "enrich"
+
+
+def test_next_after_extract_no_entities():
+    """Empty entities routes directly to 'analyst'."""
+    state = {"entities": {}}
+    assert _next_after_extract(state) == "analyst"
+
+
+def test_next_after_analyst_escalation():
+    """TruePositive + confidence > 90 routes to 'escalation'."""
+    state = {"classification": "TruePositive", "confidence": 95}
+    assert _next_after_analyst(state) == "escalation"
+
+
+def test_next_after_analyst_writeback():
+    """FalsePositive + confidence > 95 routes directly to 'writeback'."""
+    state = {"classification": "FalsePositive", "confidence": 99}
+    assert _next_after_analyst(state) == "writeback"
+
+
+def test_next_after_analyst_kql():
+    """Default case routes to 'kql'."""
+    state = {"classification": "TruePositive", "confidence": 50}
+    assert _next_after_analyst(state) == "kql"
+
+
+def test_next_after_writeback_containment():
+    """containment_approved=True routes to 'containment'."""
+    state = {"containment_approved": True}
+    assert _next_after_writeback(state) == "containment"
+
+
+def test_next_after_writeback_close_review():
+    """containment_approved=False routes to 'close_review'."""
+    state = {"containment_approved": False}
+    assert _next_after_writeback(state) == "close_review"
+
+
+def test_escalation_node():
+    """Escalation node returns escalation_triggered and summary."""
+    result = escalation_node({})
+    assert result["escalation_triggered"] is True
+    assert "escalation" in result["escalation_summary"].lower()
+

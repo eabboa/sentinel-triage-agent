@@ -31,6 +31,19 @@ constraint-dependencies = [
 pythonpath = ["."]
 asyncio_mode = "auto"
 
+[tool.coverage.run]
+branch = true
+omit = [
+    "main.py",
+    "seed_learning.py",
+    "test_model.py",
+    "tests/*",
+    "nodes/learning_node.py",
+]
+
+[tool.coverage.report]
+fail_under = 80
+
 [tool.mypy]
 ignore_missing_imports = true
 

@@ -1,7 +1,7 @@
 """
 Shared fixtures for all test modules.
 
-CRITICAL: The os.environ mutations below MUST happen at module scope (import time),
+CRITICAL: The os.environ mutations MUST happen at the module scope (import time),
 not inside fixtures. sentinel_api.py validates SUBSCRIPTION_ID, RESOURCE_GROUP, and
 WORKSPACE_NAME at module-level import. If these variables are missing when Python
 first imports sentinel_api, the import itself raises EnvironmentError — before any

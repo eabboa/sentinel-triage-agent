@@ -124,3 +124,157 @@ async def test_analyst_node_chromadb_unavailable_degrades_gracefully():
         assert "Could not connect to Chroma server" in result["triage_summary"]
         assert len(result["errors"]) > 0
 
+
+@pytest.mark.asyncio
+async def test_analyst_node_dict_verdict_path(empty_triage_state):
+    """Asserts LLM returning a raw dict (not AnalystVerdict) is manually validated."""
+    state = empty_triage_state.copy()
+    state["condensed_summary"] = "Test summary"
+    state["cti_results"] = {}
+    state["incident_tactics"] = ["Execution"]
+
+    mock_rag = AsyncMock(return_value={"documents": []})
+
+    # Return a raw dict instead of an AnalystVerdict — exercises the isinstance(verdict, dict) branch
+    raw_dict = {
+        "classification": "FalsePositive",
+        "is_true_positive": False,
+        "triage_summary": "Benign activity.",
+        "mitre_analysis": "No threat.",
+        "mitre_techniques": [],
+        "confidence": 85,
+        "recommended_action": "Close.",
+    }
+
+    mock_structured_llm = AsyncMock()
+    mock_structured_llm.ainvoke = AsyncMock(return_value=raw_dict)
+
+    with patch("nodes.analyst_node.retrieve_similar_mismatches", mock_rag), \
+         patch("nodes.analyst_node.ChatGoogleGenerativeAI") as MockLLMClass:
+
+        mock_instance = MagicMock()
+        mock_instance.with_structured_output.return_value = mock_structured_llm
+        MockLLMClass.return_value = mock_instance
+
+        result = await analyst_node(state)
+
+        assert result["classification"] == "FalsePositive"
+        assert result["confidence"] == 85
+
+
+@pytest.mark.asyncio
+async def test_analyst_node_unrecognizable_output(empty_triage_state):
+    """Asserts LLM returning a plain string triggers LLMOutputValidationError fallback."""
+    state = empty_triage_state.copy()
+    state["condensed_summary"] = "Test summary"
+    state["cti_results"] = {}
+    state["incident_tactics"] = []
+
+    mock_rag = AsyncMock(return_value={"documents": []})
+
+    # Return a plain string — exercises the else branch (non-dict, non-AnalystVerdict)
+    mock_structured_llm = AsyncMock()
+    mock_structured_llm.ainvoke = AsyncMock(return_value="just a string")
+
+    with patch("nodes.analyst_node.retrieve_similar_mismatches", mock_rag), \
+         patch("nodes.analyst_node.ChatGoogleGenerativeAI") as MockLLMClass:
+
+        mock_instance = MagicMock()
+        mock_instance.with_structured_output.return_value = mock_structured_llm
+        MockLLMClass.return_value = mock_instance
+
+        result = await analyst_node(state)
+
+        # Falls through to the blanket except which returns Undetermined
+        assert result["classification"] == "Undetermined"
+
+
+@pytest.mark.asyncio
+async def test_analyst_node_invalid_dict_verdict(empty_triage_state):
+    """Asserts LLM returning a malformed dict triggers LLMOutputValidationError fallback."""
+    state = empty_triage_state.copy()
+    state["condensed_summary"] = "Test"
+    state["cti_results"] = {}
+    state["incident_tactics"] = []
+
+    mock_rag = AsyncMock(return_value={"documents": []})
+
+    # Dict missing required fields
+    mock_structured_llm = AsyncMock()
+    mock_structured_llm.ainvoke = AsyncMock(return_value={"classification": "TruePositive"})
+
+    with patch("nodes.analyst_node.retrieve_similar_mismatches", mock_rag), \
+         patch("nodes.analyst_node.ChatGoogleGenerativeAI") as MockLLMClass:
+
+        mock_instance = MagicMock()
+        mock_instance.with_structured_output.return_value = mock_structured_llm
+        MockLLMClass.return_value = mock_instance
+
+        result = await analyst_node(state)
+        assert result["classification"] == "Undetermined"
+
+
+@pytest.mark.asyncio
+async def test_analyst_node_with_few_shot_examples(empty_triage_state, valid_analyst_verdict):
+    """Asserts few-shot examples from ChromaDB are formatted into the prompt."""
+    state = empty_triage_state.copy()
+    state["condensed_summary"] = "Test summary"
+    state["cti_results"] = {}
+    state["incident_tactics"] = ["Execution"]
+
+    # Return actual documents to exercise the few-shot formatting branch
+    mock_rag = AsyncMock(return_value={
+        "documents": [["Example 1: wrong classification", "Example 2: corrected"]],
+    })
+
+    mock_structured_llm = AsyncMock()
+    mock_structured_llm.ainvoke = AsyncMock(return_value=valid_analyst_verdict)
+
+    with patch("nodes.analyst_node.retrieve_similar_mismatches", mock_rag), \
+         patch("nodes.analyst_node.ChatGoogleGenerativeAI") as MockLLMClass:
+
+        mock_instance = MagicMock()
+        mock_instance.with_structured_output.return_value = mock_structured_llm
+        MockLLMClass.return_value = mock_instance
+
+        result = await analyst_node(state)
+        assert result["classification"] == "TruePositive"
+
+
+@pytest.mark.asyncio
+async def test_analyst_node_mitre_warnings(empty_triage_state):
+    """Asserts MITRE validation warnings are added to the verdict errors."""
+    state = empty_triage_state.copy()
+    state["condensed_summary"] = "Test"
+    state["cti_results"] = {}
+    state["incident_tactics"] = ["Execution"]
+
+    mock_rag = AsyncMock(return_value={"documents": []})
+
+    verdict = AnalystVerdict(
+        classification="TruePositive",
+        is_true_positive=True,
+        triage_summary="Malicious.",
+        mitre_analysis="Attack.",
+        mitre_techniques=[
+            MitreTechnique(technique_id="INVALID_ID", name="Made Up", confidence=50)
+        ],
+        confidence=70,
+        recommended_action="Investigate.",
+    )
+
+    mock_structured_llm = AsyncMock()
+    mock_structured_llm.ainvoke = AsyncMock(return_value=verdict)
+
+    with patch("nodes.analyst_node.retrieve_similar_mismatches", mock_rag), \
+         patch("nodes.analyst_node.ChatGoogleGenerativeAI") as MockLLMClass:
+
+        mock_instance = MagicMock()
+        mock_instance.with_structured_output.return_value = mock_structured_llm
+        MockLLMClass.return_value = mock_instance
+
+        result = await analyst_node(state)
+        # The INVALID_ID technique should produce a MITRE warning
+        assert "errors" in result
+
+

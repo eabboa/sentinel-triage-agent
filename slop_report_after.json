@@ -1,0 +1,3408 @@
+{
+  "project_path": ".",
+  "total_files": 20,
+  "deficit_files": 6,
+  "clean_files": 14,
+  "avg_deficit_score": 19.971339213168324,
+  "weighted_deficit_score": 25.68916759021235,
+  "avg_ldr": 0.9447299642079053,
+  "avg_inflation": 0.017669497933259403,
+  "avg_ddc": 0.9819444444444445,
+  "overall_status": "clean",
+  "structural_coherence": 0.6513,
+  "coherence_level": "vr_structural",
+  "file_results": [
+    {
+      "file_path": "C:\\sentinel-triage-agent\\graph.py",
+      "ldr": {
+        "total_lines": 87,
+        "logic_lines": 87,
+        "empty_lines": 0,
+        "ldr_score": 1.0,
+        "grade": "S++",
+        "is_abc_interface": false,
+        "is_type_stub": false,
+        "is_packaging_init": false
+      },
+      "inflation": {
+        "jargon_count": 0,
+        "avg_complexity": 2.6,
+        "inflation_score": 0.0,
+        "status": "PASS",
+        "jargon_found": [],
+        "jargon_details": [],
+        "justified_jargon": [],
+        "is_config_file": false
+      },
+      "ddc": {
+        "imported": [
+          "langgraph",
+          "nodes",
+          "state"
+        ],
+        "actually_used": [
+          "langgraph",
+          "nodes",
+          "state"
+        ],
+        "unused": [],
+        "fake_imports": [],
+        "type_checking_imports": [
+          "typing"
+        ],
+        "usage_ratio": 1.0,
+        "grade": "EXCELLENT"
+      },
+      "deficit_score": 4.0,
+      "status": "clean",
+      "warnings": [],
+      "pattern_issues": [
+        {
+          "pattern_id": "todo_comment",
+          "severity": "medium",
+          "axis": "noise",
+          "file": "C:\\sentinel-triage-agent\\graph.py",
+          "line": 101,
+          "column": 33,
+          "message": "TODO comment - incomplete implementation",
+          "code": "checkpointer = MemorySaver() # TODO: In Production use SqliteSaver or PostgresSaver",
+          "suggestion": "Complete the TODO or create a ticket"
+        },
+        {
+          "pattern_id": "lint_escape",
+          "severity": "medium",
+          "axis": "quality",
+          "file": "C:\\sentinel-triage-agent\\graph.py",
+          "line": 72,
+          "column": 39,
+          "message": "Type error suppressed with '# type: ignore'",
+          "code": null,
+          "suggestion": "Resolve the type error with a proper annotation or cast. # type: ignore hides real bugs from static analysis."
+        }
+      ],
+      "docstring_inflation": {
+        "total_docstrings": 1,
+        "inflated_count": 1,
+        "avg_inflation_ratio": 1.3333333333333333,
+        "max_inflation_ratio": 1.3333333333333333,
+        "total_docstring_lines": 13,
+        "total_implementation_lines": 68,
+        "overall_ratio": 0.19117647058823528,
+        "status": "WARNING",
+        "details": [
+          {
+            "name": "_next_after_writeback",
+            "type": "function",
+            "line": 49,
+            "docstring_lines": 4,
+            "implementation_lines": 3,
+            "inflation_ratio": 1.3333333333333333,
+            "severity": "warning",
+            "docstring_preview": "Route based on approval status.  No autonomous closure occurs regardless of classification or confid"
+          }
+        ]
+      },
+      "hallucination_deps": {
+        "total_hallucinated": 0,
+        "category_usage": [],
+        "hallucinated_deps": [],
+        "worst_category": "none",
+        "status": "PASS"
+      },
+      "context_jargon": {
+        "total_jargon": 0,
+        "justified_jargon": 0,
+        "unjustified_jargon": 0,
+        "evidence_details": [],
+        "worst_offenders": [],
+        "justification_ratio": 1.0,
+        "status": "PASS"
+      },
+      "dcf": {
+        "Module": 0.002277904328018223,
+        "Expr": 0.0683371298405467,
+        "ImportFrom": 0.029612756264236904,
+        "FunctionDef": 0.011389521640091117,
+        "Constant": 0.15945330296127563,
+        "alias": 0.03644646924829157,
+        "arguments": 0.011389521640091117,
+        "Assign": 0.01366742596810934,
+        "If": 0.009111617312072893,
+        "Return": 0.02050113895216401,
+        "Subscript": 0.00683371298405467,
+        "Name": 0.1662870159453303,
+        "arg": 0.009111617312072893,
+        "BoolOp": 0.00683371298405467,
+        "Call": 0.07517084282460136,
+        "Tuple": 0.011389521640091117,
+        "Load": 0.23690205011389523,
+        "Dict": 0.00683371298405467,
+        "Store": 0.015945330296127564,
+        "Or": 0.002277904328018223,
+        "GeneratorExp": 0.002277904328018223,
+        "Attribute": 0.06605922551252848,
+        "And": 0.004555808656036446,
+        "Compare": 0.009111617312072893,
+        "keyword": 0.004555808656036446,
+        "comprehension": 0.002277904328018223,
+        "Eq": 0.004555808656036446,
+        "Gt": 0.004555808656036446,
+        "List": 0.002277904328018223
+      },
+      "deficit_breakdown": {
+        "ldr_penalty": 0.0,
+        "inflation_penalty": 0.0,
+        "ddc_penalty": 0.0,
+        "purity_penalty": 0.0,
+        "pattern_hits": 4.0,
+        "total": 4.0
+      }
+    },
+    {
+      "file_path": "C:\\sentinel-triage-agent\\llm_utils.py",
+      "ldr": {
+        "total_lines": 14,
+        "logic_lines": 14,
+        "empty_lines": 0,
+        "ldr_score": 1.0,
+        "grade": "S++",
+        "is_abc_interface": false,
+        "is_type_stub": false,
+        "is_packaging_init": false
+      },
+      "inflation": {
+        "jargon_count": 0,
+        "avg_complexity": 4.0,
+        "inflation_score": 0.0,
+        "status": "PASS",
+        "jargon_found": [],
+        "jargon_details": [],
+        "justified_jargon": [],
+        "is_config_file": false
+      },
+      "ddc": {
+        "imported": [
+          "tenacity"
+        ],
+        "actually_used": [
+          "tenacity"
+        ],
+        "unused": [],
+        "fake_imports": [],
+        "type_checking_imports": [],
+        "usage_ratio": 1.0,
+        "grade": "EXCELLENT"
+      },
+      "deficit_score": 0.0,
+      "status": "clean",
+      "warnings": [],
+      "pattern_issues": [],
+      "docstring_inflation": {
+        "total_docstrings": 1,
+        "inflated_count": 0,
+        "avg_inflation_ratio": 0.5,
+        "max_inflation_ratio": 0.5,
+        "total_docstring_lines": 2,
+        "total_implementation_lines": 14,
+        "overall_ratio": 0.14285714285714285,
+        "status": "PASS",
+        "details": [
+          {
+            "name": "_is_retryable_error",
+            "type": "function",
+            "line": 6,
+            "docstring_lines": 1,
+            "implementation_lines": 2,
+            "inflation_ratio": 0.5,
+            "severity": "info",
+            "docstring_preview": "Heuristic: retry on 429/5xx/RateLimit/Unavailable (common LLM provider errors)."
+          }
+        ]
+      },
+      "hallucination_deps": {
+        "total_hallucinated": 0,
+        "category_usage": [],
+        "hallucinated_deps": [],
+        "worst_category": "none",
+        "status": "PASS"
+      },
+      "context_jargon": {
+        "total_jargon": 0,
+        "justified_jargon": 0,
+        "unjustified_jargon": 0,
+        "evidence_details": [],
+        "worst_offenders": [],
+        "justification_ratio": 1.0,
+        "status": "PASS"
+      },
+      "dcf": {
+        "Module": 0.011111111111111112,
+        "Expr": 0.022222222222222223,
+        "ImportFrom": 0.011111111111111112,
+        "FunctionDef": 0.011111111111111112,
+        "Assign": 0.022222222222222223,
+        "Constant": 0.14444444444444443,
+        "alias": 0.05555555555555555,
+        "arguments": 0.011111111111111112,
+        "Return": 0.011111111111111112,
+        "Name": 0.17777777777777778,
+        "Call": 0.07777777777777778,
+        "arg": 0.011111111111111112,
+        "BoolOp": 0.011111111111111112,
+        "Load": 0.16666666666666666,
+        "Store": 0.022222222222222223,
+        "keyword": 0.1,
+        "Attribute": 0.011111111111111112,
+        "Or": 0.011111111111111112,
+        "Compare": 0.044444444444444446,
+        "BinOp": 0.011111111111111112,
+        "In": 0.044444444444444446,
+        "Add": 0.011111111111111112
+      },
+      "deficit_breakdown": {
+        "ldr_penalty": 0.0,
+        "inflation_penalty": 0.0,
+        "ddc_penalty": 0.0,
+        "purity_penalty": 0.0,
+        "pattern_hits": 0.0,
+        "total": 0.0
+      }
+    },
+    {
+      "file_path": "C:\\sentinel-triage-agent\\main.py",
+      "ldr": {
+        "total_lines": 210,
+        "logic_lines": 210,
+        "empty_lines": 0,
+        "ldr_score": 1.0,
+        "grade": "S++",
+        "is_abc_interface": false,
+        "is_type_stub": false,
+        "is_packaging_init": false
+      },
+      "inflation": {
+        "jargon_count": 0,
+        "avg_complexity": 8.0,
+        "inflation_score": 0.0,
+        "status": "PASS",
+        "jargon_found": [],
+        "jargon_details": [],
+        "justified_jargon": [],
+        "is_config_file": false
+      },
+      "ddc": {
+        "imported": [
+          "asyncio",
+          "dotenv",
+          "graph",
+          "logging",
+          "nodes",
+          "sentinel_api",
+          "uuid"
+        ],
+        "actually_used": [
+          "asyncio",
+          "dotenv",
+          "graph",
+          "logging",
+          "nodes",
+          "sentinel_api",
+          "uuid"
+        ],
+        "unused": [],
+        "fake_imports": [],
+        "type_checking_imports": [
+          "typing"
+        ],
+        "usage_ratio": 1.0,
+        "grade": "EXCELLENT"
+      },
+      "deficit_score": 21.877057549928598,
+      "status": "clean",
+      "warnings": [
+        "PATTERNS: 1 critical issues found",
+        "PATTERNS: 1 high-severity issues found"
+      ],
+      "pattern_issues": [
+        {
+          "pattern_id": "god_function",
+          "severity": "medium",
+          "axis": "style",
+          "file": "C:\\sentinel-triage-agent\\main.py",
+          "line": 27,
+          "column": 0,
+          "message": "God function '_collect_human_decisions': 61 logic lines (limit 50)",
+          "code": null,
+          "suggestion": "Break into smaller single-responsibility functions. Each function should do one thing and fit on one screen."
+        },
+        {
+          "pattern_id": "god_function",
+          "severity": "high",
+          "axis": "style",
+          "file": "C:\\sentinel-triage-agent\\main.py",
+          "line": 98,
+          "column": 0,
+          "message": "God function 'process_incident': 101 logic lines (limit 50), complexity=11 (limit 10)",
+          "code": null,
+          "suggestion": "Break into smaller single-responsibility functions. Each function should do one thing and fit on one screen."
+        },
+        {
+          "pattern_id": "nested_complexity",
+          "severity": "critical",
+          "axis": "quality",
+          "file": "C:\\sentinel-triage-agent\\main.py",
+          "line": 98,
+          "column": 0,
+          "message": "Function 'process_incident' has both deep nesting (depth=4) and high cyclomatic complexity (cc=11) -- structural complexity composite",
+          "code": null,
+          "suggestion": "Extract nested blocks into named helper functions. Use early-return / guard clauses and reduce branch count."
+        }
+      ],
+      "docstring_inflation": {
+        "total_docstrings": 0,
+        "inflated_count": 0,
+        "avg_inflation_ratio": 0.0,
+        "max_inflation_ratio": 0.0,
+        "total_docstring_lines": 7,
+        "total_implementation_lines": 194,
+        "overall_ratio": 0.03608247422680412,
+        "status": "PASS",
+        "details": []
+      },
+      "hallucination_deps": {
+        "total_hallucinated": 0,
+        "category_usage": [
+          {
+            "category": "async",
+            "imported": [
+              "asyncio"
+            ],
+            "used": [
+              "asyncio"
+            ],
+            "unused": [],
+            "usage_ratio": 1.0
+          },
+          {
+            "category": "logging",
+            "imported": [
+              "logging"
+            ],
+            "used": [
+              "logging"
+            ],
+            "unused": [],
+            "usage_ratio": 1.0
+          }
+        ],
+        "hallucinated_deps": [],
+        "worst_category": "none",
+        "status": "PASS"
+      },
+      "context_jargon": {
+        "total_jargon": 0,
+        "justified_jargon": 0,
+        "unjustified_jargon": 0,
+        "evidence_details": [],
+        "worst_offenders": [],
+        "justification_ratio": 1.0,
+        "status": "PASS"
+      },
+      "dcf": {
+        "Module": 0.0010319917440660474,
+        "Expr": 0.033023735810113516,
+        "Import": 0.0030959752321981426,
+        "ImportFrom": 0.006191950464396285,
+        "Assign": 0.03508771929824561,
+        "AsyncFunctionDef": 0.0030959752321981426,
+        "If": 0.014447884416924664,
+        "Constant": 0.13312693498452013,
+        "alias": 0.009287925696594427,
+        "Call": 0.07327141382868937,
+        "Name": 0.20330237358101136,
+        "arguments": 0.0030959752321981426,
+        "AnnAssign": 0.0010319917440660474,
+        "AsyncWith": 0.0020639834881320948,
+        "Return": 0.007223942208462332,
+        "Try": 0.005159958720330237,
+        "Compare": 0.005159958720330237,
+        "Attribute": 0.058823529411764705,
+        "keyword": 0.01238390092879257,
+        "Store": 0.04231166150670795,
+        "arg": 0.008255933952528379,
+        "Subscript": 0.010319917440660475,
+        "Dict": 0.007223942208462332,
+        "withitem": 0.0020639834881320948,
+        "While": 0.0010319917440660474,
+        "Load": 0.24045407636738905,
+        "UnaryOp": 0.0030959752321981426,
+        "Tuple": 0.0041279669762641896,
+        "For": 0.0010319917440660474,
+        "Eq": 0.0041279669762641896,
+        "Await": 0.011351909184726523,
+        "Set": 0.0010319917440660474,
+        "Break": 0.0030959752321981426,
+        "JoinedStr": 0.014447884416924664,
+        "List": 0.005159958720330237,
+        "ExceptHandler": 0.005159958720330237,
+        "Not": 0.0030959752321981426,
+        "ListComp": 0.0010319917440660474,
+        "Continue": 0.0010319917440660474,
+        "FormattedValue": 0.017543859649122806,
+        "comprehension": 0.0010319917440660474,
+        "NotIn": 0.0010319917440660474,
+        "Starred": 0.0010319917440660474
+      },
+      "deficit_breakdown": {
+        "ldr_penalty": -0.0,
+        "inflation_penalty": -0.0,
+        "ddc_penalty": -0.0,
+        "purity_penalty": 4.8771,
+        "pattern_hits": 17.0,
+        "total": 21.8771
+      }
+    },
+    {
+      "file_path": "C:\\sentinel-triage-agent\\seed_learning.py",
+      "ldr": {
+        "total_lines": 130,
+        "logic_lines": 130,
+        "empty_lines": 0,
+        "ldr_score": 1.0,
+        "grade": "S++",
+        "is_abc_interface": false,
+        "is_type_stub": false,
+        "is_packaging_init": false
+      },
+      "inflation": {
+        "jargon_count": 2,
+        "avg_complexity": 5.25,
+        "inflation_score": 0.10961538461538461,
+        "status": "PASS",
+        "jargon_found": [
+          "embedding",
+          "embedding"
+        ],
+        "jargon_details": [
+          {
+            "word": "embedding",
+            "line": 107,
+            "category": "ai_ml",
+            "justified": true
+          },
+          {
+            "word": "embedding",
+            "line": 144,
+            "category": "ai_ml",
+            "justified": false
+          }
+        ],
+        "justified_jargon": [
+          "embedding"
+        ],
+        "is_config_file": false
+      },
+      "ddc": {
+        "imported": [
+          "argparse",
+          "chromadb",
+          "csv",
+          "logging",
+          "os",
+          "pathlib",
+          "sentence_transformers",
+          "sys",
+          "uuid"
+        ],
+        "actually_used": [
+          "argparse",
+          "chromadb",
+          "csv",
+          "logging",
+          "os",
+          "pathlib",
+          "sentence_transformers",
+          "sys",
+          "uuid"
+        ],
+        "unused": [],
+        "fake_imports": [],
+        "type_checking_imports": [
+          "typing"
+        ],
+        "usage_ratio": 1.0,
+        "grade": "EXCELLENT"
+      },
+      "deficit_score": 1.6767889015256388,
+      "status": "clean",
+      "warnings": [],
+      "pattern_issues": [],
+      "docstring_inflation": {
+        "total_docstrings": 0,
+        "inflated_count": 0,
+        "avg_inflation_ratio": 0.0,
+        "max_inflation_ratio": 0.0,
+        "total_docstring_lines": 19,
+        "total_implementation_lines": 101,
+        "overall_ratio": 0.18811881188118812,
+        "status": "PASS",
+        "details": []
+      },
+      "hallucination_deps": {
+        "total_hallucinated": 0,
+        "category_usage": [
+          {
+            "category": "logging",
+            "imported": [
+              "logging"
+            ],
+            "used": [
+              "logging"
+            ],
+            "unused": [],
+            "usage_ratio": 1.0
+          },
+          {
+            "category": "cli",
+            "imported": [
+              "argparse"
+            ],
+            "used": [
+              "argparse"
+            ],
+            "unused": [],
+            "usage_ratio": 1.0
+          }
+        ],
+        "hallucinated_deps": [],
+        "worst_category": "none",
+        "status": "PASS"
+      },
+      "context_jargon": {
+        "total_jargon": 0,
+        "justified_jargon": 0,
+        "unjustified_jargon": 0,
+        "evidence_details": [],
+        "worst_offenders": [],
+        "justification_ratio": 1.0,
+        "status": "PASS"
+      },
+      "dcf": {
+        "Module": 0.0012285012285012285,
+        "Expr": 0.029484029484029485,
+        "Import": 0.0085995085995086,
+        "ImportFrom": 0.0036855036855036856,
+        "Assign": 0.030712530712530713,
+        "FunctionDef": 0.004914004914004914,
+        "If": 0.009828009828009828,
+        "Constant": 0.09828009828009827,
+        "alias": 0.013513513513513514,
+        "Call": 0.0773955773955774,
+        "Name": 0.20884520884520885,
+        "Set": 0.002457002457002457,
+        "arguments": 0.004914004914004914,
+        "With": 0.0012285012285012285,
+        "Return": 0.0036855036855036856,
+        "Subscript": 0.019656019656019656,
+        "For": 0.0036855036855036856,
+        "Compare": 0.0036855036855036856,
+        "Attribute": 0.06756756756756757,
+        "keyword": 0.025798525798525797,
+        "Store": 0.045454545454545456,
+        "arg": 0.006142506142506142,
+        "List": 0.0036855036855036856,
+        "withitem": 0.0012285012285012285,
+        "Load": 0.25675675675675674,
+        "JoinedStr": 0.0036855036855036856,
+        "UnaryOp": 0.006142506142506142,
+        "AugAssign": 0.0012285012285012285,
+        "Eq": 0.0012285012285012285,
+        "Raise": 0.0012285012285012285,
+        "Tuple": 0.002457002457002457,
+        "FormattedValue": 0.0085995085995086,
+        "Not": 0.006142506142506142,
+        "ListComp": 0.0036855036855036856,
+        "Add": 0.004914004914004914,
+        "In": 0.0012285012285012285,
+        "BoolOp": 0.004914004914004914,
+        "Continue": 0.002457002457002457,
+        "Dict": 0.002457002457002457,
+        "Slice": 0.0036855036855036856,
+        "comprehension": 0.0036855036855036856,
+        "BinOp": 0.0036855036855036856,
+        "Or": 0.004914004914004914,
+        "NotIn": 0.0012285012285012285
+      },
+      "deficit_breakdown": {
+        "ldr_penalty": -0.0,
+        "inflation_penalty": 1.6768,
+        "ddc_penalty": -0.0,
+        "purity_penalty": -0.0,
+        "pattern_hits": 0.0,
+        "total": 1.6768
+      }
+    },
+    {
+      "file_path": "C:\\sentinel-triage-agent\\sentinel_api.py",
+      "ldr": {
+        "total_lines": 260,
+        "logic_lines": 260,
+        "empty_lines": 0,
+        "ldr_score": 1.0,
+        "grade": "S++",
+        "is_abc_interface": false,
+        "is_type_stub": false,
+        "is_packaging_init": false
+      },
+      "inflation": {
+        "jargon_count": 0,
+        "avg_complexity": 2.4615384615384617,
+        "inflation_score": 0.0,
+        "status": "PASS",
+        "jargon_found": [],
+        "jargon_details": [],
+        "justified_jargon": [],
+        "is_config_file": false
+      },
+      "ddc": {
+        "imported": [
+          "asyncio",
+          "dotenv",
+          "logging",
+          "os",
+          "re",
+          "requests",
+          "sentinel_auth",
+          "tenacity",
+          "uuid"
+        ],
+        "actually_used": [
+          "dotenv",
+          "logging",
+          "os",
+          "re",
+          "requests",
+          "sentinel_auth",
+          "tenacity",
+          "uuid"
+        ],
+        "unused": [
+          "asyncio"
+        ],
+        "fake_imports": [],
+        "type_checking_imports": [
+          "typing"
+        ],
+        "usage_ratio": 0.8888888888888888,
+        "grade": "GOOD"
+      },
+      "deficit_score": 22.09164484516408,
+      "status": "clean",
+      "warnings": [
+        "PATTERNS: 1 critical issues found",
+        "PATTERNS: 1 high-severity issues found"
+      ],
+      "pattern_issues": [
+        {
+          "pattern_id": "global_statement",
+          "severity": "high",
+          "axis": "structure",
+          "file": "C:\\sentinel-triage-agent\\sentinel_api.py",
+          "line": 77,
+          "column": 4,
+          "message": "Global statement makes code harder to test and reason about",
+          "code": null,
+          "suggestion": "Pass variables as arguments or use class attributes"
+        },
+        {
+          "pattern_id": "function_clone_cluster",
+          "severity": "critical",
+          "axis": "structure",
+          "file": "C:\\sentinel-triage-agent\\sentinel_api.py",
+          "line": 1,
+          "column": 0,
+          "message": "9 structurally near-identical functions detected (AST JSD < 0.05): _get_base, isolate_mde_device, resolve_mde_machine_id, revoke_entra_sessions, get_incident, post_incident_comment, ... (+3 more). Possible god function fragmented into helpers to evade per-function gates.",
+          "code": null,
+          "suggestion": "If these functions represent a fragmented complex operation, consider consolidating or using a data-driven dispatch table."
+        }
+      ],
+      "docstring_inflation": {
+        "total_docstrings": 4,
+        "inflated_count": 2,
+        "avg_inflation_ratio": 0.8127705627705628,
+        "max_inflation_ratio": 1.0,
+        "total_docstring_lines": 21,
+        "total_implementation_lines": 34,
+        "overall_ratio": 0.6176470588235294,
+        "status": "WARNING",
+        "details": [
+          {
+            "name": "ConcurrencyConflictError",
+            "type": "class",
+            "line": 21,
+            "docstring_lines": 1,
+            "implementation_lines": 1,
+            "inflation_ratio": 1.0,
+            "severity": "warning",
+            "docstring_preview": "Raised when an optimistic concurrency update fails due to an ETag mismatch."
+          },
+          {
+            "name": "TransientHTTPError",
+            "type": "class",
+            "line": 24,
+            "docstring_lines": 1,
+            "implementation_lines": 1,
+            "inflation_ratio": 1.0,
+            "severity": "warning",
+            "docstring_preview": "Raised for transient HTTP errors (429, 503, 504) to trigger tenacity retries."
+          },
+          {
+            "name": "revoke_entra_sessions",
+            "type": "function",
+            "line": 314,
+            "docstring_lines": 8,
+            "implementation_lines": 11,
+            "inflation_ratio": 0.7272727272727273,
+            "severity": "info",
+            "docstring_preview": "Revokes all Entra ID (Azure AD) refresh tokens for a user. This forces the user to re-authenticate a"
+          },
+          {
+            "name": "isolate_mde_device",
+            "type": "function",
+            "line": 271,
+            "docstring_lines": 11,
+            "implementation_lines": 21,
+            "inflation_ratio": 0.5238095238095238,
+            "severity": "info",
+            "docstring_preview": "Isolates a device using the Microsoft Defender for Endpoint machine isolation API.  Args:     device"
+          }
+        ]
+      },
+      "hallucination_deps": {
+        "total_hallucinated": 1,
+        "category_usage": [
+          {
+            "category": "async",
+            "imported": [
+              "asyncio"
+            ],
+            "used": [],
+            "unused": [
+              "asyncio"
+            ],
+            "usage_ratio": 0.0
+          },
+          {
+            "category": "http",
+            "imported": [
+              "requests"
+            ],
+            "used": [
+              "requests"
+            ],
+            "unused": [],
+            "usage_ratio": 1.0
+          },
+          {
+            "category": "logging",
+            "imported": [
+              "logging"
+            ],
+            "used": [
+              "logging"
+            ],
+            "unused": [],
+            "usage_ratio": 1.0
+          }
+        ],
+        "hallucinated_deps": [
+          {
+            "library": "asyncio",
+            "category": "async",
+            "line": 3,
+            "likely_intent": "asynchronous programming"
+          }
+        ],
+        "worst_category": "async",
+        "status": "PASS"
+      },
+      "context_jargon": {
+        "total_jargon": 0,
+        "justified_jargon": 0,
+        "unjustified_jargon": 0,
+        "evidence_details": [],
+        "worst_offenders": [],
+        "justification_ratio": 1.0,
+        "status": "PASS"
+      },
+      "dcf": {
+        "Module": 0.000819000819000819,
+        "Import": 0.004914004914004914,
+        "ImportFrom": 0.004095004095004095,
+        "Expr": 0.014742014742014743,
+        "Assign": 0.04668304668304668,
+        "ClassDef": 0.001638001638001638,
+        "FunctionDef": 0.006552006552006552,
+        "AnnAssign": 0.001638001638001638,
+        "AsyncFunctionDef": 0.002457002457002457,
+        "alias": 0.013923013923013924,
+        "Call": 0.05733005733005733,
+        "Name": 0.22276822276822278,
+        "Constant": 0.1285831285831286,
+        "arguments": 0.009009009009009009,
+        "Try": 0.002457002457002457,
+        "Attribute": 0.0343980343980344,
+        "BinOp": 0.002457002457002457,
+        "Global": 0.000819000819000819,
+        "If": 0.010647010647010647,
+        "For": 0.000819000819000819,
+        "Return": 0.012285012285012284,
+        "Set": 0.000819000819000819,
+        "Subscript": 0.010647010647010647,
+        "Store": 0.050778050778050775,
+        "Load": 0.22276822276822278,
+        "arg": 0.018018018018018018,
+        "ExceptHandler": 0.002457002457002457,
+        "keyword": 0.03276003276003276,
+        "BitOr": 0.002457002457002457,
+        "Compare": 0.004914004914004914,
+        "Dict": 0.013923013923013924,
+        "List": 0.003276003276003276,
+        "Tuple": 0.002457002457002457,
+        "Raise": 0.006552006552006552,
+        "JoinedStr": 0.014742014742014743,
+        "BoolOp": 0.001638001638001638,
+        "UnaryOp": 0.001638001638001638,
+        "IsNot": 0.001638001638001638,
+        "FormattedValue": 0.02293202293202293,
+        "NotIn": 0.000819000819000819,
+        "And": 0.001638001638001638,
+        "Not": 0.001638001638001638,
+        "In": 0.000819000819000819,
+        "Eq": 0.001638001638001638
+      },
+      "deficit_breakdown": {
+        "ldr_penalty": -0.0,
+        "inflation_penalty": -0.0,
+        "ddc_penalty": 2.2711,
+        "purity_penalty": 4.8205,
+        "pattern_hits": 15.0,
+        "total": 22.0916
+      }
+    },
+    {
+      "file_path": "C:\\sentinel-triage-agent\\sentinel_auth.py",
+      "ldr": {
+        "total_lines": 64,
+        "logic_lines": 64,
+        "empty_lines": 0,
+        "ldr_score": 1.0,
+        "grade": "S++",
+        "is_abc_interface": false,
+        "is_type_stub": false,
+        "is_packaging_init": false
+      },
+      "inflation": {
+        "jargon_count": 0,
+        "avg_complexity": 2.0,
+        "inflation_score": 0.0,
+        "status": "PASS",
+        "jargon_found": [],
+        "jargon_details": [],
+        "justified_jargon": [],
+        "is_config_file": false
+      },
+      "ddc": {
+        "imported": [
+          "azure",
+          "threading",
+          "time"
+        ],
+        "actually_used": [
+          "azure",
+          "threading",
+          "time"
+        ],
+        "unused": [],
+        "fake_imports": [],
+        "type_checking_imports": [
+          "typing"
+        ],
+        "usage_ratio": 1.0,
+        "grade": "EXCELLENT"
+      },
+      "deficit_score": 5.0,
+      "status": "clean",
+      "warnings": [
+        "PATTERNS: 1 high-severity issues found"
+      ],
+      "pattern_issues": [
+        {
+          "pattern_id": "global_statement",
+          "severity": "high",
+          "axis": "structure",
+          "file": "C:\\sentinel-triage-agent\\sentinel_auth.py",
+          "line": 30,
+          "column": 4,
+          "message": "Global statement makes code harder to test and reason about",
+          "code": null,
+          "suggestion": "Pass variables as arguments or use class attributes"
+        }
+      ],
+      "docstring_inflation": {
+        "total_docstrings": 2,
+        "inflated_count": 2,
+        "avg_inflation_ratio": 1.0,
+        "max_inflation_ratio": 1.0,
+        "total_docstring_lines": 13,
+        "total_implementation_lines": 51,
+        "overall_ratio": 0.2549019607843137,
+        "status": "WARNING",
+        "details": [
+          {
+            "name": "get_graph_token",
+            "type": "function",
+            "line": 69,
+            "docstring_lines": 1,
+            "implementation_lines": 1,
+            "inflation_ratio": 1.0,
+            "severity": "warning",
+            "docstring_preview": "Get a token scoped to Microsoft Graph."
+          },
+          {
+            "name": "get_mde_token",
+            "type": "function",
+            "line": 73,
+            "docstring_lines": 1,
+            "implementation_lines": 1,
+            "inflation_ratio": 1.0,
+            "severity": "warning",
+            "docstring_preview": "Get a token scoped to Microsoft Defender for Endpoint."
+          }
+        ]
+      },
+      "hallucination_deps": {
+        "total_hallucinated": 0,
+        "category_usage": [
+          {
+            "category": "cloud",
+            "imported": [
+              "azure"
+            ],
+            "used": [
+              "azure"
+            ],
+            "unused": [],
+            "usage_ratio": 1.0
+          }
+        ],
+        "hallucinated_deps": [],
+        "worst_category": "none",
+        "status": "PASS"
+      },
+      "context_jargon": {
+        "total_jargon": 0,
+        "justified_jargon": 0,
+        "unjustified_jargon": 0,
+        "evidence_details": [],
+        "worst_offenders": [],
+        "justification_ratio": 1.0,
+        "status": "PASS"
+      },
+      "dcf": {
+        "Module": 0.00425531914893617,
+        "Expr": 0.029787234042553193,
+        "Import": 0.00851063829787234,
+        "ImportFrom": 0.00851063829787234,
+        "Assign": 0.03404255319148936,
+        "AnnAssign": 0.00851063829787234,
+        "FunctionDef": 0.02127659574468085,
+        "Constant": 0.11063829787234042,
+        "alias": 0.01702127659574468,
+        "Name": 0.20425531914893616,
+        "BinOp": 0.00851063829787234,
+        "Call": 0.0425531914893617,
+        "arguments": 0.02127659574468085,
+        "Global": 0.00425531914893617,
+        "If": 0.01276595744680851,
+        "Return": 0.02127659574468085,
+        "Subscript": 0.029787234042553193,
+        "Dict": 0.01276595744680851,
+        "With": 0.00851063829787234,
+        "Store": 0.0425531914893617,
+        "BitOr": 0.00425531914893617,
+        "Attribute": 0.029787234042553193,
+        "Compare": 0.02127659574468085,
+        "Load": 0.2297872340425532,
+        "Tuple": 0.00851063829787234,
+        "arg": 0.00425531914893617,
+        "withitem": 0.00851063829787234,
+        "Is": 0.01702127659574468,
+        "BoolOp": 0.00425531914893617,
+        "JoinedStr": 0.00425531914893617,
+        "Or": 0.00425531914893617,
+        "FormattedValue": 0.00425531914893617,
+        "GtE": 0.00425531914893617,
+        "Add": 0.00425531914893617
+      },
+      "deficit_breakdown": {
+        "ldr_penalty": 0.0,
+        "inflation_penalty": 0.0,
+        "ddc_penalty": 0.0,
+        "purity_penalty": 0.0,
+        "pattern_hits": 5.0,
+        "total": 5.0
+      }
+    },
+    {
+      "file_path": "C:\\sentinel-triage-agent\\state.py",
+      "ldr": {
+        "total_lines": 32,
+        "logic_lines": 32,
+        "empty_lines": 0,
+        "ldr_score": 1.0,
+        "grade": "S++",
+        "is_abc_interface": false,
+        "is_type_stub": false,
+        "is_packaging_init": false
+      },
+      "inflation": {
+        "jargon_count": 0,
+        "avg_complexity": 1.0,
+        "inflation_score": 0.0,
+        "status": "PASS",
+        "jargon_found": [],
+        "jargon_details": [],
+        "justified_jargon": [],
+        "is_config_file": false
+      },
+      "ddc": {
+        "imported": [
+          "operator"
+        ],
+        "actually_used": [],
+        "unused": [],
+        "fake_imports": [],
+        "type_checking_imports": [
+          "typing"
+        ],
+        "usage_ratio": 1.0,
+        "grade": "EXCELLENT"
+      },
+      "deficit_score": 0.0,
+      "status": "clean",
+      "warnings": [],
+      "pattern_issues": [],
+      "docstring_inflation": {
+        "total_docstrings": 0,
+        "inflated_count": 0,
+        "avg_inflation_ratio": 0.0,
+        "max_inflation_ratio": 0.0,
+        "total_docstring_lines": 1,
+        "total_implementation_lines": 29,
+        "overall_ratio": 0.034482758620689655,
+        "status": "PASS",
+        "details": []
+      },
+      "hallucination_deps": {
+        "total_hallucinated": 0,
+        "category_usage": [],
+        "hallucinated_deps": [],
+        "worst_category": "none",
+        "status": "PASS"
+      },
+      "context_jargon": {
+        "total_jargon": 0,
+        "justified_jargon": 0,
+        "unjustified_jargon": 0,
+        "evidence_details": [],
+        "worst_offenders": [],
+        "justification_ratio": 1.0,
+        "status": "PASS"
+      },
+      "dcf": {
+        "Module": 0.005649717514124294,
+        "Expr": 0.005649717514124294,
+        "ImportFrom": 0.005649717514124294,
+        "Import": 0.005649717514124294,
+        "ClassDef": 0.005649717514124294,
+        "Constant": 0.01694915254237288,
+        "alias": 0.01694915254237288,
+        "Name": 0.3389830508474576,
+        "AnnAssign": 0.14689265536723164,
+        "Load": 0.23728813559322035,
+        "Subscript": 0.03389830508474576,
+        "BinOp": 0.011299435028248588,
+        "Store": 0.14689265536723164,
+        "BitOr": 0.011299435028248588,
+        "Tuple": 0.005649717514124294,
+        "Attribute": 0.005649717514124294
+      },
+      "deficit_breakdown": {
+        "ldr_penalty": 0.0,
+        "inflation_penalty": 0.0,
+        "ddc_penalty": 0.0,
+        "purity_penalty": 0.0,
+        "pattern_hits": 0.0,
+        "total": 0.0
+      }
+    },
+    {
+      "file_path": "C:\\sentinel-triage-agent\\throttle.py",
+      "ldr": {
+        "total_lines": 34,
+        "logic_lines": 31,
+        "empty_lines": 3,
+        "ldr_score": 0.9117647058823529,
+        "grade": "S++",
+        "is_abc_interface": false,
+        "is_type_stub": false,
+        "is_packaging_init": false
+      },
+      "inflation": {
+        "jargon_count": 0,
+        "avg_complexity": 2.1666666666666665,
+        "inflation_score": 0.0,
+        "status": "PASS",
+        "jargon_found": [],
+        "jargon_details": [],
+        "justified_jargon": [],
+        "is_config_file": false
+      },
+      "ddc": {
+        "imported": [
+          "asyncio",
+          "time"
+        ],
+        "actually_used": [
+          "asyncio",
+          "time"
+        ],
+        "unused": [],
+        "fake_imports": [],
+        "type_checking_imports": [],
+        "usage_ratio": 1.0,
+        "grade": "EXCELLENT"
+      },
+      "deficit_score": 3.6275032067108026,
+      "status": "clean",
+      "warnings": [],
+      "pattern_issues": [],
+      "docstring_inflation": {
+        "total_docstrings": 1,
+        "inflated_count": 1,
+        "avg_inflation_ratio": 1.0,
+        "max_inflation_ratio": 1.0,
+        "total_docstring_lines": 4,
+        "total_implementation_lines": 30,
+        "overall_ratio": 0.13333333333333333,
+        "status": "WARNING",
+        "details": [
+          {
+            "name": "reset",
+            "type": "function",
+            "line": 25,
+            "docstring_lines": 1,
+            "implementation_lines": 1,
+            "inflation_ratio": 1.0,
+            "severity": "warning",
+            "docstring_preview": "Clear all recorded call timestamps. Intended for test isolation."
+          }
+        ]
+      },
+      "hallucination_deps": {
+        "total_hallucinated": 0,
+        "category_usage": [
+          {
+            "category": "async",
+            "imported": [
+              "asyncio"
+            ],
+            "used": [
+              "asyncio"
+            ],
+            "unused": [],
+            "usage_ratio": 1.0
+          }
+        ],
+        "hallucinated_deps": [],
+        "worst_category": "none",
+        "status": "PASS"
+      },
+      "context_jargon": {
+        "total_jargon": 0,
+        "justified_jargon": 0,
+        "unjustified_jargon": 0,
+        "evidence_details": [],
+        "worst_offenders": [],
+        "justification_ratio": 1.0,
+        "status": "PASS"
+      },
+      "dcf": {
+        "Module": 0.004830917874396135,
+        "Expr": 0.033816425120772944,
+        "Import": 0.00966183574879227,
+        "ClassDef": 0.004830917874396135,
+        "Assign": 0.033816425120772944,
+        "Constant": 0.04830917874396135,
+        "alias": 0.00966183574879227,
+        "FunctionDef": 0.00966183574879227,
+        "AsyncFunctionDef": 0.014492753623188406,
+        "Name": 0.18357487922705315,
+        "Call": 0.03864734299516908,
+        "arguments": 0.024154589371980676,
+        "AnnAssign": 0.004830917874396135,
+        "Return": 0.014492753623188406,
+        "While": 0.004830917874396135,
+        "Store": 0.043478260869565216,
+        "keyword": 0.00966183574879227,
+        "arg": 0.04830917874396135,
+        "Attribute": 0.0966183574879227,
+        "Subscript": 0.00966183574879227,
+        "List": 0.004830917874396135,
+        "Await": 0.00966183574879227,
+        "AsyncWith": 0.004830917874396135,
+        "If": 0.00966183574879227,
+        "Load": 0.25120772946859904,
+        "withitem": 0.004830917874396135,
+        "Compare": 0.014492753623188406,
+        "ListComp": 0.004830917874396135,
+        "BinOp": 0.014492753623188406,
+        "Gt": 0.004830917874396135,
+        "comprehension": 0.004830917874396135,
+        "Lt": 0.00966183574879227,
+        "Sub": 0.014492753623188406
+      },
+      "deficit_breakdown": {
+        "ldr_penalty": 3.6275,
+        "inflation_penalty": -0.0,
+        "ddc_penalty": -0.0,
+        "purity_penalty": -0.0,
+        "pattern_hits": 0.0,
+        "total": 3.6275
+      }
+    },
+    {
+      "file_path": "C:\\sentinel-triage-agent\\models\\exceptions.py",
+      "ldr": {
+        "total_lines": 25,
+        "logic_lines": 25,
+        "empty_lines": 0,
+        "ldr_score": 1.0,
+        "grade": "S++",
+        "is_abc_interface": false,
+        "is_type_stub": false,
+        "is_packaging_init": false
+      },
+      "inflation": {
+        "jargon_count": 0,
+        "avg_complexity": 1.5,
+        "inflation_score": 0.0,
+        "status": "PASS",
+        "jargon_found": [],
+        "jargon_details": [],
+        "justified_jargon": [],
+        "is_config_file": false
+      },
+      "ddc": {
+        "imported": [],
+        "actually_used": [],
+        "unused": [],
+        "fake_imports": [],
+        "type_checking_imports": [],
+        "usage_ratio": 1.0,
+        "grade": "EXCELLENT"
+      },
+      "deficit_score": 0.0,
+      "status": "clean",
+      "warnings": [],
+      "pattern_issues": [],
+      "docstring_inflation": {
+        "total_docstrings": 0,
+        "inflated_count": 0,
+        "avg_inflation_ratio": 0.0,
+        "max_inflation_ratio": 0.0,
+        "total_docstring_lines": 3,
+        "total_implementation_lines": 22,
+        "overall_ratio": 0.13636363636363635,
+        "status": "PASS",
+        "details": []
+      },
+      "hallucination_deps": {
+        "total_hallucinated": 0,
+        "category_usage": [],
+        "hallucinated_deps": [],
+        "worst_category": "none",
+        "status": "PASS"
+      },
+      "context_jargon": {
+        "total_jargon": 0,
+        "justified_jargon": 0,
+        "unjustified_jargon": 0,
+        "evidence_details": [],
+        "worst_offenders": [],
+        "justification_ratio": 1.0,
+        "status": "PASS"
+      },
+      "dcf": {
+        "Module": 0.008130081300813009,
+        "Expr": 0.07317073170731707,
+        "ClassDef": 0.032520325203252036,
+        "Constant": 0.04065040650406504,
+        "Name": 0.22764227642276422,
+        "FunctionDef": 0.032520325203252036,
+        "Load": 0.2601626016260163,
+        "arguments": 0.032520325203252036,
+        "Assign": 0.032520325203252036,
+        "arg": 0.0975609756097561,
+        "Call": 0.06504065040650407,
+        "Attribute": 0.06504065040650407,
+        "Store": 0.032520325203252036
+      },
+      "deficit_breakdown": {
+        "ldr_penalty": 0.0,
+        "inflation_penalty": 0.0,
+        "ddc_penalty": 0.0,
+        "purity_penalty": 0.0,
+        "pattern_hits": 0.0,
+        "total": 0.0
+      }
+    },
+    {
+      "file_path": "C:\\sentinel-triage-agent\\models\\validation.py",
+      "ldr": {
+        "total_lines": 148,
+        "logic_lines": 148,
+        "empty_lines": 0,
+        "ldr_score": 1.0,
+        "grade": "S++",
+        "is_abc_interface": false,
+        "is_type_stub": false,
+        "is_packaging_init": false
+      },
+      "inflation": {
+        "jargon_count": 0,
+        "avg_complexity": 1.0,
+        "inflation_score": 0.0,
+        "status": "PASS",
+        "jargon_found": [],
+        "jargon_details": [],
+        "justified_jargon": [],
+        "is_config_file": false
+      },
+      "ddc": {
+        "imported": [
+          "datetime",
+          "pydantic"
+        ],
+        "actually_used": [
+          "pydantic"
+        ],
+        "unused": [],
+        "fake_imports": [],
+        "type_checking_imports": [
+          "typing"
+        ],
+        "usage_ratio": 1.0,
+        "grade": "EXCELLENT"
+      },
+      "deficit_score": 0.0,
+      "status": "clean",
+      "warnings": [],
+      "pattern_issues": [],
+      "docstring_inflation": {
+        "total_docstrings": 0,
+        "inflated_count": 0,
+        "avg_inflation_ratio": 0.0,
+        "max_inflation_ratio": 0.0,
+        "total_docstring_lines": 0,
+        "total_implementation_lines": 0,
+        "overall_ratio": 0.0,
+        "status": "PASS",
+        "details": []
+      },
+      "hallucination_deps": {
+        "total_hallucinated": 0,
+        "category_usage": [],
+        "hallucinated_deps": [],
+        "worst_category": "none",
+        "status": "PASS"
+      },
+      "context_jargon": {
+        "total_jargon": 0,
+        "justified_jargon": 0,
+        "unjustified_jargon": 0,
+        "evidence_details": [],
+        "worst_offenders": [],
+        "justification_ratio": 1.0,
+        "status": "PASS"
+      },
+      "dcf": {
+        "Module": 0.003355704697986577,
+        "ImportFrom": 0.010067114093959731,
+        "Expr": 0.013422818791946308,
+        "ClassDef": 0.03691275167785235,
+        "alias": 0.020134228187919462,
+        "Constant": 0.08389261744966443,
+        "Name": 0.2953020134228188,
+        "AnnAssign": 0.09731543624161074,
+        "Assign": 0.02348993288590604,
+        "Load": 0.19798657718120805,
+        "Call": 0.026845637583892617,
+        "Subscript": 0.016778523489932886,
+        "BinOp": 0.010067114093959731,
+        "Store": 0.12080536912751678,
+        "keyword": 0.026845637583892617,
+        "Tuple": 0.006711409395973154,
+        "BitOr": 0.010067114093959731
+      },
+      "deficit_breakdown": {
+        "ldr_penalty": 0.0,
+        "inflation_penalty": 0.0,
+        "ddc_penalty": 0.0,
+        "purity_penalty": 0.0,
+        "pattern_hits": 0.0,
+        "total": 0.0
+      }
+    },
+    {
+      "file_path": "C:\\sentinel-triage-agent\\nodes\\analyst_node.py",
+      "ldr": {
+        "total_lines": 224,
+        "logic_lines": 221,
+        "empty_lines": 3,
+        "ldr_score": 0.9866071428571429,
+        "grade": "S++",
+        "is_abc_interface": false,
+        "is_type_stub": false,
+        "is_packaging_init": false
+      },
+      "inflation": {
+        "jargon_count": 0,
+        "avg_complexity": 2.7,
+        "inflation_score": 0.0,
+        "status": "PASS",
+        "jargon_found": [],
+        "jargon_details": [],
+        "justified_jargon": [],
+        "is_config_file": false
+      },
+      "ddc": {
+        "imported": [
+          "asyncio",
+          "chromadb",
+          "json",
+          "langchain_core",
+          "langchain_google_genai",
+          "llm_utils",
+          "logging",
+          "models",
+          "nodes",
+          "os",
+          "pydantic",
+          "sentence_transformers",
+          "state",
+          "throttle"
+        ],
+        "actually_used": [
+          "asyncio",
+          "chromadb",
+          "json",
+          "langchain_core",
+          "langchain_google_genai",
+          "llm_utils",
+          "logging",
+          "models",
+          "nodes",
+          "os",
+          "pydantic",
+          "sentence_transformers",
+          "throttle"
+        ],
+        "unused": [],
+        "fake_imports": [],
+        "type_checking_imports": [
+          "typing"
+        ],
+        "usage_ratio": 1.0,
+        "grade": "EXCELLENT"
+      },
+      "deficit_score": 44.39216187357635,
+      "status": "suspicious",
+      "warnings": [
+        "PATTERNS: 3 critical issues found"
+      ],
+      "pattern_issues": [
+        {
+          "pattern_id": "phantom_import",
+          "severity": "critical",
+          "axis": "quality",
+          "file": "C:\\sentinel-triage-agent\\nodes\\analyst_node.py",
+          "line": 20,
+          "column": 0,
+          "message": "Phantom import: 'state' cannot be resolved (not in stdlib, built-ins, or installed packages)",
+          "code": null,
+          "suggestion": "Verify 'state' exists on PyPI and add it to [project.dependencies] in pyproject.toml. AI models sometimes generate plausible-looking but non-existent package names."
+        },
+        {
+          "pattern_id": "phantom_import",
+          "severity": "critical",
+          "axis": "quality",
+          "file": "C:\\sentinel-triage-agent\\nodes\\analyst_node.py",
+          "line": 238,
+          "column": 4,
+          "message": "Phantom import: 'throttle' cannot be resolved (not in stdlib, built-ins, or installed packages)",
+          "code": null,
+          "suggestion": "Verify 'throttle' exists on PyPI and add it to [project.dependencies] in pyproject.toml. AI models sometimes generate plausible-looking but non-existent package names."
+        },
+        {
+          "pattern_id": "phantom_import",
+          "severity": "critical",
+          "axis": "quality",
+          "file": "C:\\sentinel-triage-agent\\nodes\\analyst_node.py",
+          "line": 239,
+          "column": 4,
+          "message": "Phantom import: 'llm_utils' cannot be resolved (not in stdlib, built-ins, or installed packages)",
+          "code": null,
+          "suggestion": "Verify 'llm_utils' exists on PyPI and add it to [project.dependencies] in pyproject.toml. AI models sometimes generate plausible-looking but non-existent package names."
+        }
+      ],
+      "docstring_inflation": {
+        "total_docstrings": 2,
+        "inflated_count": 2,
+        "avg_inflation_ratio": 1.0,
+        "max_inflation_ratio": 1.0,
+        "total_docstring_lines": 4,
+        "total_implementation_lines": 207,
+        "overall_ratio": 0.01932367149758454,
+        "status": "WARNING",
+        "details": [
+          {
+            "name": "initialize_chroma",
+            "type": "function",
+            "line": 58,
+            "docstring_lines": 1,
+            "implementation_lines": 1,
+            "inflation_ratio": 1.0,
+            "severity": "warning",
+            "docstring_preview": "Initialize ChromaDB client and collection."
+          },
+          {
+            "name": "retrieve_similar_mismatches",
+            "type": "function",
+            "line": 63,
+            "docstring_lines": 1,
+            "implementation_lines": 1,
+            "inflation_ratio": 1.0,
+            "severity": "warning",
+            "docstring_preview": "Retrieve top-k similar historical mismatches."
+          }
+        ]
+      },
+      "hallucination_deps": {
+        "total_hallucinated": 0,
+        "category_usage": [
+          {
+            "category": "async",
+            "imported": [
+              "asyncio"
+            ],
+            "used": [
+              "asyncio"
+            ],
+            "unused": [],
+            "usage_ratio": 1.0
+          },
+          {
+            "category": "serialization",
+            "imported": [
+              "json"
+            ],
+            "used": [
+              "json"
+            ],
+            "unused": [],
+            "usage_ratio": 1.0
+          },
+          {
+            "category": "logging",
+            "imported": [
+              "logging"
+            ],
+            "used": [
+              "logging"
+            ],
+            "unused": [],
+            "usage_ratio": 1.0
+          }
+        ],
+        "hallucinated_deps": [],
+        "worst_category": "none",
+        "status": "PASS"
+      },
+      "context_jargon": {
+        "total_jargon": 0,
+        "justified_jargon": 0,
+        "unjustified_jargon": 0,
+        "evidence_details": [],
+        "worst_offenders": [],
+        "justification_ratio": 1.0,
+        "status": "PASS"
+      },
+      "dcf": {
+        "Module": 0.0013157894736842105,
+        "Expr": 0.018421052631578946,
+        "Import": 0.006578947368421052,
+        "ImportFrom": 0.015789473684210527,
+        "Assign": 0.031578947368421054,
+        "ClassDef": 0.0013157894736842105,
+        "FunctionDef": 0.007894736842105263,
+        "AsyncFunctionDef": 0.005263157894736842,
+        "Constant": 0.11052631578947368,
+        "alias": 0.02763157894736842,
+        "Name": 0.18552631578947368,
+        "Call": 0.08026315789473684,
+        "arguments": 0.014473684210526316,
+        "Return": 0.013157894736842105,
+        "BinOp": 0.002631578947368421,
+        "If": 0.007894736842105263,
+        "For": 0.0013157894736842105,
+        "Raise": 0.003947368421052632,
+        "Try": 0.002631578947368421,
+        "Store": 0.038157894736842106,
+        "Attribute": 0.06842105263157895,
+        "keyword": 0.031578947368421054,
+        "Assert": 0.002631578947368421,
+        "arg": 0.015789473684210527,
+        "Await": 0.006578947368421052,
+        "Add": 0.002631578947368421,
+        "UnaryOp": 0.002631578947368421,
+        "List": 0.010526315789473684,
+        "Tuple": 0.002631578947368421,
+        "Load": 0.23421052631578948,
+        "BoolOp": 0.003947368421052632,
+        "ExceptHandler": 0.002631578947368421,
+        "Compare": 0.003947368421052632,
+        "Not": 0.002631578947368421,
+        "Subscript": 0.005263157894736842,
+        "Or": 0.003947368421052632,
+        "AsyncWith": 0.0013157894736842105,
+        "Is": 0.0013157894736842105,
+        "IsNot": 0.002631578947368421,
+        "JoinedStr": 0.005263157894736842,
+        "withitem": 0.0013157894736842105,
+        "Dict": 0.003947368421052632,
+        "Lambda": 0.0013157894736842105,
+        "FormattedValue": 0.006578947368421052
+      },
+      "deficit_breakdown": {
+        "ldr_penalty": 0.4995,
+        "inflation_penalty": -0.0,
+        "ddc_penalty": -0.0,
+        "purity_penalty": 13.8926,
+        "pattern_hits": 30.0,
+        "total": 44.3922
+      }
+    },
+    {
+      "file_path": "C:\\sentinel-triage-agent\\nodes\\containment_node.py",
+      "ldr": {
+        "total_lines": 71,
+        "logic_lines": 71,
+        "empty_lines": 0,
+        "ldr_score": 1.0,
+        "grade": "S++",
+        "is_abc_interface": false,
+        "is_type_stub": false,
+        "is_packaging_init": false
+      },
+      "inflation": {
+        "jargon_count": 0,
+        "avg_complexity": 5.333333333333333,
+        "inflation_score": 0.0,
+        "status": "PASS",
+        "jargon_found": [],
+        "jargon_details": [],
+        "justified_jargon": [],
+        "is_config_file": false
+      },
+      "ddc": {
+        "imported": [
+          "asyncio",
+          "logging",
+          "re",
+          "sentinel_api",
+          "state"
+        ],
+        "actually_used": [
+          "logging",
+          "re",
+          "sentinel_api"
+        ],
+        "unused": [
+          "asyncio"
+        ],
+        "fake_imports": [],
+        "type_checking_imports": [],
+        "usage_ratio": 0.75,
+        "grade": "GOOD"
+      },
+      "deficit_score": 39.575429387992614,
+      "status": "suspicious",
+      "warnings": [
+        "PATTERNS: 2 critical issues found",
+        "PATTERNS: 1 high-severity issues found"
+      ],
+      "pattern_issues": [
+        {
+          "pattern_id": "god_function",
+          "severity": "high",
+          "axis": "style",
+          "file": "C:\\sentinel-triage-agent\\nodes\\containment_node.py",
+          "line": 47,
+          "column": 0,
+          "message": "God function 'containment_node': complexity=11 (limit 10)",
+          "code": null,
+          "suggestion": "Break into smaller single-responsibility functions. Each function should do one thing and fit on one screen."
+        },
+        {
+          "pattern_id": "phantom_import",
+          "severity": "critical",
+          "axis": "quality",
+          "file": "C:\\sentinel-triage-agent\\nodes\\containment_node.py",
+          "line": 14,
+          "column": 0,
+          "message": "Phantom import: 'sentinel_api' cannot be resolved (not in stdlib, built-ins, or installed packages)",
+          "code": null,
+          "suggestion": "Verify 'sentinel_api' exists on PyPI and add it to [project.dependencies] in pyproject.toml. AI models sometimes generate plausible-looking but non-existent package names."
+        },
+        {
+          "pattern_id": "phantom_import",
+          "severity": "critical",
+          "axis": "quality",
+          "file": "C:\\sentinel-triage-agent\\nodes\\containment_node.py",
+          "line": 15,
+          "column": 0,
+          "message": "Phantom import: 'state' cannot be resolved (not in stdlib, built-ins, or installed packages)",
+          "code": null,
+          "suggestion": "Verify 'state' exists on PyPI and add it to [project.dependencies] in pyproject.toml. AI models sometimes generate plausible-looking but non-existent package names."
+        }
+      ],
+      "docstring_inflation": {
+        "total_docstrings": 1,
+        "inflated_count": 1,
+        "avg_inflation_ratio": 1.0,
+        "max_inflation_ratio": 1.0,
+        "total_docstring_lines": 8,
+        "total_implementation_lines": 60,
+        "overall_ratio": 0.13333333333333333,
+        "status": "WARNING",
+        "details": [
+          {
+            "name": "_validate_hostname",
+            "type": "function",
+            "line": 23,
+            "docstring_lines": 1,
+            "implementation_lines": 1,
+            "inflation_ratio": 1.0,
+            "severity": "warning",
+            "docstring_preview": "Reject hostnames with path traversal, whitespace, or injection characters."
+          }
+        ]
+      },
+      "hallucination_deps": {
+        "total_hallucinated": 1,
+        "category_usage": [
+          {
+            "category": "async",
+            "imported": [
+              "asyncio"
+            ],
+            "used": [],
+            "unused": [
+              "asyncio"
+            ],
+            "usage_ratio": 0.0
+          },
+          {
+            "category": "logging",
+            "imported": [
+              "logging"
+            ],
+            "used": [
+              "logging"
+            ],
+            "unused": [],
+            "usage_ratio": 1.0
+          }
+        ],
+        "hallucinated_deps": [
+          {
+            "library": "asyncio",
+            "category": "async",
+            "line": 11,
+            "likely_intent": "asynchronous programming"
+          }
+        ],
+        "worst_category": "async",
+        "status": "PASS"
+      },
+      "context_jargon": {
+        "total_jargon": 0,
+        "justified_jargon": 0,
+        "unjustified_jargon": 0,
+        "evidence_details": [],
+        "worst_offenders": [],
+        "justification_ratio": 1.0,
+        "status": "PASS"
+      },
+      "dcf": {
+        "Module": 0.002398081534772182,
+        "Expr": 0.0407673860911271,
+        "Import": 0.007194244604316547,
+        "ImportFrom": 0.004796163069544364,
+        "Assign": 0.03117505995203837,
+        "FunctionDef": 0.002398081534772182,
+        "AsyncFunctionDef": 0.004796163069544364,
+        "Constant": 0.07673860911270983,
+        "alias": 0.014388489208633094,
+        "Name": 0.22302158273381295,
+        "Call": 0.07434052757793765,
+        "arguments": 0.007194244604316547,
+        "Return": 0.014388489208633094,
+        "If": 0.014388489208633094,
+        "BinOp": 0.004796163069544364,
+        "AnnAssign": 0.002398081534772182,
+        "For": 0.004796163069544364,
+        "Store": 0.03836930455635491,
+        "Attribute": 0.050359712230215826,
+        "arg": 0.007194244604316547,
+        "BoolOp": 0.009592326139088728,
+        "Load": 0.2517985611510791,
+        "Await": 0.007194244604316547,
+        "Compare": 0.004796163069544364,
+        "BitOr": 0.002398081534772182,
+        "Subscript": 0.002398081534772182,
+        "List": 0.014388489208633094,
+        "UnaryOp": 0.004796163069544364,
+        "Try": 0.002398081534772182,
+        "Dict": 0.011990407673860911,
+        "And": 0.002398081534772182,
+        "Is": 0.002398081534772182,
+        "JoinedStr": 0.014388489208633094,
+        "Not": 0.004796163069544364,
+        "Or": 0.007194244604316547,
+        "ExceptHandler": 0.002398081534772182,
+        "NotIn": 0.002398081534772182,
+        "FormattedValue": 0.023980815347721823,
+        "Add": 0.002398081534772182
+      },
+      "deficit_breakdown": {
+        "ldr_penalty": -0.0,
+        "inflation_penalty": -0.0,
+        "ddc_penalty": 5.3233,
+        "purity_penalty": 9.2521,
+        "pattern_hits": 25.0,
+        "total": 39.5754
+      }
+    },
+    {
+      "file_path": "C:\\sentinel-triage-agent\\nodes\\enrich_node.py",
+      "ldr": {
+        "total_lines": 270,
+        "logic_lines": 266,
+        "empty_lines": 4,
+        "ldr_score": 0.9851851851851852,
+        "grade": "S++",
+        "is_abc_interface": false,
+        "is_type_stub": false,
+        "is_packaging_init": false
+      },
+      "inflation": {
+        "jargon_count": 0,
+        "avg_complexity": 3.6666666666666665,
+        "inflation_score": 0.0,
+        "status": "PASS",
+        "jargon_found": [],
+        "jargon_details": [],
+        "justified_jargon": [],
+        "is_config_file": false
+      },
+      "ddc": {
+        "imported": [
+          "aiohttp",
+          "aiolimiter",
+          "asyncio",
+          "base64",
+          "logging",
+          "models",
+          "os",
+          "pydantic",
+          "state",
+          "tenacity"
+        ],
+        "actually_used": [
+          "aiohttp",
+          "aiolimiter",
+          "asyncio",
+          "base64",
+          "logging",
+          "models",
+          "os",
+          "pydantic",
+          "tenacity"
+        ],
+        "unused": [],
+        "fake_imports": [],
+        "type_checking_imports": [],
+        "usage_ratio": 1.0,
+        "grade": "EXCELLENT"
+      },
+      "deficit_score": 50.44153649944528,
+      "status": "inflated_signal",
+      "warnings": [
+        "PATTERNS: 3 critical issues found",
+        "PATTERNS: 1 high-severity issues found"
+      ],
+      "pattern_issues": [
+        {
+          "pattern_id": "god_function",
+          "severity": "low",
+          "axis": "style",
+          "file": "C:\\sentinel-triage-agent\\nodes\\enrich_node.py",
+          "line": 255,
+          "column": 0,
+          "message": "God function '_run_enrichment': 52 logic lines (limit 50)",
+          "code": null,
+          "suggestion": "Break into smaller single-responsibility functions. Each function should do one thing and fit on one screen."
+        },
+        {
+          "pattern_id": "nested_complexity",
+          "severity": "critical",
+          "axis": "quality",
+          "file": "C:\\sentinel-triage-agent\\nodes\\enrich_node.py",
+          "line": 174,
+          "column": 0,
+          "message": "Function '_check_abuseipdb' has both deep nesting (depth=4) and high cyclomatic complexity (cc=7) -- structural complexity composite",
+          "code": null,
+          "suggestion": "Extract nested blocks into named helper functions. Use early-return / guard clauses and reduce branch count."
+        },
+        {
+          "pattern_id": "nested_complexity",
+          "severity": "critical",
+          "axis": "quality",
+          "file": "C:\\sentinel-triage-agent\\nodes\\enrich_node.py",
+          "line": 224,
+          "column": 0,
+          "message": "Function '_partition_results' has both deep nesting (depth=4) and high cyclomatic complexity (cc=7) -- structural complexity composite",
+          "code": null,
+          "suggestion": "Extract nested blocks into named helper functions. Use early-return / guard clauses and reduce branch count."
+        },
+        {
+          "pattern_id": "phantom_import",
+          "severity": "critical",
+          "axis": "quality",
+          "file": "C:\\sentinel-triage-agent\\nodes\\enrich_node.py",
+          "line": 38,
+          "column": 0,
+          "message": "Phantom import: 'state' cannot be resolved (not in stdlib, built-ins, or installed packages)",
+          "code": null,
+          "suggestion": "Verify 'state' exists on PyPI and add it to [project.dependencies] in pyproject.toml. AI models sometimes generate plausible-looking but non-existent package names."
+        },
+        {
+          "pattern_id": "function_clone_cluster",
+          "severity": "high",
+          "axis": "structure",
+          "file": "C:\\sentinel-triage-agent\\nodes\\enrich_node.py",
+          "line": 1,
+          "column": 0,
+          "message": "4 structurally similar functions detected (AST JSD < 0.05): _vt_verdict, _check_abuseipdb, _check_vt_hash, _check_vt_url. Review for unnecessary decomposition.",
+          "code": null,
+          "suggestion": "If these functions represent a fragmented complex operation, consider consolidating or using a data-driven dispatch table."
+        }
+      ],
+      "docstring_inflation": {
+        "total_docstrings": 2,
+        "inflated_count": 2,
+        "avg_inflation_ratio": 1.0,
+        "max_inflation_ratio": 1.0,
+        "total_docstring_lines": 29,
+        "total_implementation_lines": 231,
+        "overall_ratio": 0.12554112554112554,
+        "status": "WARNING",
+        "details": [
+          {
+            "name": "close_session",
+            "type": "function",
+            "line": 84,
+            "docstring_lines": 1,
+            "implementation_lines": 1,
+            "inflation_ratio": 1.0,
+            "severity": "warning",
+            "docstring_preview": "Close the global aiohttp session. Call during shutdown."
+          },
+          {
+            "name": "_is_error_result",
+            "type": "function",
+            "line": 219,
+            "docstring_lines": 1,
+            "implementation_lines": 1,
+            "inflation_ratio": 1.0,
+            "severity": "warning",
+            "docstring_preview": "Returns True if a CTI lookup result represents a failed lookup."
+          }
+        ]
+      },
+      "hallucination_deps": {
+        "total_hallucinated": 0,
+        "category_usage": [
+          {
+            "category": "http",
+            "imported": [
+              "aiohttp"
+            ],
+            "used": [
+              "aiohttp"
+            ],
+            "unused": [],
+            "usage_ratio": 1.0
+          },
+          {
+            "category": "async",
+            "imported": [
+              "asyncio"
+            ],
+            "used": [
+              "asyncio"
+            ],
+            "unused": [],
+            "usage_ratio": 1.0
+          },
+          {
+            "category": "logging",
+            "imported": [
+              "logging"
+            ],
+            "used": [
+              "logging"
+            ],
+            "unused": [],
+            "usage_ratio": 1.0
+          }
+        ],
+        "hallucinated_deps": [],
+        "worst_category": "none",
+        "status": "PASS"
+      },
+      "context_jargon": {
+        "total_jargon": 0,
+        "justified_jargon": 0,
+        "unjustified_jargon": 0,
+        "evidence_details": [],
+        "worst_offenders": [],
+        "justification_ratio": 1.0,
+        "status": "PASS"
+      },
+      "dcf": {
+        "Module": 0.0005633802816901409,
+        "Expr": 0.012394366197183098,
+        "Import": 0.0028169014084507044,
+        "ImportFrom": 0.004507042253521127,
+        "Assign": 0.0276056338028169,
+        "AnnAssign": 0.005633802816901409,
+        "ClassDef": 0.0011267605633802818,
+        "AsyncFunctionDef": 0.005633802816901409,
+        "FunctionDef": 0.0022535211267605635,
+        "Constant": 0.10197183098591549,
+        "alias": 0.009014084507042254,
+        "Name": 0.22422535211267605,
+        "Call": 0.05464788732394366,
+        "arguments": 0.007887323943661971,
+        "Return": 0.009577464788732394,
+        "Attribute": 0.05464788732394366,
+        "Pass": 0.0005633802816901409,
+        "Try": 0.0016901408450704226,
+        "If": 0.011830985915492958,
+        "AsyncWith": 0.0022535211267605635,
+        "For": 0.0005633802816901409,
+        "Subscript": 0.009014084507042254,
+        "Store": 0.04619718309859155,
+        "Load": 0.2619718309859155,
+        "Await": 0.004507042253521127,
+        "arg": 0.011830985915492958,
+        "ExceptHandler": 0.0016901408450704226,
+        "Compare": 0.009014084507042254,
+        "Dict": 0.010140845070422535,
+        "keyword": 0.021971830985915493,
+        "JoinedStr": 0.0067605633802816905,
+        "withitem": 0.0022535211267605635,
+        "List": 0.008450704225352112,
+        "Tuple": 0.011267605633802818,
+        "ListComp": 0.0022535211267605635,
+        "BinOp": 0.003943661971830986,
+        "BoolOp": 0.004507042253521127,
+        "UnaryOp": 0.0022535211267605635,
+        "Raise": 0.003943661971830986,
+        "GtE": 0.0022535211267605635,
+        "FormattedValue": 0.011267605633802818,
+        "In": 0.0022535211267605635,
+        "comprehension": 0.0022535211267605635,
+        "Add": 0.0033802816901408453,
+        "Or": 0.0022535211267605635,
+        "Not": 0.0022535211267605635,
+        "And": 0.0022535211267605635,
+        "BitOr": 0.0005633802816901409,
+        "Eq": 0.0022535211267605635,
+        "IfExp": 0.0011267605633802818,
+        "Is": 0.0005633802816901409,
+        "IsNot": 0.0005633802816901409,
+        "Starred": 0.0005633802816901409,
+        "Slice": 0.0016901408450704226,
+        "Lt": 0.0011267605633802818
+      },
+      "deficit_breakdown": {
+        "ldr_penalty": 0.5528,
+        "inflation_penalty": -0.0,
+        "ddc_penalty": -0.0,
+        "purity_penalty": 13.8887,
+        "pattern_hits": 36.0,
+        "total": 50.4415
+      }
+    },
+    {
+      "file_path": "C:\\sentinel-triage-agent\\nodes\\extract_node.py",
+      "ldr": {
+        "total_lines": 85,
+        "logic_lines": 85,
+        "empty_lines": 0,
+        "ldr_score": 1.0,
+        "grade": "S++",
+        "is_abc_interface": false,
+        "is_type_stub": false,
+        "is_packaging_init": false
+      },
+      "inflation": {
+        "jargon_count": 0,
+        "avg_complexity": 3.0,
+        "inflation_score": 0.0,
+        "status": "PASS",
+        "jargon_found": [],
+        "jargon_details": [],
+        "justified_jargon": [],
+        "is_config_file": false
+      },
+      "ddc": {
+        "imported": [
+          "json",
+          "langchain_google_genai",
+          "llm_utils",
+          "os",
+          "re",
+          "state",
+          "throttle"
+        ],
+        "actually_used": [
+          "json",
+          "langchain_google_genai",
+          "llm_utils",
+          "os",
+          "re",
+          "throttle"
+        ],
+        "unused": [],
+        "fake_imports": [],
+        "type_checking_imports": [],
+        "usage_ratio": 1.0,
+        "grade": "EXCELLENT"
+      },
+      "deficit_score": 43.92920235749422,
+      "status": "suspicious",
+      "warnings": [
+        "PATTERNS: 3 critical issues found"
+      ],
+      "pattern_issues": [
+        {
+          "pattern_id": "phantom_import",
+          "severity": "critical",
+          "axis": "quality",
+          "file": "C:\\sentinel-triage-agent\\nodes\\extract_node.py",
+          "line": 11,
+          "column": 0,
+          "message": "Phantom import: 'state' cannot be resolved (not in stdlib, built-ins, or installed packages)",
+          "code": null,
+          "suggestion": "Verify 'state' exists on PyPI and add it to [project.dependencies] in pyproject.toml. AI models sometimes generate plausible-looking but non-existent package names."
+        },
+        {
+          "pattern_id": "phantom_import",
+          "severity": "critical",
+          "axis": "quality",
+          "file": "C:\\sentinel-triage-agent\\nodes\\extract_node.py",
+          "line": 92,
+          "column": 4,
+          "message": "Phantom import: 'throttle' cannot be resolved (not in stdlib, built-ins, or installed packages)",
+          "code": null,
+          "suggestion": "Verify 'throttle' exists on PyPI and add it to [project.dependencies] in pyproject.toml. AI models sometimes generate plausible-looking but non-existent package names."
+        },
+        {
+          "pattern_id": "phantom_import",
+          "severity": "critical",
+          "axis": "quality",
+          "file": "C:\\sentinel-triage-agent\\nodes\\extract_node.py",
+          "line": 93,
+          "column": 4,
+          "message": "Phantom import: 'llm_utils' cannot be resolved (not in stdlib, built-ins, or installed packages)",
+          "code": null,
+          "suggestion": "Verify 'llm_utils' exists on PyPI and add it to [project.dependencies] in pyproject.toml. AI models sometimes generate plausible-looking but non-existent package names."
+        }
+      ],
+      "docstring_inflation": {
+        "total_docstrings": 2,
+        "inflated_count": 2,
+        "avg_inflation_ratio": 1.0,
+        "max_inflation_ratio": 1.0,
+        "total_docstring_lines": 5,
+        "total_implementation_lines": 77,
+        "overall_ratio": 0.06493506493506493,
+        "status": "WARNING",
+        "details": [
+          {
+            "name": "_is_public_ip",
+            "type": "function",
+            "line": 31,
+            "docstring_lines": 1,
+            "implementation_lines": 1,
+            "inflation_ratio": 1.0,
+            "severity": "warning",
+            "docstring_preview": "Returns True if the IP is not a private/loopback address."
+          },
+          {
+            "name": "_is_internal_ip",
+            "type": "function",
+            "line": 36,
+            "docstring_lines": 1,
+            "implementation_lines": 1,
+            "inflation_ratio": 1.0,
+            "severity": "warning",
+            "docstring_preview": "Returns True if the IP is a private/RFC-1918 address (lateral movement candidate)."
+          }
+        ]
+      },
+      "hallucination_deps": {
+        "total_hallucinated": 0,
+        "category_usage": [
+          {
+            "category": "serialization",
+            "imported": [
+              "json"
+            ],
+            "used": [
+              "json"
+            ],
+            "unused": [],
+            "usage_ratio": 1.0
+          }
+        ],
+        "hallucinated_deps": [],
+        "worst_category": "none",
+        "status": "PASS"
+      },
+      "context_jargon": {
+        "total_jargon": 0,
+        "justified_jargon": 0,
+        "unjustified_jargon": 0,
+        "evidence_details": [],
+        "worst_offenders": [],
+        "justification_ratio": 1.0,
+        "status": "PASS"
+      },
+      "dcf": {
+        "Module": 0.002421307506053269,
+        "Expr": 0.012106537530266344,
+        "Import": 0.007263922518159807,
+        "ImportFrom": 0.009685230024213076,
+        "Assign": 0.03631961259079903,
+        "FunctionDef": 0.007263922518159807,
+        "AsyncFunctionDef": 0.004842615012106538,
+        "Constant": 0.09200968523002422,
+        "alias": 0.01694915254237288,
+        "Name": 0.21549636803874092,
+        "Call": 0.1016949152542373,
+        "List": 0.01694915254237288,
+        "arguments": 0.012106537530266344,
+        "Return": 0.012106537530266344,
+        "If": 0.002421307506053269,
+        "Try": 0.002421307506053269,
+        "Store": 0.04600484261501211,
+        "Attribute": 0.06537530266343826,
+        "Load": 0.2542372881355932,
+        "arg": 0.009685230024213076,
+        "UnaryOp": 0.004842615012106538,
+        "Dict": 0.009685230024213076,
+        "Raise": 0.002421307506053269,
+        "Subscript": 0.002421307506053269,
+        "JoinedStr": 0.002421307506053269,
+        "AsyncWith": 0.002421307506053269,
+        "ExceptHandler": 0.002421307506053269,
+        "Not": 0.004842615012106538,
+        "GeneratorExp": 0.009685230024213076,
+        "keyword": 0.007263922518159807,
+        "FormattedValue": 0.002421307506053269,
+        "withitem": 0.002421307506053269,
+        "Await": 0.004842615012106538,
+        "comprehension": 0.009685230024213076,
+        "BinOp": 0.002421307506053269,
+        "Add": 0.002421307506053269
+      },
+      "deficit_breakdown": {
+        "ldr_penalty": -0.0,
+        "inflation_penalty": -0.0,
+        "ddc_penalty": -0.0,
+        "purity_penalty": 13.9292,
+        "pattern_hits": 30.0,
+        "total": 43.9292
+      }
+    },
+    {
+      "file_path": "C:\\sentinel-triage-agent\\nodes\\fetch_node.py",
+      "ldr": {
+        "total_lines": 59,
+        "logic_lines": 59,
+        "empty_lines": 0,
+        "ldr_score": 1.0,
+        "grade": "S++",
+        "is_abc_interface": false,
+        "is_type_stub": false,
+        "is_packaging_init": false
+      },
+      "inflation": {
+        "jargon_count": 0,
+        "avg_complexity": 7.0,
+        "inflation_score": 0.0,
+        "status": "PASS",
+        "jargon_found": [],
+        "jargon_details": [],
+        "justified_jargon": [],
+        "is_config_file": false
+      },
+      "ddc": {
+        "imported": [
+          "logging",
+          "models",
+          "pydantic",
+          "sentinel_api",
+          "state"
+        ],
+        "actually_used": [
+          "logging",
+          "models",
+          "pydantic",
+          "sentinel_api"
+        ],
+        "unused": [],
+        "fake_imports": [],
+        "type_checking_imports": [
+          "typing"
+        ],
+        "usage_ratio": 1.0,
+        "grade": "EXCELLENT"
+      },
+      "deficit_score": 29.51625819640405,
+      "status": "clean",
+      "warnings": [
+        "PATTERNS: 2 critical issues found"
+      ],
+      "pattern_issues": [
+        {
+          "pattern_id": "phantom_import",
+          "severity": "critical",
+          "axis": "quality",
+          "file": "C:\\sentinel-triage-agent\\nodes\\fetch_node.py",
+          "line": 9,
+          "column": 0,
+          "message": "Phantom import: 'sentinel_api' cannot be resolved (not in stdlib, built-ins, or installed packages)",
+          "code": null,
+          "suggestion": "Verify 'sentinel_api' exists on PyPI and add it to [project.dependencies] in pyproject.toml. AI models sometimes generate plausible-looking but non-existent package names."
+        },
+        {
+          "pattern_id": "phantom_import",
+          "severity": "critical",
+          "axis": "quality",
+          "file": "C:\\sentinel-triage-agent\\nodes\\fetch_node.py",
+          "line": 10,
+          "column": 0,
+          "message": "Phantom import: 'state' cannot be resolved (not in stdlib, built-ins, or installed packages)",
+          "code": null,
+          "suggestion": "Verify 'state' exists on PyPI and add it to [project.dependencies] in pyproject.toml. AI models sometimes generate plausible-looking but non-existent package names."
+        }
+      ],
+      "docstring_inflation": {
+        "total_docstrings": 0,
+        "inflated_count": 0,
+        "avg_inflation_ratio": 0.0,
+        "max_inflation_ratio": 0.0,
+        "total_docstring_lines": 1,
+        "total_implementation_lines": 51,
+        "overall_ratio": 0.0196078431372549,
+        "status": "PASS",
+        "details": []
+      },
+      "hallucination_deps": {
+        "total_hallucinated": 0,
+        "category_usage": [
+          {
+            "category": "logging",
+            "imported": [
+              "logging"
+            ],
+            "used": [
+              "logging"
+            ],
+            "unused": [],
+            "usage_ratio": 1.0
+          }
+        ],
+        "hallucinated_deps": [],
+        "worst_category": "none",
+        "status": "PASS"
+      },
+      "context_jargon": {
+        "total_jargon": 0,
+        "justified_jargon": 0,
+        "unjustified_jargon": 0,
+        "evidence_details": [],
+        "worst_offenders": [],
+        "justification_ratio": 1.0,
+        "status": "PASS"
+      },
+      "dcf": {
+        "Module": 0.0031746031746031746,
+        "Expr": 0.022222222222222223,
+        "Import": 0.0031746031746031746,
+        "ImportFrom": 0.01904761904761905,
+        "Assign": 0.04126984126984127,
+        "FunctionDef": 0.0031746031746031746,
+        "Constant": 0.11428571428571428,
+        "alias": 0.025396825396825397,
+        "Name": 0.20634920634920634,
+        "Call": 0.06666666666666667,
+        "arguments": 0.0031746031746031746,
+        "AnnAssign": 0.006349206349206349,
+        "Try": 0.009523809523809525,
+        "Return": 0.006349206349206349,
+        "Store": 0.050793650793650794,
+        "Attribute": 0.044444444444444446,
+        "arg": 0.0031746031746031746,
+        "Subscript": 0.031746031746031744,
+        "List": 0.01904761904761905,
+        "Dict": 0.006349206349206349,
+        "ExceptHandler": 0.012698412698412698,
+        "For": 0.0031746031746031746,
+        "Load": 0.25396825396825395,
+        "Tuple": 0.0031746031746031746,
+        "BoolOp": 0.0031746031746031746,
+        "Or": 0.0031746031746031746,
+        "JoinedStr": 0.012698412698412698,
+        "Raise": 0.0031746031746031746,
+        "FormattedValue": 0.012698412698412698,
+        "keyword": 0.006349206349206349
+      },
+      "deficit_breakdown": {
+        "ldr_penalty": -0.0,
+        "inflation_penalty": -0.0,
+        "ddc_penalty": -0.0,
+        "purity_penalty": 9.5163,
+        "pattern_hits": 20.0,
+        "total": 29.5163
+      }
+    },
+    {
+      "file_path": "C:\\sentinel-triage-agent\\nodes\\kql_node.py",
+      "ldr": {
+        "total_lines": 130,
+        "logic_lines": 130,
+        "empty_lines": 0,
+        "ldr_score": 1.0,
+        "grade": "S++",
+        "is_abc_interface": false,
+        "is_type_stub": false,
+        "is_packaging_init": false
+      },
+      "inflation": {
+        "jargon_count": 0,
+        "avg_complexity": 5.5,
+        "inflation_score": 0.0,
+        "status": "PASS",
+        "jargon_found": [],
+        "jargon_details": [],
+        "justified_jargon": [],
+        "is_config_file": false
+      },
+      "ddc": {
+        "imported": [
+          "json",
+          "langchain_google_genai",
+          "llm_utils",
+          "os",
+          "state",
+          "throttle"
+        ],
+        "actually_used": [
+          "json",
+          "langchain_google_genai",
+          "llm_utils",
+          "os",
+          "throttle"
+        ],
+        "unused": [],
+        "fake_imports": [],
+        "type_checking_imports": [],
+        "usage_ratio": 1.0,
+        "grade": "EXCELLENT"
+      },
+      "deficit_score": 43.92920235749422,
+      "status": "suspicious",
+      "warnings": [
+        "PATTERNS: 3 critical issues found"
+      ],
+      "pattern_issues": [
+        {
+          "pattern_id": "phantom_import",
+          "severity": "critical",
+          "axis": "quality",
+          "file": "C:\\sentinel-triage-agent\\nodes\\kql_node.py",
+          "line": 15,
+          "column": 0,
+          "message": "Phantom import: 'state' cannot be resolved (not in stdlib, built-ins, or installed packages)",
+          "code": null,
+          "suggestion": "Verify 'state' exists on PyPI and add it to [project.dependencies] in pyproject.toml. AI models sometimes generate plausible-looking but non-existent package names."
+        },
+        {
+          "pattern_id": "phantom_import",
+          "severity": "critical",
+          "axis": "quality",
+          "file": "C:\\sentinel-triage-agent\\nodes\\kql_node.py",
+          "line": 144,
+          "column": 4,
+          "message": "Phantom import: 'throttle' cannot be resolved (not in stdlib, built-ins, or installed packages)",
+          "code": null,
+          "suggestion": "Verify 'throttle' exists on PyPI and add it to [project.dependencies] in pyproject.toml. AI models sometimes generate plausible-looking but non-existent package names."
+        },
+        {
+          "pattern_id": "phantom_import",
+          "severity": "critical",
+          "axis": "quality",
+          "file": "C:\\sentinel-triage-agent\\nodes\\kql_node.py",
+          "line": 145,
+          "column": 4,
+          "message": "Phantom import: 'llm_utils' cannot be resolved (not in stdlib, built-ins, or installed packages)",
+          "code": null,
+          "suggestion": "Verify 'llm_utils' exists on PyPI and add it to [project.dependencies] in pyproject.toml. AI models sometimes generate plausible-looking but non-existent package names."
+        }
+      ],
+      "docstring_inflation": {
+        "total_docstrings": 0,
+        "inflated_count": 0,
+        "avg_inflation_ratio": 0.0,
+        "max_inflation_ratio": 0.0,
+        "total_docstring_lines": 8,
+        "total_implementation_lines": 116,
+        "overall_ratio": 0.06896551724137931,
+        "status": "PASS",
+        "details": []
+      },
+      "hallucination_deps": {
+        "total_hallucinated": 0,
+        "category_usage": [
+          {
+            "category": "serialization",
+            "imported": [
+              "json"
+            ],
+            "used": [
+              "json"
+            ],
+            "unused": [],
+            "usage_ratio": 1.0
+          }
+        ],
+        "hallucinated_deps": [],
+        "worst_category": "none",
+        "status": "PASS"
+      },
+      "context_jargon": {
+        "total_jargon": 0,
+        "justified_jargon": 0,
+        "unjustified_jargon": 0,
+        "evidence_details": [],
+        "worst_offenders": [],
+        "justification_ratio": 1.0,
+        "status": "PASS"
+      },
+      "dcf": {
+        "Module": 0.002127659574468085,
+        "Expr": 0.006382978723404255,
+        "Import": 0.00425531914893617,
+        "ImportFrom": 0.00851063829787234,
+        "Assign": 0.027659574468085105,
+        "FunctionDef": 0.002127659574468085,
+        "AsyncFunctionDef": 0.00425531914893617,
+        "Constant": 0.26595744680851063,
+        "alias": 0.01276595744680851,
+        "Name": 0.13829787234042554,
+        "Dict": 0.02553191489361702,
+        "arguments": 0.006382978723404255,
+        "For": 0.002127659574468085,
+        "Return": 0.010638297872340425,
+        "If": 0.00851063829787234,
+        "Try": 0.002127659574468085,
+        "Store": 0.03829787234042553,
+        "arg": 0.00425531914893617,
+        "Tuple": 0.002127659574468085,
+        "Call": 0.05531914893617021,
+        "Load": 0.19787234042553192,
+        "Compare": 0.006382978723404255,
+        "UnaryOp": 0.002127659574468085,
+        "Raise": 0.002127659574468085,
+        "AsyncWith": 0.002127659574468085,
+        "ExceptHandler": 0.002127659574468085,
+        "List": 0.03404255319148936,
+        "Subscript": 0.01702127659574468,
+        "Attribute": 0.04468085106382979,
+        "Eq": 0.002127659574468085,
+        "Not": 0.002127659574468085,
+        "keyword": 0.023404255319148935,
+        "withitem": 0.002127659574468085,
+        "Await": 0.00425531914893617,
+        "ListComp": 0.002127659574468085,
+        "In": 0.00425531914893617,
+        "BoolOp": 0.002127659574468085,
+        "JoinedStr": 0.00425531914893617,
+        "comprehension": 0.00425531914893617,
+        "GeneratorExp": 0.002127659574468085,
+        "Or": 0.002127659574468085,
+        "FormattedValue": 0.00851063829787234
+      },
+      "deficit_breakdown": {
+        "ldr_penalty": -0.0,
+        "inflation_penalty": -0.0,
+        "ddc_penalty": -0.0,
+        "purity_penalty": 13.9292,
+        "pattern_hits": 30.0,
+        "total": 43.9292
+      }
+    },
+    {
+      "file_path": "C:\\sentinel-triage-agent\\nodes\\learning_node.py",
+      "ldr": {
+        "total_lines": 218,
+        "logic_lines": 218,
+        "empty_lines": 0,
+        "ldr_score": 1.0,
+        "grade": "S++",
+        "is_abc_interface": false,
+        "is_type_stub": false,
+        "is_packaging_init": false
+      },
+      "inflation": {
+        "jargon_count": 6,
+        "avg_complexity": 4.285714285714286,
+        "inflation_score": 0.24377457404980343,
+        "status": "PASS",
+        "jargon_found": [
+          "embedding",
+          "embedding",
+          "embedding",
+          "embedding",
+          "embedding",
+          "embedding"
+        ],
+        "jargon_details": [
+          {
+            "word": "embedding",
+            "line": 21,
+            "category": "ai_ml",
+            "justified": true
+          },
+          {
+            "word": "embedding",
+            "line": 40,
+            "category": "ai_ml",
+            "justified": false
+          },
+          {
+            "word": "embedding",
+            "line": 48,
+            "category": "ai_ml",
+            "justified": true
+          },
+          {
+            "word": "embedding",
+            "line": 102,
+            "category": "ai_ml",
+            "justified": false
+          },
+          {
+            "word": "embedding",
+            "line": 112,
+            "category": "ai_ml",
+            "justified": false
+          },
+          {
+            "word": "embedding",
+            "line": 140,
+            "category": "ai_ml",
+            "justified": false
+          }
+        ],
+        "justified_jargon": [
+          "embedding",
+          "embedding"
+        ],
+        "is_config_file": false
+      },
+      "ddc": {
+        "imported": [
+          "asyncio",
+          "chromadb",
+          "concurrent",
+          "logging",
+          "os",
+          "sentence_transformers",
+          "state",
+          "threading",
+          "time",
+          "uuid"
+        ],
+        "actually_used": [
+          "asyncio",
+          "chromadb",
+          "concurrent",
+          "logging",
+          "os",
+          "sentence_transformers",
+          "threading",
+          "time",
+          "uuid"
+        ],
+        "unused": [],
+        "fake_imports": [],
+        "type_checking_imports": [],
+        "usage_ratio": 1.0,
+        "grade": "EXCELLENT"
+      },
+      "deficit_score": 42.97668334129798,
+      "status": "suspicious",
+      "warnings": [
+        "PATTERNS: 2 critical issues found",
+        "PATTERNS: 2 high-severity issues found"
+      ],
+      "pattern_issues": [
+        {
+          "pattern_id": "god_function",
+          "severity": "high",
+          "axis": "style",
+          "file": "C:\\sentinel-triage-agent\\nodes\\learning_node.py",
+          "line": 204,
+          "column": 0,
+          "message": "God function 'flush_and_shutdown': complexity=11 (limit 10)",
+          "code": null,
+          "suggestion": "Break into smaller single-responsibility functions. Each function should do one thing and fit on one screen."
+        },
+        {
+          "pattern_id": "deep_nesting",
+          "severity": "high",
+          "axis": "style",
+          "file": "C:\\sentinel-triage-agent\\nodes\\learning_node.py",
+          "line": 69,
+          "column": 4,
+          "message": "Function 'get_instance' has nesting depth 5 (limit 4)",
+          "code": null,
+          "suggestion": "Extract nested blocks into helper functions. Use early-return / guard clauses to reduce nesting."
+        },
+        {
+          "pattern_id": "nested_complexity",
+          "severity": "critical",
+          "axis": "quality",
+          "file": "C:\\sentinel-triage-agent\\nodes\\learning_node.py",
+          "line": 69,
+          "column": 4,
+          "message": "Function 'get_instance' has both deep nesting (depth=5) and high cyclomatic complexity (cc=8) -- structural complexity composite",
+          "code": null,
+          "suggestion": "Extract nested blocks into named helper functions. Use early-return / guard clauses and reduce branch count."
+        },
+        {
+          "pattern_id": "phantom_import",
+          "severity": "critical",
+          "axis": "quality",
+          "file": "C:\\sentinel-triage-agent\\nodes\\learning_node.py",
+          "line": 16,
+          "column": 0,
+          "message": "Phantom import: 'state' cannot be resolved (not in stdlib, built-ins, or installed packages)",
+          "code": null,
+          "suggestion": "Verify 'state' exists on PyPI and add it to [project.dependencies] in pyproject.toml. AI models sometimes generate plausible-looking but non-existent package names."
+        }
+      ],
+      "docstring_inflation": {
+        "total_docstrings": 1,
+        "inflated_count": 1,
+        "avg_inflation_ratio": 1.0,
+        "max_inflation_ratio": 1.0,
+        "total_docstring_lines": 3,
+        "total_implementation_lines": 207,
+        "overall_ratio": 0.014492753623188406,
+        "status": "WARNING",
+        "details": [
+          {
+            "name": "_init_worker",
+            "type": "function",
+            "line": 39,
+            "docstring_lines": 1,
+            "implementation_lines": 1,
+            "inflation_ratio": 1.0,
+            "severity": "warning",
+            "docstring_preview": "Initialize the worker process embedding model."
+          }
+        ]
+      },
+      "hallucination_deps": {
+        "total_hallucinated": 0,
+        "category_usage": [
+          {
+            "category": "async",
+            "imported": [
+              "asyncio",
+              "concurrent"
+            ],
+            "used": [
+              "asyncio",
+              "concurrent"
+            ],
+            "unused": [],
+            "usage_ratio": 1.0
+          },
+          {
+            "category": "logging",
+            "imported": [
+              "logging"
+            ],
+            "used": [
+              "logging"
+            ],
+            "unused": [],
+            "usage_ratio": 1.0
+          }
+        ],
+        "hallucinated_deps": [],
+        "worst_category": "none",
+        "status": "PASS"
+      },
+      "context_jargon": {
+        "total_jargon": 0,
+        "justified_jargon": 0,
+        "unjustified_jargon": 0,
+        "evidence_details": [],
+        "worst_offenders": [],
+        "justification_ratio": 1.0,
+        "status": "PASS"
+      },
+      "dcf": {
+        "Module": 0.0008045052292839903,
+        "Expr": 0.029766693483507644,
+        "Import": 0.006436041834271922,
+        "ImportFrom": 0.0016090104585679806,
+        "Assign": 0.028962188254223652,
+        "ClassDef": 0.0016090104585679806,
+        "FunctionDef": 0.0056315366049879325,
+        "AnnAssign": 0.007240547063555913,
+        "AsyncFunctionDef": 0.004022526146419952,
+        "Constant": 0.07723250201126307,
+        "alias": 0.008045052292839904,
+        "Name": 0.20434432823813356,
+        "Call": 0.06033789219629927,
+        "arguments": 0.010458567980691875,
+        "Subscript": 0.012872083668543845,
+        "Return": 0.009654062751407884,
+        "If": 0.011263073209975865,
+        "Try": 0.009654062751407884,
+        "While": 0.003218020917135961,
+        "Store": 0.039420756234915526,
+        "Attribute": 0.08608205953338696,
+        "Load": 0.26950925181013674,
+        "keyword": 0.009654062751407884,
+        "BinOp": 0.002413515687851971,
+        "arg": 0.015285599356395816,
+        "JoinedStr": 0.0016090104585679806,
+        "Compare": 0.008045052292839904,
+        "Raise": 0.004022526146419952,
+        "Dict": 0.002413515687851971,
+        "ExceptHandler": 0.009654062751407884,
+        "ListComp": 0.002413515687851971,
+        "BoolOp": 0.004827031375703942,
+        "UnaryOp": 0.0056315366049879325,
+        "Tuple": 0.004022526146419952,
+        "BitOr": 0.0016090104585679806,
+        "With": 0.0008045052292839903,
+        "FormattedValue": 0.004022526146419952,
+        "Is": 0.004022526146419952,
+        "comprehension": 0.002413515687851971,
+        "Await": 0.0056315366049879325,
+        "Or": 0.004022526146419952,
+        "List": 0.0016090104585679806,
+        "Continue": 0.0008045052292839903,
+        "Not": 0.0056315366049879325,
+        "Break": 0.002413515687851971,
+        "And": 0.0008045052292839903,
+        "Lt": 0.002413515687851971,
+        "withitem": 0.0008045052292839903,
+        "NotEq": 0.0008045052292839903,
+        "Lambda": 0.0008045052292839903,
+        "AugAssign": 0.0008045052292839903,
+        "Add": 0.0016090104585679806,
+        "Gt": 0.0008045052292839903
+      },
+      "deficit_breakdown": {
+        "ldr_penalty": -0.0,
+        "inflation_penalty": 3.6405,
+        "ddc_penalty": -0.0,
+        "purity_penalty": 9.3361,
+        "pattern_hits": 30.0,
+        "total": 42.9767
+      }
+    },
+    {
+      "file_path": "C:\\sentinel-triage-agent\\nodes\\mitre_utils.py",
+      "ldr": {
+        "total_lines": 229,
+        "logic_lines": 229,
+        "empty_lines": 0,
+        "ldr_score": 1.0,
+        "grade": "S++",
+        "is_abc_interface": false,
+        "is_type_stub": false,
+        "is_packaging_init": false
+      },
+      "inflation": {
+        "jargon_count": 0,
+        "avg_complexity": 5.5,
+        "inflation_score": 0.0,
+        "status": "PASS",
+        "jargon_found": [],
+        "jargon_details": [],
+        "justified_jargon": [],
+        "is_config_file": false
+      },
+      "ddc": {
+        "imported": [
+          "logging",
+          "re",
+          "types"
+        ],
+        "actually_used": [
+          "logging",
+          "re",
+          "types"
+        ],
+        "unused": [],
+        "fake_imports": [],
+        "type_checking_imports": [
+          "typing"
+        ],
+        "usage_ratio": 1.0,
+        "grade": "EXCELLENT"
+      },
+      "deficit_score": 2.0,
+      "status": "clean",
+      "warnings": [],
+      "pattern_issues": [
+        {
+          "pattern_id": "god_function",
+          "severity": "medium",
+          "axis": "style",
+          "file": "C:\\sentinel-triage-agent\\nodes\\mitre_utils.py",
+          "line": 191,
+          "column": 0,
+          "message": "God function 'validate_and_enrich_techniques': 63 logic lines (limit 50)",
+          "code": null,
+          "suggestion": "Break into smaller single-responsibility functions. Each function should do one thing and fit on one screen."
+        }
+      ],
+      "docstring_inflation": {
+        "total_docstrings": 3,
+        "inflated_count": 0,
+        "avg_inflation_ratio": 0.5,
+        "max_inflation_ratio": 0.5,
+        "total_docstring_lines": 10,
+        "total_implementation_lines": 239,
+        "overall_ratio": 0.04184100418410042,
+        "status": "PASS",
+        "details": [
+          {
+            "name": "_build_inverse_lookup",
+            "type": "function",
+            "line": 146,
+            "docstring_lines": 3,
+            "implementation_lines": 6,
+            "inflation_ratio": 0.5,
+            "severity": "info",
+            "docstring_preview": "Build an immutable technique-ID \u2192 (name, tactic) index from MITRE_CATALOG.  Keeps the first tactic m"
+          },
+          {
+            "name": "_resolve_id_by_name",
+            "type": "function",
+            "line": 165,
+            "docstring_lines": 3,
+            "implementation_lines": 6,
+            "inflation_ratio": 0.5,
+            "severity": "info",
+            "docstring_preview": "Search the catalog for a technique matching *raw_name* (case-insensitive).  Returns (technique_id, o"
+          },
+          {
+            "name": "normalize_tactic",
+            "type": "function",
+            "line": 178,
+            "docstring_lines": 2,
+            "implementation_lines": 4,
+            "inflation_ratio": 0.5,
+            "severity": "info",
+            "docstring_preview": "Standardizes a Sentinel or raw tactic name to official MITRE ATT&CK spelling. E.g. 'InitialAccess' -"
+          }
+        ]
+      },
+      "hallucination_deps": {
+        "total_hallucinated": 0,
+        "category_usage": [
+          {
+            "category": "logging",
+            "imported": [
+              "logging"
+            ],
+            "used": [
+              "logging"
+            ],
+            "unused": [],
+            "usage_ratio": 1.0
+          }
+        ],
+        "hallucinated_deps": [],
+        "worst_category": "none",
+        "status": "PASS"
+      },
+      "context_jargon": {
+        "total_jargon": 0,
+        "justified_jargon": 0,
+        "unjustified_jargon": 0,
+        "evidence_details": [],
+        "worst_offenders": [],
+        "justification_ratio": 1.0,
+        "status": "PASS"
+      },
+      "dcf": {
+        "Module": 0.001152073732718894,
+        "Expr": 0.01728110599078341,
+        "Import": 0.002304147465437788,
+        "ImportFrom": 0.002304147465437788,
+        "Assign": 0.026497695852534562,
+        "FunctionDef": 0.004608294930875576,
+        "Constant": 0.2857142857142857,
+        "alias": 0.004608294930875576,
+        "Name": 0.18433179723502305,
+        "Call": 0.04953917050691244,
+        "Dict": 0.019585253456221197,
+        "arguments": 0.004608294930875576,
+        "AnnAssign": 0.001152073732718894,
+        "For": 0.00576036866359447,
+        "Return": 0.0069124423963133645,
+        "Subscript": 0.013824884792626729,
+        "BinOp": 0.001152073732718894,
+        "If": 0.01152073732718894,
+        "Store": 0.04838709677419355,
+        "Attribute": 0.03917050691244239,
+        "Tuple": 0.01728110599078341,
+        "Load": 0.20852534562211983,
+        "arg": 0.004608294930875576,
+        "BitOr": 0.001152073732718894,
+        "UnaryOp": 0.0034562211981566822,
+        "List": 0.002304147465437788,
+        "SetComp": 0.001152073732718894,
+        "Not": 0.0034562211981566822,
+        "comprehension": 0.001152073732718894,
+        "Continue": 0.0034562211981566822,
+        "Compare": 0.0069124423963133645,
+        "In": 0.002304147465437788,
+        "BoolOp": 0.001152073732718894,
+        "JoinedStr": 0.002304147465437788,
+        "NotIn": 0.002304147465437788,
+        "Eq": 0.001152073732718894,
+        "NotEq": 0.001152073732718894,
+        "And": 0.001152073732718894,
+        "FormattedValue": 0.004608294930875576
+      },
+      "deficit_breakdown": {
+        "ldr_penalty": 0.0,
+        "inflation_penalty": 0.0,
+        "ddc_penalty": 0.0,
+        "purity_penalty": 0.0,
+        "pattern_hits": 2.0,
+        "total": 2.0
+      }
+    },
+    {
+      "file_path": "C:\\sentinel-triage-agent\\nodes\\summarize_node.py",
+      "ldr": {
+        "total_lines": 33,
+        "logic_lines": 33,
+        "empty_lines": 0,
+        "ldr_score": 1.0,
+        "grade": "S++",
+        "is_abc_interface": false,
+        "is_type_stub": false,
+        "is_packaging_init": false
+      },
+      "inflation": {
+        "jargon_count": 0,
+        "avg_complexity": 5.0,
+        "inflation_score": 0.0,
+        "status": "PASS",
+        "jargon_found": [],
+        "jargon_details": [],
+        "justified_jargon": [],
+        "is_config_file": false
+      },
+      "ddc": {
+        "imported": [
+          "state"
+        ],
+        "actually_used": [],
+        "unused": [],
+        "fake_imports": [],
+        "type_checking_imports": [],
+        "usage_ratio": 1.0,
+        "grade": "EXCELLENT"
+      },
+      "deficit_score": 14.877057549928598,
+      "status": "clean",
+      "warnings": [
+        "PATTERNS: 1 critical issues found"
+      ],
+      "pattern_issues": [
+        {
+          "pattern_id": "phantom_import",
+          "severity": "critical",
+          "axis": "quality",
+          "file": "C:\\sentinel-triage-agent\\nodes\\summarize_node.py",
+          "line": 5,
+          "column": 0,
+          "message": "Phantom import: 'state' cannot be resolved (not in stdlib, built-ins, or installed packages)",
+          "code": null,
+          "suggestion": "Verify 'state' exists on PyPI and add it to [project.dependencies] in pyproject.toml. AI models sometimes generate plausible-looking but non-existent package names."
+        }
+      ],
+      "docstring_inflation": {
+        "total_docstrings": 0,
+        "inflated_count": 0,
+        "avg_inflation_ratio": 0.0,
+        "max_inflation_ratio": 0.0,
+        "total_docstring_lines": 1,
+        "total_implementation_lines": 31,
+        "overall_ratio": 0.03225806451612903,
+        "status": "PASS",
+        "details": []
+      },
+      "hallucination_deps": {
+        "total_hallucinated": 0,
+        "category_usage": [],
+        "hallucinated_deps": [],
+        "worst_category": "none",
+        "status": "PASS"
+      },
+      "context_jargon": {
+        "total_jargon": 0,
+        "justified_jargon": 0,
+        "unjustified_jargon": 0,
+        "evidence_details": [],
+        "worst_offenders": [],
+        "justification_ratio": 1.0,
+        "status": "PASS"
+      },
+      "dcf": {
+        "Module": 0.004739336492890996,
+        "Expr": 0.014218009478672985,
+        "ImportFrom": 0.004739336492890996,
+        "Assign": 0.03317535545023697,
+        "FunctionDef": 0.004739336492890996,
+        "Constant": 0.1848341232227488,
+        "alias": 0.004739336492890996,
+        "Name": 0.17061611374407584,
+        "arguments": 0.004739336492890996,
+        "If": 0.004739336492890996,
+        "For": 0.004739336492890996,
+        "Return": 0.004739336492890996,
+        "Store": 0.04265402843601896,
+        "arg": 0.004739336492890996,
+        "Subscript": 0.04739336492890995,
+        "Compare": 0.004739336492890996,
+        "AugAssign": 0.004739336492890996,
+        "List": 0.014218009478672985,
+        "Call": 0.06635071090047394,
+        "Dict": 0.014218009478672985,
+        "Load": 0.23696682464454977,
+        "Slice": 0.014218009478672985,
+        "Gt": 0.004739336492890996,
+        "Add": 0.004739336492890996,
+        "Attribute": 0.04739336492890995,
+        "JoinedStr": 0.004739336492890996,
+        "FormattedValue": 0.02843601895734597,
+        "BoolOp": 0.009478672985781991,
+        "Or": 0.009478672985781991
+      },
+      "deficit_breakdown": {
+        "ldr_penalty": -0.0,
+        "inflation_penalty": -0.0,
+        "ddc_penalty": -0.0,
+        "purity_penalty": 4.8771,
+        "pattern_hits": 10.0,
+        "total": 14.8771
+      }
+    },
+    {
+      "file_path": "C:\\sentinel-triage-agent\\nodes\\writeback_node.py",
+      "ldr": {
+        "total_lines": 118,
+        "logic_lines": 118,
+        "empty_lines": 0,
+        "ldr_score": 1.0,
+        "grade": "S++",
+        "is_abc_interface": false,
+        "is_type_stub": false,
+        "is_packaging_init": false
+      },
+      "inflation": {
+        "jargon_count": 0,
+        "avg_complexity": 4.666666666666667,
+        "inflation_score": 0.0,
+        "status": "PASS",
+        "jargon_found": [],
+        "jargon_details": [],
+        "justified_jargon": [],
+        "is_config_file": false
+      },
+      "ddc": {
+        "imported": [
+          "sentinel_api",
+          "state"
+        ],
+        "actually_used": [
+          "sentinel_api"
+        ],
+        "unused": [],
+        "fake_imports": [],
+        "type_checking_imports": [],
+        "usage_ratio": 1.0,
+        "grade": "EXCELLENT"
+      },
+      "deficit_score": 29.51625819640405,
+      "status": "clean",
+      "warnings": [
+        "PATTERNS: 2 critical issues found"
+      ],
+      "pattern_issues": [
+        {
+          "pattern_id": "phantom_import",
+          "severity": "critical",
+          "axis": "quality",
+          "file": "C:\\sentinel-triage-agent\\nodes\\writeback_node.py",
+          "line": 6,
+          "column": 0,
+          "message": "Phantom import: 'sentinel_api' cannot be resolved (not in stdlib, built-ins, or installed packages)",
+          "code": null,
+          "suggestion": "Verify 'sentinel_api' exists on PyPI and add it to [project.dependencies] in pyproject.toml. AI models sometimes generate plausible-looking but non-existent package names."
+        },
+        {
+          "pattern_id": "phantom_import",
+          "severity": "critical",
+          "axis": "quality",
+          "file": "C:\\sentinel-triage-agent\\nodes\\writeback_node.py",
+          "line": 7,
+          "column": 0,
+          "message": "Phantom import: 'state' cannot be resolved (not in stdlib, built-ins, or installed packages)",
+          "code": null,
+          "suggestion": "Verify 'state' exists on PyPI and add it to [project.dependencies] in pyproject.toml. AI models sometimes generate plausible-looking but non-existent package names."
+        }
+      ],
+      "docstring_inflation": {
+        "total_docstrings": 0,
+        "inflated_count": 0,
+        "avg_inflation_ratio": 0.0,
+        "max_inflation_ratio": 0.0,
+        "total_docstring_lines": 2,
+        "total_implementation_lines": 114,
+        "overall_ratio": 0.017543859649122806,
+        "status": "PASS",
+        "details": []
+      },
+      "hallucination_deps": {
+        "total_hallucinated": 0,
+        "category_usage": [],
+        "hallucinated_deps": [],
+        "worst_category": "none",
+        "status": "PASS"
+      },
+      "context_jargon": {
+        "total_jargon": 0,
+        "justified_jargon": 0,
+        "unjustified_jargon": 0,
+        "evidence_details": [],
+        "worst_offenders": [],
+        "justification_ratio": 1.0,
+        "status": "PASS"
+      },
+      "dcf": {
+        "Module": 0.0013550135501355014,
+        "Expr": 0.024390243902439025,
+        "ImportFrom": 0.0027100271002710027,
+        "FunctionDef": 0.008130081300813009,
+        "Constant": 0.16802168021680217,
+        "alias": 0.0040650406504065045,
+        "arguments": 0.008130081300813009,
+        "Assign": 0.03387533875338753,
+        "If": 0.012195121951219513,
+        "Return": 0.009485094850948509,
+        "Subscript": 0.024390243902439025,
+        "For": 0.0040650406504065045,
+        "Name": 0.17886178861788618,
+        "Try": 0.0027100271002710027,
+        "arg": 0.008130081300813009,
+        "List": 0.013550135501355014,
+        "Call": 0.06910569105691057,
+        "Load": 0.23170731707317074,
+        "UnaryOp": 0.0013550135501355014,
+        "Compare": 0.009485094850948509,
+        "JoinedStr": 0.013550135501355014,
+        "ExceptHandler": 0.0027100271002710027,
+        "Dict": 0.005420054200542005,
+        "Store": 0.037940379403794036,
+        "Attribute": 0.052845528455284556,
+        "Not": 0.0013550135501355014,
+        "IfExp": 0.006775067750677507,
+        "Eq": 0.0013550135501355014,
+        "FormattedValue": 0.036585365853658534,
+        "NotIn": 0.0027100271002710027,
+        "BoolOp": 0.0040650406504065045,
+        "Or": 0.0040650406504065045,
+        "keyword": 0.0040650406504065045,
+        "Gt": 0.005420054200542005,
+        "Slice": 0.005420054200542005
+      },
+      "deficit_breakdown": {
+        "ldr_penalty": -0.0,
+        "inflation_penalty": -0.0,
+        "ddc_penalty": -0.0,
+        "purity_penalty": 9.5163,
+        "pattern_hits": 20.0,
+        "total": 29.5163
+      }
+    }
+  ],
+  "js_file_results": [],
+  "go_file_results": []
+}

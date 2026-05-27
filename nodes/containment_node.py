@@ -25,6 +25,25 @@ def _validate_hostname(hostname: str) -> bool:
     return bool(_SAFE_HOSTNAME_PATTERN.match(hostname)) and ".." not in hostname
 
 
+async def _isolate_target(target: str) -> str | None:
+    """Resolve a hostname/IP to an MDE machine ID and isolate it.
+
+    Returns an error string on failure, or None on success.
+    """
+    machine_id = await resolve_mde_machine_id(target)
+    if machine_id is None:
+        msg = f"MDE device not found for target {target}; skipping isolation"
+        logger.warning(msg)
+        return msg
+
+    result = await isolate_mde_device(machine_id)
+    if isinstance(result, dict):
+        logger.info(f"Successfully isolated target {target} (machine_id={machine_id})")
+    else:
+        logger.warning(f"Unexpected result type for {target}: {type(result)}")
+    return None
+
+
 async def containment_node(state: TriageState) -> dict:
     """
     Orchestrates active containment: isolates MDE devices and revokes user sessions.
@@ -66,18 +85,10 @@ async def containment_node(state: TriageState) -> dict:
     
     # Resolve hostnames/IPs to MDE machine IDs and isolate
     for target in isolation_targets:
-        try: ## TODO : make this try block shorter
-            machine_id = await resolve_mde_machine_id(target)
-            if machine_id is None:
-                msg = f"MDE device not found for target {target}; skipping isolation"
-                logger.warning(msg)
-                errors.append(msg)
-                continue
-            result = await isolate_mde_device(machine_id)
-            if isinstance(result, dict):
-                logger.info(f"Successfully isolated target {target} (machine_id={machine_id})")
-            else:
-                logger.warning(f"Unexpected result type for {target}: {type(result)}")
+        try:
+            err = await _isolate_target(target)
+            if err:
+                errors.append(err)
         except Exception as exc:
             error_msg = f"MDE isolation failed for {target}: {str(exc)}"
             logger.error(error_msg)

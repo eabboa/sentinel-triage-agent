@@ -17,24 +17,28 @@ from state import TriageState
 
 logger = logging.getLogger(__name__)
 
-worker_embedding_model = None
-embedding_executor: concurrent.futures.ProcessPoolExecutor | None = None
+class _WorkerState:
+    """Module-level state for the embedding process pool."""
+    def __init__(self):
+        self.embedding_model = None
+        self.executor: concurrent.futures.ProcessPoolExecutor | None = None
+
+    def ensure_executor(self, max_workers: int = 1) -> concurrent.futures.ProcessPoolExecutor:
+        """Create or reuse a process executor for encoding batches."""
+        if self.executor is None or getattr(self.executor, "_shutdown", False):
+            self.executor = concurrent.futures.ProcessPoolExecutor(
+                max_workers=max_workers,
+                initializer=_init_worker,
+            )
+        return self.executor
+
+
+_worker_state = _WorkerState()
+
 
 def _init_worker():
     """Initialize the worker process embedding model."""
-    global worker_embedding_model
-    worker_embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-
-
-def _ensure_embedding_executor(max_workers: int = 1) -> concurrent.futures.ProcessPoolExecutor:
-    """Create or reuse a process executor for encoding batches."""
-    global embedding_executor
-    if embedding_executor is None or getattr(embedding_executor, "_shutdown", False):
-        embedding_executor = concurrent.futures.ProcessPoolExecutor(
-            max_workers=max_workers,
-            initializer=_init_worker,
-        )
-    return embedding_executor
+    _worker_state.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
 
 
 learning_queue: asyncio.Queue[dict[str, str]] = asyncio.Queue(maxsize=1000)
@@ -94,9 +98,9 @@ def _build_document(payload: dict[str, str]) -> str:
 
 
 def _encode_batch(documents: list[str]) -> list[list[float]]:
-    if worker_embedding_model is None:
+    if _worker_state.embedding_model is None:
         raise RuntimeError("Worker embedding model not initialized")
-    return worker_embedding_model.encode(documents).tolist()
+    return _worker_state.embedding_model.encode(documents).tolist()
 
 
 async def embed_and_store(
@@ -119,6 +123,40 @@ async def embed_and_store(
         logger.error("Learning queue saturated; dropping payload to prevent blocking. Data loss occurred for human_classification=%s", human_classification)
 
 
+async def _embed_and_write_batch(
+    instance: ChromaSingleton,
+    executor: concurrent.futures.ProcessPoolExecutor,
+    loop: asyncio.AbstractEventLoop,
+    batch: list[dict[str, str]],
+) -> bool:
+    """Embed documents and write to ChromaDB. Returns True on success."""
+    documents = [_build_document(item) for item in batch]
+    metadatas = [{"human_classification": item["human_classification"]} for item in batch]
+    ids = [f"mismatch_{uuid.uuid4()}" for _ in batch]
+
+    try:
+        embeddings = await loop.run_in_executor(executor, _encode_batch, documents)
+    except Exception:
+        logger.exception("Embedding model failure in learning_node")
+        return False
+
+    try:
+        await loop.run_in_executor(
+            None,
+            lambda: instance.collection.add(
+                documents=documents,
+                embeddings=embeddings,
+                metadatas=metadatas,
+                ids=ids,
+            ),
+        )
+    except Exception:
+        logger.exception("Failed to write learning mismatch batch to ChromaDB")
+        return False
+
+    return True
+
+
 async def consume_learning_queue(batch_size: int = 32, flush_interval: float = 5):
     """Continuously consume the learning queue, embed in batches, and write to ChromaDB."""
     try:
@@ -134,7 +172,7 @@ async def consume_learning_queue(batch_size: int = 32, flush_interval: float = 5
         return
 
     loop = asyncio.get_running_loop()
-    executor = _ensure_embedding_executor()
+    executor = _worker_state.ensure_executor()
 
     while True:
         batch: list[dict[str, str]] = []
@@ -146,7 +184,7 @@ async def consume_learning_queue(batch_size: int = 32, flush_interval: float = 5
             batch.append(first_item)
             learning_queue.task_done()
         except asyncio.TimeoutError:
-            pass
+            logger.debug("Learning queue flush interval elapsed with no new items")
 
         while len(batch) < batch_size:
             try:
@@ -159,41 +197,8 @@ async def consume_learning_queue(batch_size: int = 32, flush_interval: float = 5
         if not batch:
             continue
 
-        documents = [_build_document(item) for item in batch]
-        metadatas = [
-            {"human_classification": item["human_classification"]}
-            for item in batch
-        ]
-        ids = [f"mismatch_{uuid.uuid4()}" for _ in batch]
-
-        try:
-            embeddings = await loop.run_in_executor(
-                executor,
-                _encode_batch,
-                documents,
-            )
-        except Exception:
-            logger.exception("Embedding model failure in learning_node.consume_learning_queue")
-            continue
-
-        try:
-            await loop.run_in_executor(
-                None,
-                lambda: instance.collection.add(
-                    documents=documents,
-                    embeddings=embeddings,
-                    metadatas=metadatas,
-                    ids=ids,
-                ),
-            )
-        except Exception:
-            logger.exception("Failed to write learning mismatch batch to ChromaDB")
-            continue
-
-        logger.debug(
-            "Successfully stored %d learning mismatch documents",
-            len(batch),
-        )
+        if await _embed_and_write_batch(instance, executor, loop, batch):
+            logger.debug("Successfully stored %d learning mismatch documents", len(batch))
 
 
 async def flush_and_shutdown(batch_size: int = 32):
@@ -213,7 +218,7 @@ async def flush_and_shutdown(batch_size: int = 32):
         return
 
     loop = asyncio.get_running_loop()
-    executor = _ensure_embedding_executor()
+    executor = _worker_state.ensure_executor()
 
     while not learning_queue.empty():
         batch: list[dict[str, str]] = []
@@ -228,43 +233,8 @@ async def flush_and_shutdown(batch_size: int = 32):
         if not batch:
             break
 
-        documents = [_build_document(item) for item in batch]
-        metadatas = [
-            {"human_classification": item["human_classification"]}
-            for item in batch
-        ]
-        ids = [f"mismatch_{uuid.uuid4()}" for _ in batch]
-
-        try:
-            embeddings = await loop.run_in_executor(
-                executor,
-                _encode_batch,
-                documents,
-            )
-        except Exception:
-            logger.exception("Embedding model failure in learning_node.flush_and_shutdown")
-            continue
-
-        try:
-            await loop.run_in_executor(
-                None,
-                lambda: instance.collection.add(
-                    documents=documents,
-                    embeddings=embeddings,
-                    metadatas=metadatas,
-                    ids=ids,
-                ),
-            )
-        except Exception:
-            logger.exception(
-                "Failed to write learning mismatch batch to ChromaDB during shutdown"
-            )
-            continue
-
-        logger.debug(
-            "Flushed %d remaining learning mismatch documents",
-            len(batch),
-        )
+        if await _embed_and_write_batch(instance, executor, loop, batch):
+            logger.debug("Flushed %d remaining learning mismatch documents", len(batch))
 
     try:
         await learning_queue.join()
@@ -276,8 +246,7 @@ async def flush_and_shutdown(batch_size: int = 32):
     except Exception:
         logger.exception("Error shutting down learning node executor")
     finally:
-        global embedding_executor
-        embedding_executor = None
+        _worker_state.executor = None
 
     logger.info("Learning node flush and shutdown complete")
 

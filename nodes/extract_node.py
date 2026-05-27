@@ -38,6 +38,17 @@ def _is_internal_ip(ip: str) -> bool:
     return any(p.match(ip) for p in PRIVATE_IP_RANGES)
 
 
+def _extract_regex_iocs(text: str) -> dict:
+    """Extract IPs, hashes, and URLs from raw text using compiled regex patterns."""
+    all_ips = IP_PATTERN.findall(text)
+    return {
+        "ips": list(set(ip for ip in all_ips if _is_public_ip(ip))),
+        "internal_ips": list(set(ip for ip in all_ips if _is_internal_ip(ip))),
+        "hashes": list(set(HASH_SHA256.findall(text) + HASH_MD5.findall(text))),
+        "urls": list(set(URL_PATTERN.findall(text))),
+    }
+
+
 async def extract_node(state: TriageState) -> dict:
     """Extracts IOCs from the condensed summary using regex + LLM fallback."""
     if not os.getenv("GOOGLE_API_KEY"):
@@ -45,13 +56,7 @@ async def extract_node(state: TriageState) -> dict:
     text = state["condensed_summary"]
 
     # ── Phase 1: Regex extraction ──────────────────────────────────────────────
-    all_ips = IP_PATTERN.findall(text)
-    # Public IPs → threat-intel enrichment (VirusTotal, etc.)
-    ips = list(set(ip for ip in all_ips if _is_public_ip(ip)))
-    # Internal IPs → kept for lateral movement / host containment; NOT sent to VirusTotal
-    internal_ips = list(set(ip for ip in all_ips if _is_internal_ip(ip)))
-    hashes = list(set(HASH_SHA256.findall(text) + HASH_MD5.findall(text)))
-    urls = list(set(URL_PATTERN.findall(text)))
+    regex_iocs = _extract_regex_iocs(text)
 
     # ── Phase 2: LLM extraction for contextual entities ───────────────────────
     llm = ChatGoogleGenerativeAI(
@@ -102,10 +107,7 @@ TEXT:
         llm_entities = {"usernames": [], "hostnames": [], "domains": []}
 
     entities = {
-        "ips": ips,                                          # Public IPs - enriched via threat intel
-        "internal_ips": internal_ips,                        # Private IPs - lateral movement candidates
-        "urls": urls,
-        "hashes": hashes,
+        **regex_iocs,
         "usernames": llm_entities.get("usernames", []),
         "hostnames": llm_entities.get("hostnames", []),
         "domains": llm_entities.get("domains", []),

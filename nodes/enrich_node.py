@@ -55,24 +55,35 @@ VT_MALICIOUS_THRESHOLD: int = int(os.getenv("VT_MALICIOUS_THRESHOLD", "5"))
 ABUSEIPDB_MALICIOUS_THRESHOLD: int = int(os.getenv("ABUSEIPDB_MALICIOUS_THRESHOLD", "75"))
 ABUSEIPDB_SUSPICIOUS_THRESHOLD: int = 25  # Fixed lower bound for "suspicious" band
 
-# Global instances for connection pooling and rate limiting
-_client_session: aiohttp.ClientSession | None = None
+class _SessionManager:
+    """Manages a shared aiohttp.ClientSession with lazy initialization."""
+    def __init__(self):
+        self._session: aiohttp.ClientSession | None = None
+
+    async def get(self) -> aiohttp.ClientSession:
+        if self._session is None or self._session.closed:
+            timeout = aiohttp.ClientTimeout(total=DEFAULT_HTTP_TIMEOUT)
+            self._session = aiohttp.ClientSession(timeout=timeout)
+        return self._session
+
+    async def close(self):
+        """Close the aiohttp session. Call during shutdown."""
+        if self._session is not None and not self._session.closed:
+            await self._session.close()
+            self._session = None
+
+
+_session_mgr = _SessionManager()
 vt_rate_limiter = AsyncLimiter(4, 60)
 
+
 async def get_session() -> aiohttp.ClientSession:
-    global _client_session
-    if _client_session is None or _client_session.closed:
-        timeout = aiohttp.ClientTimeout(total=DEFAULT_HTTP_TIMEOUT)
-        _client_session = aiohttp.ClientSession(timeout=timeout)
-    return _client_session
+    return await _session_mgr.get()
 
 
 async def close_session():
     """Close the global aiohttp session. Call during shutdown."""
-    global _client_session
-    if _client_session is not None and not _client_session.closed:
-        await _client_session.close()
-        _client_session = None
+    await _session_mgr.close()
 
 
 class TransientHTTPError(Exception):
@@ -85,10 +96,42 @@ class TransientHTTPError(Exception):
     stop=stop_after_attempt(RETRY_ATTEMPTS),
     reraise=True,
 )
+def _vt_verdict(raw_data: dict, ioc: str, ioc_type: str) -> dict:
+    """Validate a VT response and return a verdict dict."""
+    try:
+        validated = VirusTotalResponse.model_validate(raw_data)
+        malicious_count: int = validated.data.attributes.last_analysis_stats.malicious
+        suspicious_count: int = validated.data.attributes.last_analysis_stats.suspicious
+    except ValidationError as exc:
+        logger.error("VirusTotal response failed schema validation. Raw response: %s", raw_data)
+        raise VirusTotalResponseValidationError(
+            message=f"VT {ioc_type} schema mismatch: {str(exc)}",
+            raw_data=raw_data
+        ) from exc
+
+    if malicious_count >= VT_MALICIOUS_THRESHOLD:
+        verdict = "malicious"
+    elif malicious_count >= 2:
+        verdict = "suspicious"
+    else:
+        verdict = "clean"
+
+    return {
+        "ioc": ioc, "type": ioc_type,
+        "malicious": malicious_count, "suspicious": suspicious_count,
+        "verdict": verdict, "threshold_used": VT_MALICIOUS_THRESHOLD,
+    }
+
+
+@retry(
+    retry=retry_if_exception_type((aiohttp.ClientError, asyncio.TimeoutError, TransientHTTPError)),
+    wait=wait_exponential(multiplier=1, min=1, max=10),
+    stop=stop_after_attempt(RETRY_ATTEMPTS),
+    reraise=True,
+)
 async def _check_vt_url(session: aiohttp.ClientSession, url: str) -> dict:
     """Queries VirusTotal URL analysis endpoint."""
     import base64
-    # VT API v3 requires the URL to be URL-safe base64 encoded (no padding)
     encoded = base64.urlsafe_b64encode(url.encode()).rstrip(b"=").decode()
     endpoint = f"https://www.virustotal.com/api/v3/urls/{encoded}"
 
@@ -96,33 +139,7 @@ async def _check_vt_url(session: aiohttp.ClientSession, url: str) -> dict:
         if resp.status in (429, 503, 504):
             raise TransientHTTPError(f"VirusTotal URL lookup transient HTTP {resp.status} for {url}")
         if resp.status == 200:
-            raw_data = resp.json()
-            try:
-                # validate first. extra="ignore" -> we ignore extra fields come from VT.
-                validated = VirusTotalResponse.model_validate(raw_data)
-                # use validated data for malicious/suspicious counts
-                malicious_count: int = validated.data.attributes.last_analysis_stats.malicious
-                suspicious_count: int = validated.data.attributes.last_analysis_stats.suspicious
-            except ValidationError as exc:
-                logger.error("VirusTotal response failed for schema validation. Raw response: %s", raw_data)
-                raise VirusTotalResponseValidationError(
-                    message=f"VT URL schema mismatch: {str(exc)}",
-                    raw_data=raw_data
-                ) from exc
-            if malicious_count >= VT_MALICIOUS_THRESHOLD:
-                verdict = "malicious"
-            elif malicious_count >= 2:
-                verdict = "suspicious"
-            else:
-                verdict = "clean"
-            return {
-                "ioc": url,
-                "type": "url",
-                "malicious": malicious_count,
-                "suspicious": suspicious_count,
-                "verdict": verdict,
-                "threshold_used": VT_MALICIOUS_THRESHOLD,
-            }
+            return _vt_verdict(resp.json(), url, "url")
         return {"ioc": url, "type": "url", "error": f"HTTP {resp.status}"}
 
 
@@ -140,38 +157,49 @@ async def _check_vt_hash(session: aiohttp.ClientSession, file_hash: str) -> dict
         if resp.status in (429, 503, 504):
             raise TransientHTTPError(f"VirusTotal hash lookup transient HTTP {resp.status} for {file_hash}")
         if resp.status == 200:
-            raw_data = resp.json()
-            try:
-                # validate first. extra="ignore".
-                validated = VirusTotalResponse.model_validate(raw_data)
-                # use validated data for malicious/suspicious counts
-                malicious_count: int = validated.data.attributes.last_analysis_stats.malicious
-                suspicious_count: int = validated.data.attributes.last_analysis_stats.suspicious
-            except ValidationError as exc:
-                logger.error("VirusTotal response failed for schema validation. Raw response: %s", raw_data)
-                raise VirusTotalResponseValidationError(
-                    message=f"VT URL scheam mismatch: {str(exc)}",
-                    raw_data=raw_data
-                ) from exc
-            if malicious_count >= VT_MALICIOUS_THRESHOLD:
-                verdict = "malicious"
-            elif malicious_count >= 2:
-                verdict = "suspicious"
-            else:
-                verdict = "clean"
-            return {
-                "ioc": file_hash,
-                "type": "hash",
-                "malicious": malicious_count,
-                "suspicious": suspicious_count,
-                "verdict": verdict,
-                "threshold_used": VT_MALICIOUS_THRESHOLD,
-            }
-        elif resp.status == 404:
+            return _vt_verdict(resp.json(), file_hash, "hash")
+        if resp.status == 404:
             # Not in VT database - genuinely unknown, not clean.
             # Returned as a valid (non-error) result so the LLM can reason about novelty.
             return {"ioc": file_hash, "type": "hash", "verdict": "not_found_in_vt"}
         return {"ioc": file_hash, "type": "hash", "error": f"HTTP {resp.status}"}
+
+
+@retry(
+    retry=retry_if_exception_type((aiohttp.ClientError, asyncio.TimeoutError, TransientHTTPError)),
+    wait=wait_exponential(multiplier=1, min=1, max=10),
+    stop=stop_after_attempt(RETRY_ATTEMPTS),
+    reraise=True,
+)
+def _abuseipdb_verdict(raw_data: dict, ip: str) -> dict:
+    """Validate an AbuseIPDB response and return a verdict dict."""
+    try:
+        parsed = AbuseIPDBResponse.model_validate(raw_data)
+        d_obj = parsed.data
+        score = d_obj.abuseConfidenceScore
+    except ValidationError as exc:
+        logger.error("AbuseIPDB response failed schema validation. Raw response: %s", raw_data)
+        raise AbuseIPDBResponseValidationError(
+            message=f"AbuseIPDB schema mismatch: {str(exc)}",
+            raw_data=raw_data
+        ) from exc
+
+    if score >= ABUSEIPDB_MALICIOUS_THRESHOLD:
+        verdict = "malicious"
+    elif score >= ABUSEIPDB_SUSPICIOUS_THRESHOLD:
+        verdict = "suspicious"
+    else:
+        verdict = "clean"
+
+    return {
+        "ioc": ip, "type": "ip",
+        "abuse_score": score, "verdict": verdict,
+        "threshold_used": ABUSEIPDB_MALICIOUS_THRESHOLD,
+        "total_reports": d_obj.totalReports,
+        "country": d_obj.countryCode,
+        "isp": d_obj.isp,
+        "usage_type": d_obj.usageType,
+    }
 
 
 @retry(
@@ -190,38 +218,7 @@ async def _check_abuseipdb(session: aiohttp.ClientSession, ip: str) -> dict:
         if resp.status in (429, 503, 504):
             raise TransientHTTPError(f"AbuseIPDB lookup transient HTTP {resp.status} for {ip}")
         if resp.status == 200:
-            raw_data = await resp.json()
-            
-            try:
-                parsed = AbuseIPDBResponse.model_validate(raw_data)
-                d_obj = parsed.data
-                score = d_obj.abuseConfidenceScore
-                
-            except ValidationError as exc:
-                logger.error("AbuseIPDB response failed schema validation. Raw response: %s", raw_data)
-                raise AbuseIPDBResponseValidationError(
-                    message=f"AbuseIPDB schema mismatch: {str(exc)}", 
-                    raw_data=raw_data
-                ) from exc
-                
-            if score >= ABUSEIPDB_MALICIOUS_THRESHOLD:
-                verdict = "malicious"
-            elif score >= ABUSEIPDB_SUSPICIOUS_THRESHOLD:
-                verdict = "suspicious"
-            else:
-                verdict = "clean"
-                
-            return {
-                "ioc": ip,
-                "type": "ip",
-                "abuse_score": score,
-                "verdict": verdict,
-                "threshold_used": ABUSEIPDB_MALICIOUS_THRESHOLD,
-                "total_reports": d_obj.totalReports,
-                "country": d_obj.countryCode,
-                "isp": d_obj.isp,
-                "usage_type": d_obj.usageType,
-            }
+            return _abuseipdb_verdict(await resp.json(), ip)
         return {"ioc": ip, "type": "ip", "error": f"HTTP {resp.status}"}
 
 
@@ -230,115 +227,91 @@ def _is_error_result(result: dict) -> bool:
     return "error" in result
 
 
-async def _run_enrichment(entities: dict) -> tuple[dict, list[str]]:
-    """
-    Runs all CTI lookups concurrently.
-    VT calls are rate limited to 4 req/min using aiolimiter.
+def _partition_results(
+    results: list,
+    iocs: list[str],
+    source_label: str,
+) -> tuple[list[dict], list[str]]:
+    """Separate gather() results into successful reports and error strings."""
+    reports: list[dict] = []
+    errors: list[str] = []
 
-    Returns a tuple of:
-      - cti_results: only verified, non-error results. Error results are stripped
-        to ensure the LLM prompt contains no ambiguous failure signals.
-      - enrichment_errors: human-readable strings describing each failed lookup,
-        to be appended to the graph's errors list for observability.
-    """
-    ip_reports = []
-    url_reports = []
-    hash_reports = []
-    enrichment_errors: list[str] = []
+    for idx, result in enumerate(results):
+        ioc_label = iocs[idx] if idx < len(iocs) else "?"
 
-    internal_ip_reports = [
+        if isinstance(result, BaseException):
+            msg = f"enrich_node: {source_label} lookup failed for {ioc_label}: {result}"
+            logger.exception(msg)
+            errors.append(msg)
+            continue
+
+        if not isinstance(result, dict):
+            continue
+
+        if _is_error_result(result):
+            ioc_label = result.get("ioc") or ioc_label
+            msg = f"enrich_node: {source_label} returned error for {ioc_label}: {result['error']}"
+            logger.warning(msg)
+            errors.append(msg)
+        else:
+            reports.append(result)
+
+    return reports, errors
+
+
+def _build_internal_reports(entities: dict) -> list[dict]:
+    """Build non-enriched reports for RFC 1918 lateral movement candidates."""
+    return [
         {
-            "ioc": ip,
-            "type": "internal_ip",
+            "ioc": ip, "type": "internal_ip",
             "verdict": "lateral_movement_candidate",
             "note": "RFC 1918 address - not submitted to external CTI. Investigate for host-to-host pivoting.",
         }
         for ip in entities.get("internal_ips", [])
     ]
 
+
+async def _rate_limited_vt(session, check_fn, ioc: str, ioc_type: str):
+    """Wrap a VT check coroutine with rate limiting and error capture."""
+    async with vt_rate_limiter:
+        try:
+            return await check_fn(session, ioc)
+        except Exception as exc:
+            logger.exception("VirusTotal %s enrichment failed for %s", ioc_type, ioc)
+            return {"ioc": ioc, "type": ioc_type, "error": str(exc)}
+
+
+async def _run_enrichment(entities: dict) -> tuple[dict, list[str]]:
+    """Run all CTI lookups concurrently. Returns (cti_results, errors)."""
     session = await get_session()
 
-    # Prepare AbuseIPDB tasks
-    ip_tasks = [_check_abuseipdb(session, ip) for ip in entities.get("ips", [])]
+    ip_list = entities.get("ips", [])
+    url_list = entities.get("urls", [])
+    hash_list = entities.get("hashes", [])
 
-    # Prepare VirusTotal URL tasks with rate limit wrapper
-    async def fetch_vt_url(url: str):
-        async with vt_rate_limiter:
-            try:
-                return await _check_vt_url(session, url)
-            except Exception as exc:
-                logger.exception("VirusTotal URL enrichment failed for %s", url)
-                return {"ioc": url, "type": "url", "error": str(exc)}
+    ip_tasks = [_check_abuseipdb(session, ip) for ip in ip_list]
+    url_tasks = [_rate_limited_vt(session, _check_vt_url, u, "url") for u in url_list]
+    hash_tasks = [_rate_limited_vt(session, _check_vt_hash, h, "hash") for h in hash_list]
 
-    url_tasks = [fetch_vt_url(url) for url in entities.get("urls", [])]
-
-    # Prepare VirusTotal Hash tasks with rate limit wrapper
-    async def fetch_vt_hash(file_hash: str):
-        async with vt_rate_limiter:
-            try:
-                return await _check_vt_hash(session, file_hash)
-            except Exception as exc:
-                logger.exception("VirusTotal hash enrichment failed for %s", file_hash)
-                return {"ioc": file_hash, "type": "hash", "error": str(exc)}
-
-    hash_tasks = [fetch_vt_hash(h) for h in entities.get("hashes", [])]
-
-    # Run all tasks concurrently with error isolation
     all_tasks = ip_tasks + url_tasks + hash_tasks
+    ip_reports, url_reports, hash_reports = [], [], []
+    enrichment_errors: list[str] = []
+
     if all_tasks:
         results = await asyncio.gather(*all_tasks, return_exceptions=True)
+        ip_len, url_len = len(ip_tasks), len(url_tasks)
 
-        # Unpack results based on task counts
-        ip_len = len(ip_tasks)
-        url_len = len(url_tasks)
-
-        ip_results = results[:ip_len]
-        url_results = results[ip_len:ip_len + url_len]
-        hash_results = results[ip_len + url_len:]
-
-        for ip, result in zip(entities.get("ips", []), ip_results):
-            if isinstance(result, BaseException):
-                msg = f"enrich_node: AbuseIPDB lookup failed for {ip}: {result}"
-                logger.exception(msg)
-                enrichment_errors.append(msg)
-            elif isinstance(result, dict) and _is_error_result(result):
-                # HTTP error from the API (e.g. 403, 422) - strip from CTI payload
-                msg = f"enrich_node: AbuseIPDB returned error for {ip}: {result['error']}"
-                logger.warning(msg)
-                enrichment_errors.append(msg)
-            elif isinstance(result, dict):
-                ip_reports.append(result)
-
-        for result in url_results:
-            if isinstance(result, BaseException):
-                msg = f"enrich_node: VirusTotal URL lookup failed: {result}"
-                logger.exception(msg)
-                enrichment_errors.append(msg)
-            elif isinstance(result, dict) and _is_error_result(result):
-                msg = f"enrich_node: VirusTotal URL returned error for {result.get('ioc', '?')}: {result['error']}"
-                logger.warning(msg)
-                enrichment_errors.append(msg)
-            elif isinstance(result, dict):
-                url_reports.append(result)
-
-        for result in hash_results:
-            if isinstance(result, BaseException):
-                msg = f"enrich_node: VirusTotal hash lookup failed: {result}"
-                logger.exception(msg)
-                enrichment_errors.append(msg)
-            elif isinstance(result, dict) and _is_error_result(result):
-                msg = f"enrich_node: VirusTotal hash returned error for {result.get('ioc', '?')}: {result['error']}"
-                logger.warning(msg)
-                enrichment_errors.append(msg)
-            elif isinstance(result, dict):
-                hash_reports.append(result)
+        ip_reports, ip_errs = _partition_results(results[:ip_len], ip_list, "AbuseIPDB")
+        url_reports, url_errs = _partition_results(results[ip_len:ip_len + url_len], url_list, "VirusTotal URL")
+        hash_reports, hash_errs = _partition_results(results[ip_len + url_len:], hash_list, "VirusTotal hash")
+        enrichment_errors.extend(ip_errs + url_errs + hash_errs)
 
     return (
         {
             "ip_reports": ip_reports,
             "url_reports": url_reports,
             "hash_reports": hash_reports,
-            "internal_ip_reports": internal_ip_reports,  # Lateral movement candidates
+            "internal_ip_reports": _build_internal_reports(entities),
         },
         enrichment_errors,
     )

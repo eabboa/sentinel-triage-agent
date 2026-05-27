@@ -22,6 +22,10 @@ class APIRateLimiter:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         return False
 
+    def reset(self) -> None:
+        """Clear all recorded call timestamps. Intended for test isolation."""
+        self.calls.clear()
+
     async def acquire(self):
         while True:
             async with self.lock:

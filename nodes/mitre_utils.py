@@ -5,6 +5,7 @@ Prevents LLM hallucination of technique IDs/names and provides structured mappin
 
 import re
 import logging
+from types import MappingProxyType
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -141,14 +142,24 @@ MITRE_CATALOG = {
     },
 }
 
+
+def _build_inverse_lookup() -> MappingProxyType[str, tuple[str, str]]:
+    """Build an immutable technique-ID → (name, tactic) index from MITRE_CATALOG.
+
+    Keeps the first tactic mapping when a technique appears under multiple tactics.
+    """
+    result: dict[str, tuple[str, str]] = {}
+    for tactic_name, techniques in MITRE_CATALOG.items():
+        for tech_id, name in techniques.items():
+            if tech_id not in result:
+                result[tech_id] = (name, tactic_name)
+    return MappingProxyType(result)
+
+
 # Inverse index for quick technique-to-tactic lookup
 # Structure: { technique_id: (official_name, standardized_tactic) }
-INVERSE_LOOKUP = {}
-for tactic_name, techniques in MITRE_CATALOG.items():
-    for tech_id, name in techniques.items():
-        # Keep the first/most common tactic mapping if a technique appears multiple times
-        if tech_id not in INVERSE_LOOKUP:
-            INVERSE_LOOKUP[tech_id] = (name, tactic_name)
+INVERSE_LOOKUP = _build_inverse_lookup()
+
 
 
 def _resolve_id_by_name(raw_name: str) -> tuple[str, str] | None:

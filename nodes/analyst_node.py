@@ -23,44 +23,46 @@ from nodes.mitre_utils import MITRE_CATALOG
 mitre_catalog_str = json.dumps(MITRE_CATALOG, indent=2)
 
 
-# Global variables for ChromaDB and embedding model
-chroma_client = None
-collection = None
-embedding_model = None
+class _AnalystChroma:
+    """Lazy-initialized ChromaDB client for analyst RAG retrieval."""
+    def __init__(self):
+        self.client = None
+        self.collection = None
+        self.embedding_model = None
+
+    def _ensure_initialized(self):
+        if self.client is None:
+            host = os.environ.get("CHROMA_HOST", "localhost")
+            port = int(os.environ.get("CHROMA_PORT", "8000"))
+            self.client = chromadb.HttpClient(host=host, port=port)
+            self.collection = self.client.get_or_create_collection(name="triage_corrections")
+            self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+
+    async def retrieve_similar_mismatches(self, condensed_summary: str, top_k: int = 3):
+        """Retrieve top-k similar historical mismatches."""
+        self._ensure_initialized()
+        assert self.embedding_model is not None
+        assert self.collection is not None
+
+        query_embedding = self.embedding_model.encode(condensed_summary).tolist()
+        coll = self.collection
+        return await asyncio.get_running_loop().run_in_executor(
+            None,
+            lambda: coll.query(query_embeddings=[query_embedding], n_results=top_k),
+        )
+
+
+_analyst_chroma = _AnalystChroma()
 
 
 def initialize_chroma():
     """Initialize ChromaDB client and collection."""
-    global chroma_client, collection, embedding_model
-    if chroma_client is None:
-        host = os.environ.get("CHROMA_HOST", "localhost")
-        port = int(os.environ.get("CHROMA_PORT", "8000"))
-        chroma_client = chromadb.HttpClient(host=host, port=port)
-        collection = chroma_client.get_or_create_collection(name="triage_corrections")
-        embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+    _analyst_chroma._ensure_initialized()
 
 
 async def retrieve_similar_mismatches(condensed_summary: str, top_k: int = 3):
     """Retrieve top-k similar historical mismatches."""
-    if chroma_client is None or embedding_model is None or collection is None:
-        initialize_chroma()
-
-    assert embedding_model is not None, "embedding_model not initialized"
-    assert collection is not None, "collection not initialized"
-
-    # Embed the query
-    query_embedding = embedding_model.encode(condensed_summary).tolist()
-
-    # Query the collection
-    results = await asyncio.get_running_loop().run_in_executor(
-        None,
-        lambda: collection.query(
-            query_embeddings=[query_embedding],
-            n_results=top_k
-        )
-    )
-
-    return results
+    return await _analyst_chroma.retrieve_similar_mismatches(condensed_summary, top_k)
 
 
 ANALYST_SYSTEM_PROMPT = """
@@ -164,6 +166,60 @@ Evaluate the data above according to your system instructions.
 """
 
 
+def _build_few_shot_context(results: dict) -> str:
+    """Format RAG retrieval results into few-shot prompt text."""
+    if not results.get("documents"):
+        return ""
+    lines = ["FEW-SHOT EXAMPLES OF PAST MISTAKES:"]
+    for i, doc in enumerate(results["documents"][0], 1):
+        lines.append(f"Example {i}:\n{doc}\n")
+    return "\n".join(lines)
+
+
+def _build_messages(state: TriageState, few_shot_context: str) -> list:
+    """Construct the LLM message list from state and few-shot context."""
+    return [
+        SystemMessage(content=ANALYST_SYSTEM_PROMPT),
+        HumanMessage(content=USER_DATA_TEMPLATE.format(
+            condensed_summary=state.get("condensed_summary", "No summary available."),
+            cti_results=json.dumps(state.get("cti_results", {}), indent=2),
+            internal_ips=json.dumps(
+                state.get("entities", {}).get("internal_ips", []), indent=2
+            ) or "None detected",
+            tactics=", ".join(state.get("incident_tactics", [])) or "None detected by Sentinel",
+            few_shot_examples=few_shot_context,
+        ))
+    ]
+
+
+def _parse_llm_response(response) -> dict:
+    """Extract and validate the AnalystVerdict from the raw LLM response."""
+    verdict = (
+        getattr(response, "output_parsed", None)
+        or getattr(response, "parsed_output", None)
+        or response
+    )
+
+    if isinstance(verdict, AnalystVerdict):
+        return verdict.model_dump()
+
+    if isinstance(verdict, dict):
+        try:
+            return AnalystVerdict.model_validate(verdict).model_dump()
+        except ValidationError as exc:
+            logger.error("LLM output failed schema validation. Raw output: %s", verdict)
+            raise LLMOutputValidationError(
+                message=f"LLM hallucinated invalid schema: {str(exc)}",
+                raw_data=verdict,
+            ) from exc
+
+    logger.error("LLM returned unrecognizable output type. Raw output: %s", verdict)
+    raise LLMOutputValidationError(
+        message="LLM returned non-dict and non-model output.",
+        raw_data=verdict,
+    )
+
+
 async def analyst_node(state: TriageState) -> dict:
     """
     Sends the condensed incident context to the LLM for structured triage analysis.
@@ -172,87 +228,40 @@ async def analyst_node(state: TriageState) -> dict:
     if not os.getenv("GOOGLE_API_KEY"):
         raise ValueError("NO API KEY: GOOGLE_API_KEY")
 
-    # Strictly enforce the output schema with Pydantic validation
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",  # Use a powerful model for production
+        model="gemini-2.5-flash",
         google_api_key=os.getenv("GOOGLE_API_KEY"),
-        temperature=0,  # deterministic and consistent classification
-        max_retries=0,  # Disabled internal retries to let tenacity handle backoff with jitter
+        temperature=0,
+        max_retries=0,
     ).with_structured_output(AnalystVerdict)
-
-    condensed_summary = state.get("condensed_summary", "No summary available.")
 
     from throttle import gemini_rate_limiter
     from llm_utils import llm_retry
 
     try:
-        # Retrieve similar historical mismatches — inside try so ChromaDB
-        # outages degrade to empty few-shot context instead of crashing.
-        results = await retrieve_similar_mismatches(condensed_summary, top_k=3)
-
-        # Format few-shot examples
-        few_shot_examples = ""
-        if results['documents']:
-            few_shot_examples = "FEW-SHOT EXAMPLES OF PAST MISTAKES:\n"
-            for i, doc in enumerate(results['documents'][0], 1):
-                few_shot_examples += f"Example {i}:\n{doc}\n\n"
-
-        messages = [
-            SystemMessage(content=ANALYST_SYSTEM_PROMPT),
-            HumanMessage(content=USER_DATA_TEMPLATE.format(
-                condensed_summary=condensed_summary,
-                cti_results=json.dumps(state.get("cti_results", {}), indent=2),
-                internal_ips=json.dumps(
-                    state.get("entities", {}).get("internal_ips", []), indent=2
-                ) or "None detected",
-                tactics=", ".join(state.get("incident_tactics", [])) or "None detected by Sentinel",
-                few_shot_examples=few_shot_examples,
-            ))
-        ]
+        # ChromaDB outages degrade to empty few-shot context instead of crashing.
+        results = await retrieve_similar_mismatches(
+            state.get("condensed_summary", "No summary available."), top_k=3
+        )
+        messages = _build_messages(state, _build_few_shot_context(results))
 
         @llm_retry
         async def _invoke_llm():
             async with gemini_rate_limiter:
                 return await llm.ainvoke(messages)
 
-        response = await _invoke_llm()
-        verdict = getattr(response, "output_parsed", None) or getattr(response, "parsed_output", None) or response
-        verdict_dict = {}
-        if isinstance(verdict, AnalystVerdict):
-            # The happy path: LangChain already validated it into an object
-            verdict_dict = verdict.model_dump()
-            
-        elif isinstance(verdict, dict):
-            # The dangerous path: We got a dictionary. We MUST validate it manually.
-            try:
-                validated_verdict = AnalystVerdict.model_validate(verdict)
-                verdict_dict = validated_verdict.model_dump()
-            except ValidationError as exc:
-                # We use logger.error so the exact hallucinated dictionary is printed to your console
-                logger.error("LLM output failed schema validation. Raw output: %s", verdict)
-                raise LLMOutputValidationError(
-                    message=f"LLM hallucinated invalid schema: {str(exc)}",
-                    raw_data=verdict
-                ) from exc
-                
-        else:
-            # We got something completely unrecognizable (like a plain string)
-            logger.error("LLM returned unrecognizable output type. Raw output: %s", verdict)
-            raise LLMOutputValidationError(
-                message="LLM returned non-dict and non-model output.",
-                raw_data=verdict
-            )
+        verdict_dict = _parse_llm_response(await _invoke_llm())
 
         # Programmatically validate and enrich MITRE techniques
-        suggested_techs = verdict_dict.get("mitre_techniques", [])
-        incident_tactics = state.get("incident_tactics", [])
         from nodes.mitre_utils import validate_and_enrich_techniques
-        verified_techs, warnings = validate_and_enrich_techniques(suggested_techs, incident_tactics)
-        
+        verified_techs, warnings = validate_and_enrich_techniques(
+            verdict_dict.get("mitre_techniques", []),
+            state.get("incident_tactics", []),
+        )
         verdict_dict["mitre_techniques"] = verified_techs
         if warnings:
             verdict_dict["errors"] = warnings
-            
+
         return verdict_dict
 
     except Exception as e:

@@ -7,32 +7,28 @@ from sentinel_api import post_incident_comment, update_incident_status
 from state import TriageState
 
 
-def _format_comment(state: TriageState) -> str:
-    """
-    Formats the triage results into a structured, readable Sentinel comment.
-    """
-    entities = state.get("entities", {})
-    cti = state.get("cti_results", {})
-    kql_queries = state.get("kql_queries", [])
-
-    # Build entity summary
-    entity_lines = []
+def _format_entity_lines(entities: dict) -> list[str]:
+    """Build markdown lines summarizing extracted entities."""
+    lines = []
     if entities.get("ips"):
-        entity_lines.append(f"**IPs:** {', '.join(entities['ips'])}")
+        lines.append(f"**IPs:** {', '.join(entities['ips'])}")
     if entities.get("urls"):
-        entity_lines.append(f"**URLs:** {', '.join(entities['urls'][:3])}")
+        lines.append(f"**URLs:** {', '.join(entities['urls'][:3])}")
     if entities.get("hashes"):
-        entity_lines.append(f"**Hashes:** {', '.join(entities['hashes'][:3])}")
+        lines.append(f"**Hashes:** {', '.join(entities['hashes'][:3])}")
     if entities.get("usernames"):
-        entity_lines.append(f"**Users:** {', '.join(entities['usernames'])}")
+        lines.append(f"**Users:** {', '.join(entities['usernames'])}")
+    return lines
 
-    # Build CTI summary
-    cti_lines = []
+
+def _format_cti_lines(cti: dict) -> list[str]:
+    """Build markdown lines summarizing CTI enrichment results."""
+    lines = []
     for ip_report in cti.get("ip_reports", []):
         if "error" not in ip_report:
             score = ip_report.get("abuse_score", 0)
             flag = "🔴" if score > 50 else ("🟡" if score > 10 else "🟢")
-            cti_lines.append(
+            lines.append(
                 f"{flag} IP {ip_report['ioc']}: AbuseIPDB score {score}/100 "
                 f"({ip_report.get('usage_type', 'Unknown')} | {ip_report.get('country', '?')})"
             )
@@ -40,24 +36,35 @@ def _format_comment(state: TriageState) -> str:
         if "error" not in url_report:
             mal = url_report.get("malicious", 0)
             flag = "🔴" if mal > 3 else ("🟡" if mal > 0 else "🟢")
-            cti_lines.append(
+            lines.append(
                 f"{flag} URL {url_report['ioc'][:60]}: {mal} VT detections"
             )
+    return lines
 
-    # Build MITRE techniques list
-    mitre_tech_lines = []
-    mitre_techniques = state.get("mitre_techniques", [])
-    if mitre_techniques:
-        mitre_tech_lines.append("| Tactic | Technique ID | Technique Name | Confidence | Status |")
-        mitre_tech_lines.append("| :--- | :--- | :--- | :--- | :--- |")
-        for tech in mitre_techniques:
-            status_flag = "⚠️ Unverified" if tech.get("unverified") else "✅ Verified"
-            tactic_name = tech.get("tactic", "Unknown")
-            mitre_tech_lines.append(
-                f"| {tactic_name} | `{tech['technique_id']}` | {tech['name']} | {tech['confidence']}% | {status_flag} |"
-            )
-    else:
-        mitre_tech_lines.append("_No specific MITRE techniques mapped._")
+
+def _format_mitre_table(mitre_techniques: list) -> list[str]:
+    """Build a markdown table of mapped MITRE ATT&CK techniques."""
+    if not mitre_techniques:
+        return ["_No specific MITRE techniques mapped._"]
+
+    lines = [
+        "| Tactic | Technique ID | Technique Name | Confidence | Status |",
+        "| :--- | :--- | :--- | :--- | :--- |",
+    ]
+    for tech in mitre_techniques:
+        status_flag = "⚠️ Unverified" if tech.get("unverified") else "✅ Verified"
+        tactic_name = tech.get("tactic", "Unknown")
+        lines.append(
+            f"| {tactic_name} | `{tech['technique_id']}` | {tech['name']} | {tech['confidence']}% | {status_flag} |"
+        )
+    return lines
+
+
+def _format_comment(state: TriageState) -> str:
+    """Formats the triage results into a structured, readable Sentinel comment."""
+    entity_lines = _format_entity_lines(state.get("entities", {}))
+    cti_lines = _format_cti_lines(state.get("cti_results", {}))
+    mitre_tech_lines = _format_mitre_table(state.get("mitre_techniques", []))
 
     review_tag = ""
     if state.get("classification") == "BenignPositive":
@@ -93,7 +100,7 @@ def _format_comment(state: TriageState) -> str:
 Copy and run these in Sentinel → Logs:
 
 ```kql
-{chr(10).join(kql_queries[:2]) or "No queries generated."}
+{chr(10).join(state.get("kql_queries", [])[:2]) or "No queries generated."}
 ```
 
 ---

@@ -343,6 +343,16 @@ To ensure predictable failure modes and protect against malformed data, the pipe
 
 ## Changelog
 
+### [v0.9.0] - 2026-05-27 (Technical Debt Remediation & Test Suite)
+
+**Comprehensive Test Suite Implementation:** Constructed a professional-grade, deterministic test suite utilizing `pytest`. Focused on component isolation, the Arrange-Act-Assert pattern, and removal of external system dependencies to ensure reliable automated testing.
+
+**Cyclomatic Complexity Reduction:** Remediated structural debt identified by `ai-slop-detector`. Refactored god functions and streamlined control flow across primary agent nodes to bring deficit scores below 30.
+
+**State Mutability Hardening:** Audited and eliminated mutable global variables across the codebase. Refactored global objects into immutable structures or encapsulated class instances to guarantee thread safety and prevent unintended side effects.
+
+**Readability Refactoring:** Improved code maintainability by replacing dense list comprehensions and generator expressions with explicit, expanded loop structures throughout the project.
+
 ### [v0.8.0] - 2026-05-25 (Validation Hardening & Dependency Security)
 
 **Strict Boundary Validation & Type Safety:** Migrated all external data inputs (Sentinel, VirusTotal, AbuseIPDB, LLM Outputs) to explicitly defined nested Pydantic models (`models/validation.py`) utilizing `ConfigDict(extra="ignore")` to prevent operational failures during API evolution.

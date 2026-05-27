@@ -19,18 +19,13 @@ Concurrency Invariants:
 """
 
 import pytest
-import aiohttp
 import aioresponses
 from unittest.mock import patch, AsyncMock
 from nodes.enrich_node import (
     enrich_node,
     close_session,
-    _check_abuseipdb,
-    _check_vt_hash,
-    _check_vt_url,
     get_session,
     _is_error_result,
-    TransientHTTPError,
 )
 
 
@@ -61,10 +56,20 @@ async def test_enrich_node_success(empty_triage_state, cleanup_session):
         assert len(cti["ip_reports"]) == 2
 
         # Verify specific results match specific IPs (no cross-contamination)
-        report_8 = next(r for r in cti["ip_reports"] if r["ioc"] == "8.8.8.8")
+        report_8 = None
+        for report in cti["ip_reports"]:
+            if report["ioc"] == "8.8.8.8":
+                report_8 = report
+                break
+        assert report_8 is not None
         assert report_8["verdict"] == "malicious"
 
-        report_1 = next(r for r in cti["ip_reports"] if r["ioc"] == "1.1.1.1")
+        report_1 = None
+        for report in cti["ip_reports"]:
+            if report["ioc"] == "1.1.1.1":
+                report_1 = report
+                break
+        assert report_1 is not None
         assert report_1["verdict"] == "clean"
 
 @pytest.mark.asyncio
@@ -241,7 +246,12 @@ async def test_enrich_node_enrichment_errors_in_result(empty_triage_state, clean
         result = await enrich_node(state)
         assert len(result["cti_results"]["ip_reports"]) == 0
         assert "errors" in result
-        assert any("422" in e for e in result["errors"])
+        found_422 = False
+        for error_message in result["errors"]:
+            if "422" in error_message:
+                found_422 = True
+                break
+        assert found_422
 
 
 # ── _is_error_result ─────────────────────────────────────────────────────────

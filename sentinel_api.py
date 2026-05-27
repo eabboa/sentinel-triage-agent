@@ -86,8 +86,11 @@ def _get_base() -> str:
         "SUBSCRIPTION_ID": subscription_id,
         "RESOURCE_GROUP": resource_group,
         "WORKSPACE_NAME": workspace_name,
-    }
-    _missing = [k for k, v in _required.items() if not v]
+    }   
+    _missing = []
+    for env_var, value in _required.items():
+        if not value:
+            _missing.append(env_var)
     if _missing:
         raise EnvironmentError(
             f"Missing required environment variables: {', '.join(_missing)}. "

@@ -23,7 +23,8 @@ Concurrency Invariants:
 
 import pytest
 from unittest.mock import patch, AsyncMock, MagicMock
-from nodes.analyst_node import analyst_node, AnalystVerdict, MitreTechnique
+from nodes.analyst_node import analyst_node
+from models.validation import MitreTechnique, AnalystVerdict
 
 
 @pytest.mark.asyncio

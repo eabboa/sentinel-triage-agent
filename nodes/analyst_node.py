@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from pydantic import BaseModel, ValidationError
+from models.validation import AnalystVerdict, MitreTechnique
 from models.exceptions import LLMOutputValidationError
 from sentence_transformers import SentenceTransformer
 from state import TriageState
@@ -61,22 +62,6 @@ async def retrieve_similar_mismatches(condensed_summary: str, top_k: int = 3):
 
     return results
 
-
-class MitreTechnique(BaseModel):
-    technique_id: str
-    name: str
-    confidence: int
-    tactic: Optional[str] = None
-
-
-class AnalystVerdict(BaseModel):
-    classification: Literal["TruePositive", "FalsePositive", "BenignPositive"]
-    is_true_positive: bool
-    triage_summary: str
-    mitre_analysis: str
-    mitre_techniques: list[MitreTechnique]
-    confidence: int
-    recommended_action: str
 
 ANALYST_SYSTEM_PROMPT = """
 You are a Tier 2 SOC analyst performing incident triage in Microsoft Sentinel.
@@ -155,7 +140,7 @@ Return ONLY valid JSON with this exact schema. No preamble, no markdown, no expl
   "mitre_analysis": "How the detected tactics map to the observed behavior. 3 sentence explanation. Each sentence under 15 words.",
   "mitre_techniques": [{"technique_id": "TXXXX", "name": "", "confidence": 90, "tactic": ""}],
   "confidence": "CONFIDENCE SCORING: Start at 50. Add/subtract based on CTI verdicts only (not raw counts). +25 if any IOC verdict is 'malicious'. +10 if any IOC verdict is 'suspicious'. -10 if all IOC verdicts are 'clean'. Apply 0 modifier for missing/failed lookups (treat as neutral unknown, not clean). Add 20 for multi-stage MITRE correlation. Subtract 10 for isolated events lacking context. Cap between 0-100, where 90-100 is Definitive, 70-89 is Probable, 40-69 is Ambiguous, and 0-39 is Insufficient Data. Output exact integer.",
-  "recommended_action": "Brief next step for the Tier 2 analyst. 3 sentence explanation."
+  "recommended_action": "Brief next step for the Tier 2 analyst. 5 sentence explanation."
 }
 """
 

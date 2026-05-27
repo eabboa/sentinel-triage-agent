@@ -30,7 +30,7 @@ for key, value in _TEST_ENV_VARS.items():
 # ── Now safe to import application modules ──────────────────────────────────────
 import pytest
 from state import TriageState
-from nodes.analyst_node import AnalystVerdict, MitreTechnique
+from models.validation import AnalystVerdict, MitreTechnique
 
 
 @pytest.fixture

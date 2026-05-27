@@ -49,7 +49,7 @@ async def test_graph_hitl_interrupt_and_resume():
          patch("nodes.learning_node.embed_and_store", new_callable=AsyncMock):
 
         # Configure the mocked LLM chain to return a valid AnalystVerdict
-        from nodes.analyst_node import AnalystVerdict, MitreTechnique
+        from models.validation import AnalystVerdict, MitreTechnique
         mock_verdict = AnalystVerdict(
             classification="FalsePositive",
             is_true_positive=False,

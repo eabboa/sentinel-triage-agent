@@ -224,7 +224,12 @@ def test_writeback_node_comment_failure(empty_triage_state):
     with patch("nodes.writeback_node.post_incident_comment", side_effect=Exception("API down")):
         result = writeback_node(state)
         assert result["comment_posted"] is False
-        assert any("Comment post failed" in e for e in result["errors"])
+        found_comment_error = False
+        for error_message in result["errors"]:
+            if "Comment post failed" in error_message:
+                found_comment_error = True
+                break
+        assert found_comment_error
 
 
 # ── close_review_node: failure branch ────────────────────────────────────────
@@ -237,4 +242,9 @@ def test_close_review_node_api_failure(empty_triage_state):
     with patch("nodes.writeback_node.update_incident_status", side_effect=Exception("Timeout")):
         result = close_review_node(state)
         assert result["incident_closed"] is False
-        assert any("Close approval failed" in e for e in result["errors"])
+        found_close_error = False
+        for error_message in result["errors"]:
+            if "Close approval failed" in error_message:
+                found_close_error = True
+                break
+        assert found_close_error

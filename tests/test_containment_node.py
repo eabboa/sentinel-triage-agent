@@ -77,7 +77,12 @@ async def test_containment_node_machine_not_found(empty_triage_state):
         mock_resolve.return_value = None  # Device not found
         result = await containment_node(state)
 
-        assert any("not found" in e for e in result["errors"])
+        found_not_found_error = False
+        for error_message in result["errors"]:
+            if "not found" in error_message:
+                found_not_found_error = True
+                break
+        assert found_not_found_error
         mock_isolate.assert_not_called()
 
 
@@ -95,7 +100,12 @@ async def test_containment_node_isolation_api_failure(empty_triage_state):
         mock_isolate.side_effect = Exception("MDE API timeout")
 
         result = await containment_node(state)
-        assert any("MDE isolation failed" in e for e in result["errors"])
+        found_isolation_error = False
+        for error_message in result["errors"]:
+            if "MDE isolation failed" in error_message:
+                found_isolation_error = True
+                break
+        assert found_isolation_error
 
 
 @pytest.mark.asyncio

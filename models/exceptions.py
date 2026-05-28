@@ -27,6 +27,14 @@ class AbuseIPDBResponseValidationError(Exception):
         super().__init__(message)
         self.raw_data = raw_data
 
+class LLMExtractionError(Exception):
+    """Raised when an LLM invocation fails after retries (API/network/rate-limit)."""
+
+    def __init__(self, message: str, original_error: BaseException):
+        super().__init__(message)
+        self.original_error = original_error
+
+
 class LLMOutputValidationError(Exception):
     """Raised when the structured output from the LLM fails validation."""
     

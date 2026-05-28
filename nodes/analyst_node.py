@@ -8,17 +8,14 @@ import json
 import os
 from typing import Literal, Optional
 import logging
-import chromadb
 
-logger = logging.getLogger(__name__)
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import SystemMessage, HumanMessage
-from pydantic import BaseModel, ValidationError
+from pydantic import ValidationError
 from models.validation import AnalystVerdict, MitreTechnique
 from models.exceptions import LLMOutputValidationError
-from sentence_transformers import SentenceTransformer
 from state import TriageState
 from nodes.mitre_utils import MITRE_CATALOG
+
+logger = logging.getLogger(__name__)
 
 mitre_catalog_str = json.dumps(MITRE_CATALOG, indent=2)
 
@@ -32,6 +29,9 @@ class _AnalystChroma:
 
     def _ensure_initialized(self):
         if self.client is None:
+            import chromadb
+            from sentence_transformers import SentenceTransformer
+
             host = os.environ.get("CHROMA_HOST", "localhost")
             port = int(os.environ.get("CHROMA_PORT", "8000"))
             self.client = chromadb.HttpClient(host=host, port=port)
@@ -178,6 +178,8 @@ def _build_few_shot_context(results: dict) -> str:
 
 def _build_messages(state: TriageState, few_shot_context: str) -> list:
     """Construct the LLM message list from state and few-shot context."""
+    from langchain_core.messages import SystemMessage, HumanMessage
+
     return [
         SystemMessage(content=ANALYST_SYSTEM_PROMPT),
         HumanMessage(content=USER_DATA_TEMPLATE.format(
@@ -227,6 +229,8 @@ async def analyst_node(state: TriageState) -> dict:
     """
     if not os.getenv("GOOGLE_API_KEY"):
         raise ValueError("NO API KEY: GOOGLE_API_KEY")
+
+    from langchain_google_genai import ChatGoogleGenerativeAI
 
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.5-flash",

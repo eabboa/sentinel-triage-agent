@@ -6,9 +6,13 @@ This node uses BOTH regex and LLM extraction in a hybrid approach.
 
 import re
 import json
+import logging
 import os
-from langchain_google_genai import ChatGoogleGenerativeAI
+
 from state import TriageState
+from models.exceptions import LLMExtractionError, LLMOutputValidationError
+
+logger = logging.getLogger(__name__)
 
 # ── Compiled regex patterns ────────────────────────────────────────────────────
 # IPv4 address pattern (excludes private/loopback ranges in the filter step)
@@ -59,6 +63,8 @@ async def extract_node(state: TriageState) -> dict:
     regex_iocs = _extract_regex_iocs(text)
 
     # ── Phase 2: LLM extraction for contextual entities ───────────────────────
+    from langchain_google_genai import ChatGoogleGenerativeAI
+
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.5-flash",  # Use flash model here; preserve quota for the Analyst node
         google_api_key=os.getenv("GOOGLE_API_KEY"),
@@ -101,9 +107,20 @@ TEXT:
         response = await _invoke_llm()
         # Strip markdown fences if the model adds them despite instructions
         clean = response.content.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-        llm_entities = json.loads(clean)
-    except Exception:
-        # If LLM extraction fails, proceed with regex-only results
+        try:
+            llm_entities = json.loads(clean)
+        except json.JSONDecodeError as exc:
+            raise LLMOutputValidationError(
+                f"LLM returned unparsable output: {clean[:200]}", raw_data=clean
+            ) from exc
+    except (LLMExtractionError, LLMOutputValidationError):
+        logger.warning("LLM extraction failed, falling back to regex-only", exc_info=True)
+        llm_entities = {"usernames": [], "hostnames": [], "domains": []}
+    except Exception as exc:
+        logger.warning(
+            "LLM extraction failed (unexpected: %s), falling back to regex-only",
+            type(exc).__name__, exc_info=True,
+        )
         llm_entities = {"usernames": [], "hostnames": [], "domains": []}
 
     entities = {

@@ -11,8 +11,7 @@ import threading
 import time
 import uuid
 
-import chromadb
-from sentence_transformers import SentenceTransformer
+
 from state import TriageState
 
 logger = logging.getLogger(__name__)
@@ -38,6 +37,8 @@ _worker_state = _WorkerState()
 
 def _init_worker():
     """Initialize the worker process embedding model."""
+    from sentence_transformers import SentenceTransformer
+
     _worker_state.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
 
 
@@ -57,6 +58,9 @@ class ChromaSingleton:
         host = os.environ.get('CHROMA_HOST', 'localhost')
         port = int(os.environ.get('CHROMA_PORT', '8000'))
         try:
+            import chromadb
+            from sentence_transformers import SentenceTransformer
+
             self.client = chromadb.HttpClient(host=host, port=port)
             self.collection = self.client.get_or_create_collection(name="triage_corrections")
             self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')

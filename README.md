@@ -128,7 +128,22 @@ ABUSEIPDB_MALICIOUS_THRESHOLD=75
 
 #### For production:
 - Assign a Managed Identity (User-Assigned or System-Assigned) to your application/service with `Microsoft Sentinel Contributor` role at the Resource Group scope (IAM → Add role assignment). Wait ~10 minutes for propagation.
-- **Defender for Endpoint (MDE) API Permissions**: To use the automated containment node, the identity must have the `Machine.Read.All` and `Machine.Isolate` application permissions in the Microsoft Defender ATP API, with admin consent granted.
+
+#### App Registration API Permissions
+
+The containment node (`containment_node.py`) calls three APIs that require explicit application permissions. Configure these in **Azure Portal → App registrations → your app → API permissions**:
+
+1. Click **"+ Add a permission"**.
+2. Add each permission below, selecting **Application permissions** (not Delegated) for all three.
+3. After adding all three, click **"Grant admin consent for \<your tenant\>"**. The Status column must show a green checkmark before the pipeline can use these endpoints.
+
+| Step | API | Permission Name | Purpose |
+|------|-----|-----------------|---------|
+| 1 | **Microsoft Graph** | `User.RevokeSessions.All` | `revoke_entra_sessions()` — revokes compromised user refresh tokens via Graph API |
+| 2 | **APIs my organization uses** → search `WindowsDefenderATP` | `Machine.Read.All` | `resolve_mde_machine_id()` — resolves hostnames/IPs to MDE machine IDs |
+| 3 | *(same WindowsDefenderATP entry)* | `Machine.Isolate` | `isolate_mde_device()` — issues network isolation to compromised devices |
+
+> **Note:** For step 2 and 3, `WindowsDefenderATP` appears under **"APIs my organization uses"**, not under Microsoft APIs. If it doesn't appear, ensure Microsoft Defender for Endpoint is enabled in your tenant.
 
 ---
 

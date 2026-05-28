@@ -11,7 +11,7 @@ This does not solve hallucination completely. But it tunes out.
 
 import json
 import os
-from langchain_google_genai import ChatGoogleGenerativeAI
+
 from state import TriageState
 
 
@@ -122,6 +122,8 @@ async def kql_node(state: TriageState) -> dict:
 
     if not os.getenv("GOOGLE_API_KEY"):
         raise ValueError("NO API KEY: GOOGLE_API_KEY")
+
+    from langchain_google_genai import ChatGoogleGenerativeAI
 
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.5-flash-lite",  # Lite model

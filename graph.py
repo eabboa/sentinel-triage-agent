@@ -98,7 +98,7 @@ def build_graph():
     builder.add_edge("close_review", "learning")
     builder.add_edge("learning", END)
 
-    checkpointer = MemorySaver() # TODO: In Production use SqliteSaver or PostgresSaver
+    checkpointer = MemorySaver() # TODO: In Production use AsyncSqliteSaver or PostgresSaver
     """
     MemorySaver is only for the development stage.
     It fails when the Python process crashes. The memory is completely wiped.   

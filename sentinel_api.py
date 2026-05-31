@@ -184,6 +184,15 @@ def post_incident_comment(incident_id: str, comment_text: str) -> dict:
     return response.json()
 
 
+def fetch_incident_comments(incident_id: str) -> list[dict]:
+    """Fetches all comments on a Sentinel incident."""
+    url = f"{_get_base()}/incidents/{incident_id}/comments"
+    params = {"api-version": API_VERSION}
+
+    response = _request("GET", url, headers=get_auth_headers(), params=params)
+    return response.json().get("value", [])
+
+
 @retry(
     retry=retry_if_exception_type(ConcurrencyConflictError),
     wait=wait_exponential(multiplier=1, min=1, max=10),

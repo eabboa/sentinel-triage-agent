@@ -26,6 +26,13 @@ Neutral baseline guarantee:
     The LLM never sees an error object in the cti_results payload - it only receives
     verified signals. This prevents the LLM from inferring threat signals from the
     mere presence of a failed lookup (e.g. "timeout = IP blocking scanners").
+
+Graceful degradation:
+    If an entire CTI source is unavailable (missing API key, DNS failure, etc.),
+    the source name is appended to degraded_sources and the pipeline continues
+    with partial results from the remaining sources. Individual IOC failures
+    within a healthy source are captured in errors but do not mark the source
+    as degraded.
 """
 
 import asyncio
@@ -139,7 +146,7 @@ async def _check_vt_url(session: aiohttp.ClientSession, url: str) -> dict:
         if resp.status in (429, 503, 504):
             raise TransientHTTPError(f"VirusTotal URL lookup transient HTTP {resp.status} for {url}")
         if resp.status == 200:
-            return _vt_verdict(resp.json(), url, "url")
+            return _vt_verdict(await resp.json(), url, "url")
         return {"ioc": url, "type": "url", "error": f"HTTP {resp.status}"}
 
 
@@ -157,7 +164,7 @@ async def _check_vt_hash(session: aiohttp.ClientSession, file_hash: str) -> dict
         if resp.status in (429, 503, 504):
             raise TransientHTTPError(f"VirusTotal hash lookup transient HTTP {resp.status} for {file_hash}")
         if resp.status == 200:
-            return _vt_verdict(resp.json(), file_hash, "hash")
+            return _vt_verdict(await resp.json(), file_hash, "hash")
         if resp.status == 404:
             # Not in VT database - genuinely unknown, not clean.
             # Returned as a valid (non-error) result so the LLM can reason about novelty.
@@ -281,30 +288,80 @@ async def _rate_limited_vt(session, check_fn, ioc: str, ioc_type: str):
             return {"ioc": ioc, "type": ioc_type, "error": str(exc)}
 
 
-async def _run_enrichment(entities: dict) -> tuple[dict, list[str]]:
-    """Run all CTI lookups concurrently. Returns (cti_results, errors)."""
+async def _run_enrichment(entities: dict) -> tuple[dict, list[str], list[str]]:
+    """Run all CTI lookups concurrently. Returns (cti_results, errors, degraded_sources)."""
     session = await get_session()
 
     ip_list = entities.get("ips", [])
     url_list = entities.get("urls", [])
     hash_list = entities.get("hashes", [])
 
-    ip_tasks = [_check_abuseipdb(session, ip) for ip in ip_list]
-    url_tasks = [_rate_limited_vt(session, _check_vt_url, u, "url") for u in url_list]
-    hash_tasks = [_rate_limited_vt(session, _check_vt_hash, h, "hash") for h in hash_list]
-
-    all_tasks = ip_tasks + url_tasks + hash_tasks
     ip_reports, url_reports, hash_reports = [], [], []
     enrichment_errors: list[str] = []
+    degraded: list[str] = []
+
+    # ── AbuseIPDB tasks ───────────────────────────────────────────────────
+    abuseipdb_tasks: list = []
+    try:
+        if ip_list:
+            if not ABUSEIPDB_API_KEY:
+                raise ValueError("ABUSEIPDB_API_KEY not configured")
+            abuseipdb_tasks = [_check_abuseipdb(session, ip) for ip in ip_list]
+    except Exception as exc:
+        degraded.append("abuseipdb")
+        enrichment_errors.append(f"enrich_node: AbuseIPDB unavailable: {exc}")
+        logger.warning("AbuseIPDB source degraded: %s", exc)
+
+    # ── VirusTotal tasks ──────────────────────────────────────────────────
+    vt_url_tasks: list = []
+    vt_hash_tasks: list = []
+    try:
+        if url_list or hash_list:
+            if not VT_API_KEY:
+                raise ValueError("VT_API_KEY not configured")
+            vt_url_tasks = [_rate_limited_vt(session, _check_vt_url, u, "url") for u in url_list]
+            vt_hash_tasks = [_rate_limited_vt(session, _check_vt_hash, h, "hash") for h in hash_list]
+    except Exception as exc:
+        degraded.append("virustotal")
+        enrichment_errors.append(f"enrich_node: VirusTotal unavailable: {exc}")
+        logger.warning("VirusTotal source degraded: %s", exc)
+
+    # ── Run all surviving tasks concurrently ──────────────────────────────
+    all_tasks = abuseipdb_tasks + vt_url_tasks + vt_hash_tasks
 
     if all_tasks:
         results = await asyncio.gather(*all_tasks, return_exceptions=True)
-        ip_len, url_len = len(ip_tasks), len(url_tasks)
 
-        ip_reports, ip_errs = _partition_results(results[:ip_len], ip_list, "AbuseIPDB")
-        url_reports, url_errs = _partition_results(results[ip_len:ip_len + url_len], url_list, "VirusTotal URL")
-        hash_reports, hash_errs = _partition_results(results[ip_len + url_len:], hash_list, "VirusTotal hash")
-        enrichment_errors.extend(ip_errs + url_errs + hash_errs)
+        ab_len = len(abuseipdb_tasks)
+        vt_url_len = len(vt_url_tasks)
+
+        # ── Process AbuseIPDB results ─────────────────────────────────
+        try:
+            ip_reports, ip_errs = _partition_results(
+                results[:ab_len], ip_list, "AbuseIPDB",
+            )
+            enrichment_errors.extend(ip_errs)
+        except Exception as exc:
+            if "abuseipdb" not in degraded:
+                degraded.append("abuseipdb")
+            enrichment_errors.append(f"enrich_node: AbuseIPDB result processing failed: {exc}")
+            logger.error("AbuseIPDB result processing failed: %s", exc)
+
+        # ── Process VirusTotal results ────────────────────────────────
+        try:
+            vt_results = results[ab_len:]
+            url_reports, url_errs = _partition_results(
+                vt_results[:vt_url_len], url_list, "VirusTotal URL",
+            )
+            hash_reports, hash_errs = _partition_results(
+                vt_results[vt_url_len:], hash_list, "VirusTotal hash",
+            )
+            enrichment_errors.extend(url_errs + hash_errs)
+        except Exception as exc:
+            if "virustotal" not in degraded:
+                degraded.append("virustotal")
+            enrichment_errors.append(f"enrich_node: VirusTotal result processing failed: {exc}")
+            logger.error("VirusTotal result processing failed: %s", exc)
 
     return (
         {
@@ -314,6 +371,7 @@ async def _run_enrichment(entities: dict) -> tuple[dict, list[str]]:
             "internal_ip_reports": _build_internal_reports(entities),
         },
         enrichment_errors,
+        degraded,
     )
 
 
@@ -323,15 +381,12 @@ async def enrich_node(state: TriageState) -> dict:
     if not any([entities.get("ips"), entities.get("urls"), entities.get("hashes"), entities.get("internal_ips")]):
         return {"cti_results": {"ip_reports": [], "url_reports": [], "hash_reports": [], "internal_ip_reports": []}}
 
-    if entities.get("ips") and not ABUSEIPDB_API_KEY:
-        raise ValueError("NO API KEY: ABUSEIPDB_API_KEY")
-    if (entities.get("urls") or entities.get("hashes")) and not VT_API_KEY:
-        raise ValueError("NO API KEY: VT_API_KEY")
-
-    cti_results, enrichment_errors = await _run_enrichment(entities)
+    cti_results, enrichment_errors, degraded = await _run_enrichment(entities)
 
     update: dict = {"cti_results": cti_results}
     if enrichment_errors:
         update["errors"] = enrichment_errors
+    if degraded:
+        update["degraded_sources"] = degraded
 
     return update

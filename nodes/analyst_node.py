@@ -82,6 +82,9 @@ signal. Raw counts (malicious, suspicious) are supporting context only.
     Treat this IOC as UNKNOWN - apply a 0 point confidence modifier. Do NOT infer
     threat signals from the absence of a result (e.g. timeout is not IP blocking scanners).
 
+DEGRADED SOURCES:
+If the incident data lists any 'DEGRADED CTI SOURCES', it means that entire threat intelligence feed is offline or unavailable. You must explicitly note this missing context in your triage_summary, and you must lower your overall confidence score since you are triaging with an incomplete intelligence picture.
+
 TASK:
 1. Analyze whether this incident represents a genuine threat.
 2. Correlate the CTI verdicts with the MITRE ATT&CK tactics.
@@ -155,6 +158,9 @@ INCIDENT SUMMARY:
 CTI ENRICHMENT RESULTS:
 {cti_results}
 
+DEGRADED CTI SOURCES (Unavailable for this analysis):
+{degraded_sources}
+
 INTERNAL IPs (Lateral Movement Candidates - no external CTI available):
 {internal_ips}
 
@@ -180,11 +186,15 @@ def _build_messages(state: TriageState, few_shot_context: str) -> list:
     """Construct the LLM message list from state and few-shot context."""
     from langchain_core.messages import SystemMessage, HumanMessage
 
+    degraded = state.get("degraded_sources", [])
+    degraded_str = ", ".join(degraded) if degraded else "None (all configured sources available)"
+
     return [
         SystemMessage(content=ANALYST_SYSTEM_PROMPT),
         HumanMessage(content=USER_DATA_TEMPLATE.format(
             condensed_summary=state.get("condensed_summary", "No summary available."),
             cti_results=json.dumps(state.get("cti_results", {}), indent=2),
+            degraded_sources=degraded_str,
             internal_ips=json.dumps(
                 state.get("entities", {}).get("internal_ips", []), indent=2
             ) or "None detected",

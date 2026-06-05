@@ -23,6 +23,7 @@ class TriageState(TypedDict):
 
     # ── Enrichment (enrich_node.py) ────────────────────────────────────────────
     cti_results: dict            # {"ip_reports": [...], "url_reports": [...], "hash_reports": [...]}
+    degraded_sources: Annotated[list[str], operator.add]  # CTI sources that failed entirely (e.g., ["virustotal"])
 
     # ── Analysis (analyst_node.py) ─────────────────────────────────────────────
     is_true_positive: bool

@@ -216,7 +216,7 @@ SCENARIOS = [
         "obfuscation_profile": [11],
         "ip_mode": "public",
         "domain_pool": RANDOM_DOMAINS,
-        "alert_count": 10,
+        "alert_count": 2,
         "special": "malformed"
     },
     {
@@ -398,7 +398,7 @@ def build_rule_body(scenario: dict, rule_id: str, kql_query: str) -> dict:
             "fieldMappings": [{"identifier": "Name", "columnName": "TargetHost"}]
         })
         
-    return {
+    body = {
         "kind": "Scheduled",
         "properties": {
             "displayName": scenario["name"],
@@ -438,6 +438,11 @@ def build_rule_body(scenario: dict, rule_id: str, kql_query: str) -> dict:
             }
         }
     }
+    
+    if not entity_mappings:
+        del body["properties"]["entityMappings"]
+        
+    return body
 
 
 def create_mock_incidents():

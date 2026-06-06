@@ -37,7 +37,7 @@ def _next_after_extract(state: TriageState) -> Literal["analyst", "enrich"]:
 def _next_after_analyst(state: TriageState) -> Literal["escalation", "writeback", "kql"]:
     """Choose the next node based on analyst classification and confidence."""
     classification = state.get("classification", "")
-    confidence = int(state.get("confidence", 0))
+    confidence = state.get("confidence", 0)
 
     if classification == "TruePositive" and confidence > 90:
         return "escalation"

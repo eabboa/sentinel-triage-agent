@@ -58,8 +58,8 @@ ABUSEIPDB_API_KEY = os.getenv("ABUSEIPDB_API_KEY", "")
 
 # Configurable thresholds - override via environment variables in production.
 # See module docstring for threshold semantics and rationale.
-VT_MALICIOUS_THRESHOLD: int = int(os.getenv("VT_MALICIOUS_THRESHOLD", "5"))
-ABUSEIPDB_MALICIOUS_THRESHOLD: int = int(os.getenv("ABUSEIPDB_MALICIOUS_THRESHOLD", "75"))
+VT_MALICIOUS_THRESHOLD: int = int(os.getenv("VT_MALICIOUS_THRESHOLD", "5")) # default 5
+ABUSEIPDB_MALICIOUS_THRESHOLD: int = int(os.getenv("ABUSEIPDB_MALICIOUS_THRESHOLD", "75")) # default 75
 ABUSEIPDB_SUSPICIOUS_THRESHOLD: int = 25  # Fixed lower bound for "suspicious" band
 
 class _SessionManager:

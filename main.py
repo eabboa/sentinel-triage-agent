@@ -151,7 +151,11 @@ async def process_incident(incident, graph, semaphore, console_lock):
             return  # Nothing to resume — no state was committed
 
         if not snapshot.next:
-            # Graph completed without hitting the HITL interrupt — no review needed
+            """
+            Graph always will hit the HITL normally, however, this code block is necessary 
+            if the incident has already finished (resuming a completed checkpoint) or 
+            if the interrupt_after configuration is changed or disabled.
+            """
             final_state = state
         else:
             # ── Phase 2: Human-in-the-loop console interaction ────────────

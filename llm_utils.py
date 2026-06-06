@@ -1,12 +1,16 @@
 """
 Utility module for shared LLM functions, deduplication of code.
 """
+from google.genai.errors import APIError, ServerError
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception, wait_random
 
 def _is_retryable_error(e: BaseException) -> bool:
-    """Heuristic: retry on 429/5xx/RateLimit/Unavailable (common LLM provider errors)."""
-    err_str = str(e).upper()
-    return "429" in err_str or "503" in err_str or "RESOURCE_EXHAUSTED" in err_str or "UNAVAILABLE" in err_str
+    """Retry on transient LLM provider errors: any 5xx or 429 (rate-limit)."""
+    if isinstance(e, ServerError):
+        return True
+    if isinstance(e, APIError) and e.code == 429:
+        return True
+    return False
 
 llm_retry = retry(
     wait=wait_exponential(multiplier=2, min=5, max=60) + wait_random(min=0, max=5),

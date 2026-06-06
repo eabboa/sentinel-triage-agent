@@ -332,7 +332,7 @@ def generate_scenario_datatable(scenario: dict) -> str:
         ]
         for i in range(scenario["alert_count"]):
             narrative = narratives[i % len(narratives)]
-            narrative_escaped = narrative.replace("'", "\\'")
+            narrative_escaped = narrative.replace('\\', '\\\\').replace("'", "\\'")
             rows.append(f"now(), '', '', '', '', '', '{narrative_escaped}'")
     else:
         for _ in range(scenario["alert_count"]):
@@ -359,7 +359,7 @@ def generate_scenario_datatable(scenario: dict) -> str:
             if scenario["special"] == "malformed":
                 payload = base64.b64encode(urllib.parse.quote(payload).encode()).decode() + "GARBAGE_" * 50
                 
-            payload_escaped = payload.replace("'", "\\'")
+            payload_escaped = payload.replace('\\', '\\\\').replace("'", "\\'")
             
             rows.append(f"now(), '{ip}', '{hostname}', 'SHA256', '{hash_val}', '{domain}', '{payload_escaped}'")
             

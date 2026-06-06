@@ -62,7 +62,15 @@ SENTINEL_TABLE_SCHEMA = {
 
 
 def _select_relevant_tables(tactics: list[str]) -> dict:
-    """Returns only the table schemas relevant to the detected tactics."""
+    """
+    Returns only the table schemas relevant to the detected tactics.
+
+    Args:
+        tactics: A list of MITRE ATT&CK tactics detected in the incident.
+
+    Returns:
+        A dictionary of relevant table schemas.
+    """
     relevant = {}
     for table, schema in SENTINEL_TABLE_SCHEMA.items():
         if "*" in schema["use_for_tactics"]:
@@ -115,7 +123,18 @@ Generate 3 targeted queries.
 
 
 async def kql_node(state: TriageState) -> dict:
-    """Generates schema-validated KQL hunting queries."""
+    """
+    Generates schema-validated KQL hunting queries.
+
+    Args:
+        state: The current TriageState dictionary.
+
+    Returns:
+        A dictionary containing the state updates for generated KQL queries.
+
+    Raises:
+        ValueError: If GOOGLE_API_KEY is not set.
+    """
     # Skip KQL generation for false positives
     if state.get("classification") == "FalsePositive":
         return {"kql_queries": ["# No hunting queries generated - classified as FalsePositive"]}

@@ -11,6 +11,12 @@ MAX_ALERT_CHARS = 300
 def summarize_node(state: TriageState) -> dict:
     """
     Builds a condensed, token-efficient summary from the raw incident data.
+
+    Args:
+        state: The current TriageState dictionary.
+
+    Returns:
+        A dictionary containing the state updates for the condensed summary.
     """
     # Truncate the incident description to avoid blowing the context window
     description = state["incident_description"][:MAX_DESCRIPTION_CHARS]

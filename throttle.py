@@ -23,10 +23,21 @@ class APIRateLimiter:
         return False
 
     def reset(self) -> None:
-        """Clear all recorded call timestamps. Intended for test isolation."""
+        """
+        Clears all recorded call timestamps. Intended for test isolation.
+
+        Returns:
+            None
+        """
         self.calls.clear()
 
     async def acquire(self):
+        """
+        Acquires permission to make an API call, sleeping if the limit is reached.
+
+        Returns:
+            None
+        """
         while True:
             async with self.lock:
                 now = time.monotonic()

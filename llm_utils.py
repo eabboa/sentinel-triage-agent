@@ -5,7 +5,15 @@ from google.genai.errors import APIError, ServerError
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception, wait_random
 
 def _is_retryable_error(e: BaseException) -> bool:
-    """Retry on transient LLM provider errors: any 5xx or 429 (rate-limit)."""
+    """
+    Determines if an LLM provider error should be retried (e.g., 5xx or 429).
+
+    Args:
+        e: The exception caught during the LLM call.
+
+    Returns:
+        True if the error is retryable, False otherwise.
+    """
     if isinstance(e, ServerError):
         return True
     if isinstance(e, APIError) and e.code == 429:

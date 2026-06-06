@@ -28,6 +28,12 @@ class _AnalystChroma:
         self.embedding_model = None
 
     def _ensure_initialized(self):
+        """
+        Initializes the ChromaDB client lazily.
+
+        Returns:
+            None
+        """
         if self.client is None:
             import chromadb
             from sentence_transformers import SentenceTransformer
@@ -39,7 +45,16 @@ class _AnalystChroma:
             self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
 
     async def retrieve_similar_mismatches(self, condensed_summary: str, top_k: int = 3):
-        """Retrieve top-k similar historical mismatches."""
+        """
+        Retrieves top-k similar historical mismatches from ChromaDB.
+
+        Args:
+            condensed_summary: The summary of the current incident.
+            top_k: Number of historical examples to retrieve.
+
+        Returns:
+            A dictionary containing the query results.
+        """
         self._ensure_initialized()
         assert self.embedding_model is not None
         assert self.collection is not None
@@ -56,12 +71,26 @@ _analyst_chroma = _AnalystChroma()
 
 
 def initialize_chroma():
-    """Initialize ChromaDB client and collection."""
+    """
+    Initializes ChromaDB client and collection.
+
+    Returns:
+        None
+    """
     _analyst_chroma._ensure_initialized()
 
 
 async def retrieve_similar_mismatches(condensed_summary: str, top_k: int = 3):
-    """Retrieve top-k similar historical mismatches."""
+    """
+    Retrieves top-k similar historical mismatches.
+
+    Args:
+        condensed_summary: The summary of the current incident.
+        top_k: Number of historical examples to retrieve.
+
+    Returns:
+        A dictionary containing the query results.
+    """
     return await _analyst_chroma.retrieve_similar_mismatches(condensed_summary, top_k)
 
 
@@ -173,7 +202,15 @@ Evaluate the data above according to your system instructions.
 
 
 def _build_few_shot_context(results: dict) -> str:
-    """Format RAG retrieval results into few-shot prompt text."""
+    """
+    Formats RAG retrieval results into few-shot prompt text.
+
+    Args:
+        results: Dictionary containing retrieved documents from ChromaDB.
+
+    Returns:
+        A string formatted as few-shot examples.
+    """
     if not results.get("documents"):
         return ""
     lines = ["FEW-SHOT EXAMPLES OF PAST MISTAKES:"]
@@ -183,7 +220,16 @@ def _build_few_shot_context(results: dict) -> str:
 
 
 def _build_messages(state: TriageState, few_shot_context: str) -> list:
-    """Construct the LLM message list from state and few-shot context."""
+    """
+    Constructs the LLM message list from state and few-shot context.
+
+    Args:
+        state: The current TriageState dictionary.
+        few_shot_context: Formatted string containing historical mismatches.
+
+    Returns:
+        A list of BaseMessage objects for the LLM.
+    """
     from langchain_core.messages import SystemMessage, HumanMessage
 
     degraded = state.get("degraded_sources", [])
@@ -205,7 +251,18 @@ def _build_messages(state: TriageState, few_shot_context: str) -> list:
 
 
 def _parse_llm_response(response) -> dict:
-    """Extract and validate the AnalystVerdict from the raw LLM response."""
+    """
+    Extracts and validates the AnalystVerdict from the raw LLM response.
+
+    Args:
+        response: The response object returned by the LLM.
+
+    Returns:
+        A dictionary representing the validated AnalystVerdict.
+
+    Raises:
+        LLMOutputValidationError: If the output cannot be parsed or validated.
+    """
     verdict = (
         getattr(response, "output_parsed", None)
         or getattr(response, "parsed_output", None)
@@ -235,7 +292,17 @@ def _parse_llm_response(response) -> dict:
 async def analyst_node(state: TriageState) -> dict:
     """
     Sends the condensed incident context to the LLM for structured triage analysis.
+
     Includes RAG-retrieved few-shot examples of past mistakes.
+
+    Args:
+        state: The current TriageState dictionary.
+
+    Returns:
+        A dictionary containing the state updates for the analyst verdict.
+
+    Raises:
+        ValueError: If GOOGLE_API_KEY is not set.
     """
     if not os.getenv("GOOGLE_API_KEY"):
         raise ValueError("NO API KEY: GOOGLE_API_KEY")

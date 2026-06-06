@@ -15,6 +15,12 @@ def fetch_node(state: TriageState) -> dict:
     """
     Entry point node. Reads incident_id from state (set by the caller before
     the graph is invoked), then fetches the full incident and its alerts.
+
+    Args:
+        state: The current TriageState dictionary.
+
+    Returns:
+        A dictionary containing the state updates for the fetched incident.
     """
     incident_id = state["incident_id"]
     errors: list[str] = []

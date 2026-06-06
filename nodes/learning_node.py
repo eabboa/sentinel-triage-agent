@@ -23,7 +23,15 @@ class _WorkerState:
         self.executor: concurrent.futures.ProcessPoolExecutor | None = None
 
     def ensure_executor(self, max_workers: int = 1) -> concurrent.futures.ProcessPoolExecutor:
-        """Create or reuse a process executor for encoding batches."""
+        """
+        Creates or reuses a process executor for encoding batches.
+
+        Args:
+            max_workers: The maximum number of worker processes to use.
+
+        Returns:
+            The ProcessPoolExecutor instance.
+        """
         if self.executor is None or getattr(self.executor, "_shutdown", False):
             self.executor = concurrent.futures.ProcessPoolExecutor(
                 max_workers=max_workers,
@@ -36,7 +44,12 @@ _worker_state = _WorkerState()
 
 
 def _init_worker():
-    """Initialize the worker process embedding model."""
+    """
+    Initializes the worker process embedding model.
+
+    Returns:
+        None
+    """
     from sentence_transformers import SentenceTransformer
 
     _worker_state.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
@@ -92,6 +105,16 @@ class ChromaSingleton:
 
 
 def _build_document(payload: dict[str, str]) -> str:
+    """
+    Builds the textual document for ChromaDB embedding.
+
+    Args:
+        payload: Dictionary containing summary and classification data.
+
+    Returns:
+        The formatted string representing the document.
+    """
+    reason = payload.get('human_classification_reason', '')
     reason = payload.get('human_classification_reason', '')
     return (
         f"Incident Context: {payload['condensed_summary']}\n"
@@ -102,6 +125,19 @@ def _build_document(payload: dict[str, str]) -> str:
 
 
 def _encode_batch(documents: list[str]) -> list[list[float]]:
+    """
+    Encodes a batch of documents into embeddings.
+
+    Args:
+        documents: A list of string documents to encode.
+
+    Returns:
+        A list of embedding vectors.
+
+    Raises:
+        RuntimeError: If the worker embedding model is not initialized.
+    """
+    if _worker_state.embedding_model is None:
     if _worker_state.embedding_model is None:
         raise RuntimeError("Worker embedding model not initialized")
     return _worker_state.embedding_model.encode(documents).tolist()
@@ -113,7 +149,18 @@ async def embed_and_store(
     human_classification: str,
     human_classification_reason: str = "",
 ):
-    """Queue learning payload for batched embedding and storage."""
+    """
+    Queues a learning payload for batched embedding and storage.
+
+    Args:
+        condensed_summary: The summary of the incident.
+        triage_summary: The LLM's triage explanation.
+        human_classification: The correct classification.
+        human_classification_reason: The reason for the classification.
+
+    Returns:
+        None
+    """
     payload = {
         "condensed_summary": condensed_summary,
         "triage_summary": triage_summary,
@@ -133,7 +180,18 @@ async def _embed_and_write_batch(
     loop: asyncio.AbstractEventLoop,
     batch: list[dict[str, str]],
 ) -> bool:
-    """Embed documents and write to ChromaDB. Returns True on success."""
+    """
+    Embeds documents and writes them to ChromaDB.
+
+    Args:
+        instance: The ChromaSingleton instance.
+        executor: The ProcessPoolExecutor for embedding.
+        loop: The current asyncio event loop.
+        batch: A list of learning payload dictionaries.
+
+    Returns:
+        True on success, False on failure.
+    """
     documents = [_build_document(item) for item in batch]
     metadatas = [{"human_classification": item["human_classification"]} for item in batch]
     ids = [f"mismatch_{uuid.uuid4()}" for _ in batch]
@@ -162,7 +220,16 @@ async def _embed_and_write_batch(
 
 
 async def consume_learning_queue(batch_size: int = 32, flush_interval: float = 5):
-    """Continuously consume the learning queue, embed in batches, and write to ChromaDB."""
+    """
+    Continuously consumes the learning queue, embeds in batches, and writes to ChromaDB.
+
+    Args:
+        batch_size: The number of items to process in a batch.
+        flush_interval: Maximum time in seconds to wait for a full batch.
+
+    Returns:
+        None
+    """
     try:
         instance = ChromaSingleton.get_instance()
     except Exception:
@@ -206,7 +273,15 @@ async def consume_learning_queue(batch_size: int = 32, flush_interval: float = 5
 
 
 async def flush_and_shutdown(batch_size: int = 32):
-    """Drain all remaining items in learning_queue and commit them to ChromaDB."""
+    """
+    Drains all remaining items in learning_queue and commits them to ChromaDB.
+
+    Args:
+        batch_size: The number of items to process in a batch.
+
+    Returns:
+        None
+    """
     try:
         instance = ChromaSingleton.get_instance()
     except Exception:
@@ -257,6 +332,12 @@ async def flush_and_shutdown(batch_size: int = 32):
 async def learning_node(state: TriageState) -> dict:
     """
     LangGraph node: Evaluates human vs. LLM classification and queues mismatches.
+
+    Args:
+        state: The current TriageState dictionary.
+
+    Returns:
+        An empty dictionary.
     """
     llm_classification = state.get("classification", "")
     # 'human_classification' is injected into state during the HITL pause.

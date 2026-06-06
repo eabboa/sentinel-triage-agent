@@ -33,17 +33,41 @@ PRIVATE_IP_RANGES = [
 
 
 def _is_public_ip(ip: str) -> bool:
-    """Returns True if the IP is not a private/loopback address."""
+    """
+    Determines if the IP is a public address (not a private/loopback address).
+
+    Args:
+        ip: The IP address string.
+
+    Returns:
+        True if the IP is public, False otherwise.
+    """
     return not any(p.match(ip) for p in PRIVATE_IP_RANGES)
 
 
 def _is_internal_ip(ip: str) -> bool:
-    """Returns True if the IP is a private/RFC-1918 address (lateral movement candidate)."""
+    """
+    Determines if the IP is an internal address (RFC-1918/loopback).
+
+    Args:
+        ip: The IP address string.
+
+    Returns:
+        True if the IP is internal, False otherwise.
+    """
     return any(p.match(ip) for p in PRIVATE_IP_RANGES)
 
 
 def _extract_regex_iocs(text: str) -> dict:
-    """Extract IPs, hashes, and URLs from raw text using compiled regex patterns."""
+    """
+    Extracts IPs, hashes, and URLs from raw text using compiled regex patterns.
+
+    Args:
+        text: The raw text string to extract IOCs from.
+
+    Returns:
+        A dictionary of extracted IOC lists keyed by type.
+    """
     all_ips = IP_PATTERN.findall(text)
     return {
         "ips": list(set(ip for ip in all_ips if _is_public_ip(ip))),
@@ -54,7 +78,18 @@ def _extract_regex_iocs(text: str) -> dict:
 
 
 async def extract_node(state: TriageState) -> dict:
-    """Extracts IOCs from the condensed summary using regex + LLM fallback."""
+    """
+    Extracts IOCs from the condensed summary using regex + LLM fallback.
+
+    Args:
+        state: The current TriageState dictionary.
+
+    Returns:
+        A dictionary containing the extracted entities state updates.
+
+    Raises:
+        ValueError: If GOOGLE_API_KEY is not set.
+    """
     if not os.getenv("GOOGLE_API_KEY"):
         raise ValueError("NO API KEY: GOOGLE_API_KEY")
     text = state["condensed_summary"]

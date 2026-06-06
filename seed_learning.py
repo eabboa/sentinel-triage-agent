@@ -35,6 +35,18 @@ VALID_CLASSIFICATIONS = {"TruePositive", "FalsePositive", "BenignPositive"}
 
 
 def load_csv(path: Path) -> list[dict]:
+    """
+    Loads and validates the training seed data from a CSV file.
+
+    Args:
+        path: A Path object pointing to the CSV file.
+
+    Returns:
+        A list of parsed row dictionaries containing learning data.
+
+    Raises:
+        ValueError: If the CSV is missing required columns.
+    """
     rows = []
     with path.open(encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
@@ -70,6 +82,15 @@ def load_csv(path: Path) -> list[dict]:
 
 
 def build_document(payload: dict) -> str:
+    """
+    Builds the textual representation of an incident for ChromaDB embedding.
+
+    Args:
+        payload: Dictionary containing incident data from the CSV.
+
+    Returns:
+        A formatted string used as the vector embedding document.
+    """
     reason = payload.get('human_classification_reason', '')
     return (
         f"Incident Context: {payload['condensed_summary']}\n"
@@ -80,6 +101,17 @@ def build_document(payload: dict) -> str:
 
 
 def seed(csv_path: Path, batch_size: int, dry_run: bool) -> None:
+    """
+    Seeds the ChromaDB vector store with historical incident data.
+
+    Args:
+        csv_path: Path to the input CSV file.
+        batch_size: Number of documents to process and insert at once.
+        dry_run: If True, prints actions instead of writing to DB.
+
+    Returns:
+        None
+    """
     rows = load_csv(csv_path)
     if not rows:
         logger.error("No valid rows found in CSV. Exiting.")
@@ -137,6 +169,12 @@ def seed(csv_path: Path, batch_size: int, dry_run: bool) -> None:
 
 
 def main():
+    """
+    Parses CLI arguments and invokes the seed function.
+
+    Returns:
+        None
+    """
     parser = argparse.ArgumentParser(
         description="Seed ChromaDB with historical analyst-classified incidents."
     )

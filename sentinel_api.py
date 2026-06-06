@@ -7,8 +7,8 @@ import re
 import uuid
 from typing import Any
 import requests
-from requests.exceptions import HTTPError, RequestException
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+from requests.exceptions import ConnectionError, HTTPError, RequestException, Timeout
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential_jitter
 from dotenv import load_dotenv
 from sentinel_auth import get_auth_headers, get_graph_token, get_mde_token
 
@@ -25,13 +25,29 @@ class TransientHTTPError(RequestException):
     """Raised for transient HTTP errors (429, 503, 504) to trigger tenacity retries."""
 
 @retry(
-    retry=retry_if_exception_type(TransientHTTPError),
-    wait=wait_exponential(multiplier=1, min=1, max=10),
+    retry=retry_if_exception_type((TransientHTTPError, ConnectionError, Timeout)),
+    wait=wait_exponential_jitter(initial=1, max=10),
     stop=stop_after_attempt(RETRY_ATTEMPTS),
     reraise=True,
 )
-
 def _http_request(method: str, url: str, *, headers=None, params=None, json=None) -> requests.Response:
+    """
+    Executes an HTTP request with automatic retries on transient failures.
+
+    Args:
+        method: HTTP method (GET, POST, PUT, etc.).
+        url: The target URL.
+        headers: Optional HTTP headers.
+        params: Optional query parameters.
+        json: Optional JSON body payload.
+
+    Returns:
+        The successful requests.Response object.
+
+    Raises:
+        TransientHTTPError: On 429, 503, 504 responses (triggers tenacity retry).
+        RequestException: On any other HTTP failure.
+    """
     try:
         response = requests.request(
             method,
@@ -55,8 +71,22 @@ def _http_request(method: str, url: str, *, headers=None, params=None, json=None
 
 
 def _request(method: str, url: str, *, headers=None, params=None, json=None) -> requests.Response:
-    # A wrapper around _http_request that provides centralized error logging and failure handling.
-    # It catches any ultimate RequestException if all retries are exhausted.
+    """
+    Wrapper around _http_request that provides centralized error logging after retry exhaustion.
+
+    Args:
+        method: HTTP method (GET, POST, PUT, etc.).
+        url: The target URL.
+        headers: Optional HTTP headers.
+        params: Optional query parameters.
+        json: Optional JSON body payload.
+
+    Returns:
+        The successful requests.Response object.
+
+    Raises:
+        RequestException: If the request fails after all retry attempts.
+    """
     try:
         # Delegate the request execution to the retry-enabled _http_request helper.
         return _http_request(method, url, headers=headers, params=params, json=json)
@@ -73,7 +103,15 @@ _BASE: str | None = None
 
 
 def _get_base() -> str:
-    """Return the Sentinel API base URL, validating config on first call."""
+    """
+    Returns the Sentinel API base URL, validating config on first call.
+
+    Returns:
+        The fully constructed Azure Sentinel REST API base URL.
+
+    Raises:
+        EnvironmentError: If SUBSCRIPTION_ID, RESOURCE_GROUP, or WORKSPACE_NAME is missing.
+    """
     global _BASE
     if _BASE is not None:
         return _BASE
@@ -113,17 +151,30 @@ VALID_INCIDENT_STATUSES = {"New", "Active", "Closed"}
 
 def list_incidents(status_filter: str = "New", max_results: int = 5) -> list[dict]:
     """
-    Fetches open Sentinel incidents filtered by status. Look only for New, which is no one interacted with this incident yet.
-    
-    max_results=5?
-    Free tier rate limit protection. The Gemini free tier allows 15 RPM.
-    5 incidents x 3 LLM calls each = 15 calls. This is inside the safe limits.
+    Fetches open Sentinel incidents filtered by status.
+
+    Looks only for "New" by default — incidents no one has interacted with yet.
+    max_results defaults to 5 for free-tier rate-limit protection
+    (5 incidents × 3 LLM calls = 15 RPM, within Gemini free-tier limits).
+
+    Args:
+        status_filter: Incident status to filter by. Must be one of "New", "Active", "Closed".
+        max_results: Maximum number of incidents to return.
+
+    Returns:
+        List of incident dicts from the Sentinel API (may be empty).
+
+    Raises:
+        ValueError: If status_filter is not a valid incident status.
+        RequestException: If the API request fails.
     """
     if status_filter not in VALID_INCIDENT_STATUSES:
         raise ValueError(
             f"Invalid status_filter {status_filter!r}. Must be one of {VALID_INCIDENT_STATUSES}."
         )
     url = f"{_get_base()}/incidents"
+    # query parameters for an HTTP GET request to the Azure Sentinel (Azure Resource Manager) REST API,
+    # following the OData (Open Data Protocol) standard
     params = {
         "api-version": API_VERSION,
         "$filter": f"properties/status eq '{status_filter}'",
@@ -138,7 +189,16 @@ def list_incidents(status_filter: str = "New", max_results: int = 5) -> list[dic
 
 def get_incident(incident_id: str) -> dict:
     """
-    Fetches a single incident by its ID. full incident object, including all properties and entity mappings.
+    Fetches a single incident by its ID, including all properties and entity mappings.
+
+    Args:
+        incident_id: The Sentinel incident ID.
+
+    Returns:
+        Full incident dict including properties, etag, and entity mappings.
+
+    Raises:
+        RequestException: If the API request fails.
     """
     url = f"{_get_base()}/incidents/{incident_id}"
     params = {"api-version": API_VERSION}
@@ -154,12 +214,21 @@ def get_incident(incident_id: str) -> dict:
 def list_incident_alerts(incident_id: str) -> list[dict]:
     """
     Fetches all alerts associated with an incident.
+
+    Args:
+        incident_id: The Sentinel incident ID.
+
+    Returns:
+        List of alert dicts associated with the incident.
+
+    Raises:
+        RequestException: If the API request fails.
     """
     url = f"{_get_base()}/incidents/{incident_id}/alerts"
     params = {"api-version": API_VERSION}
     
     response = _request("POST", url, headers=get_auth_headers(), params=params)
-    # Note: This is a POST, not GET. The Sentinel API uses POST for listing.
+    # Note: This is a POST, not GET. The Sentinel API uses POST for listing the alerts of an incident.
     data = response.json()
     return data.get("value", [])
 
@@ -167,9 +236,19 @@ def list_incident_alerts(incident_id: str) -> list[dict]:
 def post_incident_comment(incident_id: str, comment_text: str) -> dict:
     """
     Posts an analyst comment on a Sentinel incident.
-    
-    The comment_id must be a valid GUID (UUID4). Azure uses it as a unique key.
-    Generating it locally ensures idempotency - if your agent crashes and retries, use the same comment_id and Azure will not create a duplicate.
+
+    The comment_id is generated as a UUID4 locally. Azure uses it as a unique key,
+    so reusing the same ID on retry prevents duplicate comments.
+
+    Args:
+        incident_id: The Sentinel incident ID.
+        comment_text: The comment message body.
+
+    Returns:
+        Response JSON dict from the Sentinel comments endpoint.
+
+    Raises:
+        RequestException: If the API request fails.
     """
     comment_id = str(uuid.uuid4())
     url = f"{_get_base()}/incidents/{incident_id}/comments/{comment_id}"
@@ -185,7 +264,18 @@ def post_incident_comment(incident_id: str, comment_text: str) -> dict:
 
 
 def fetch_incident_comments(incident_id: str) -> list[dict]:
-    """Fetches all comments on a Sentinel incident."""
+    """
+    Fetches all comments on a Sentinel incident.
+
+    Args:
+        incident_id: The Sentinel incident ID.
+
+    Returns:
+        List of comment dicts for the incident.
+
+    Raises:
+        RequestException: If the API request fails.
+    """
     url = f"{_get_base()}/incidents/{incident_id}/comments"
     params = {"api-version": API_VERSION}
 
@@ -195,19 +285,28 @@ def fetch_incident_comments(incident_id: str) -> list[dict]:
 
 @retry(
     retry=retry_if_exception_type(ConcurrencyConflictError),
-    wait=wait_exponential(multiplier=1, min=1, max=10),
+    wait=wait_exponential_jitter(initial=1, max=10),
     stop=stop_after_attempt(3),
     reraise=True,
 )
 def update_incident_status(incident_id: str, new_status: str, classification: str | None = None) -> dict:
     """
-    Updates a Sentinel incident's status.
-    
-    Valid statuses: "New", "Active", "Closed"
-    Valid classifications (required when closing):
-        "TruePositive", "FalsePositive", "BenignPositive", "Undetermined"
-    
+    Updates a Sentinel incident's status with optimistic concurrency control.
+
     Retries automatically on ETag 412 conflicts by re-fetching the incident.
+
+    Args:
+        incident_id: The Sentinel incident ID.
+        new_status: Target status — "New", "Active", or "Closed".
+        classification: Required when closing. One of "TruePositive",
+            "FalsePositive", "BenignPositive", "Undetermined".
+
+    Returns:
+        Updated incident dict from the Sentinel API.
+
+    Raises:
+        ConcurrencyConflictError: On ETag 412 mismatch (triggers tenacity retry).
+        HTTPError: On any other HTTP failure.
     """
     # Fetch current incident to preserve all existing fields and capture its current ETag.
     existing = get_incident(incident_id)
@@ -256,7 +355,15 @@ _MDE_MACHINE_ID_PATTERN = re.compile(r"^[0-9a-fA-F]{40}$")
 async def resolve_mde_machine_id(hostname_or_ip: str) -> str | None:
     """
     Resolves a hostname or IP to an MDE machine ID via the MDE API.
-    Returns None if the device is not found in MDE.
+
+    Args:
+        hostname_or_ip: The device hostname or IP address to look up.
+
+    Returns:
+        The MDE machine ID string, or None if the device is not found.
+
+    Raises:
+        RequestException: If the MDE API request fails.
     """
     url = "https://api.securitycenter.microsoft.com/api/machines"
     headers = {
@@ -323,13 +430,17 @@ async def isolate_mde_device(device_id: str) -> dict:
 async def revoke_entra_sessions(user_id: str) -> dict:
     """
     Revokes all Entra ID (Azure AD) refresh tokens for a user.
-    This forces the user to re-authenticate and invalidates existing sessions.
+
+    Forces the user to re-authenticate and invalidates all existing sessions.
+
     Args:
-        user_id: The Entra ID user object ID (GUID) or UPN
+        user_id: The Entra ID user object ID (GUID) or UPN.
+
     Returns:
-        Response JSON from Microsoft Graph API
+        Response JSON from Microsoft Graph API.
+
     Raises:
-        RequestException: If the revocation request fails (caller should handle)
+        RequestException: If the revocation request fails (caller should handle).
     """
     url = f"https://graph.microsoft.com/v1.0/users/{user_id}/revokeSignInSessions"
     

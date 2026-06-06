@@ -33,10 +33,18 @@ async def _collect_human_decisions(
     console_lock: asyncio.Lock,
 ) -> dict:
     """
-    Collect analyst decisions via console prompts.
+    Collects analyst decisions via console prompts.
 
-    Returns a dict of state updates to apply.  Performs NO graph mutations;
-    if this function raises, the checkpoint remains clean.
+    Performs NO graph mutations; if this function raises, the checkpoint remains clean.
+
+    Args:
+        state_vals: Dictionary containing current values from the TriageState.
+        incident_title: The Sentinel incident title.
+        incident_id: The Sentinel incident ID.
+        console_lock: An asyncio.Lock to prevent concurrent stdout/stdin interleaving.
+
+    Returns:
+        A dictionary of state updates to apply.
     """
     updates: dict[str, Any] = {}
 
@@ -98,6 +106,18 @@ async def _collect_human_decisions(
 
 
 async def process_incident(incident, graph, semaphore, console_lock):
+    """
+    Processes a single incident through the langgraph engine with human-in-the-loop support.
+
+    Args:
+        incident: The raw Sentinel incident dictionary.
+        graph: The compiled langgraph StateGraph.
+        semaphore: Concurrency limiter.
+        console_lock: Console access lock for HITL prompting.
+
+    Returns:
+        None
+    """
     incident_id = incident["name"]  # Sentinel uses 'name' as the unique ID
     incident_title = incident["properties"]["title"]
     
@@ -225,6 +245,12 @@ async def process_incident(incident, graph, semaphore, console_lock):
 
 
 async def main():
+    """
+    Main entry point for fetching and processing new Sentinel incidents.
+
+    Returns:
+        None
+    """
     logger.info("Sentinel Triage Agent starting...")
 
     # Fetch new, unprocessed incidents with retries

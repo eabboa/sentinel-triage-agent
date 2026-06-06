@@ -27,7 +27,15 @@ from nodes.containment_node import containment_node
 
 
 def _next_after_extract(state: TriageState) -> Literal["analyst", "enrich"]:
-    """Route directly to analyst when no actionable entities were extracted."""
+    """
+    Routes directly to analyst when no actionable entities were extracted.
+
+    Args:
+        state: The current TriageState.
+
+    Returns:
+        "enrich" if actionable entities exist, otherwise "analyst".
+    """
     entities = state.get("entities", {}) or {}
     if any(entities.get(key) for key in ("ips", "hashes", "urls")):
         return "enrich"
@@ -35,7 +43,15 @@ def _next_after_extract(state: TriageState) -> Literal["analyst", "enrich"]:
 
 
 def _next_after_analyst(state: TriageState) -> Literal["escalation", "writeback", "kql"]:
-    """Choose the next node based on analyst classification and confidence."""
+    """
+    Chooses the next node based on analyst classification and confidence.
+
+    Args:
+        state: The current TriageState.
+
+    Returns:
+        "escalation", "writeback", or "kql" depending on classification and confidence.
+    """
     classification = state.get("classification", "")
     confidence = state.get("confidence", 0)
 
@@ -47,10 +63,17 @@ def _next_after_analyst(state: TriageState) -> Literal["escalation", "writeback"
 
 
 def _next_after_writeback(state: TriageState) -> Literal["containment", "close_review"]:
-    """Route based on approval status.
+    """
+    Routes based on approval status.
     
     No autonomous closure occurs regardless of classification or confidence score.
     If containment is approved, run containment before close_review.
+
+    Args:
+        state: The current TriageState.
+
+    Returns:
+        "containment" if containment is approved, otherwise "close_review".
     """
     # If containment is approved, run containment before close_review
     if state.get("containment_approved", False):
@@ -60,7 +83,15 @@ def _next_after_writeback(state: TriageState) -> Literal["containment", "close_r
 
 
 def escalation_node(state: TriageState) -> dict:
-    """Placeholder escalation node for high-confidence TruePositive incidents."""
+    """
+    Placeholder escalation node for high-confidence TruePositive incidents.
+
+    Args:
+        state: The current TriageState.
+
+    Returns:
+        A dict with state updates reflecting escalation.
+    """
     return {
         "escalation_triggered": True,
         "escalation_summary": "This incident requires escalation before writeback.",
@@ -68,7 +99,12 @@ def escalation_node(state: TriageState) -> dict:
 
 
 def build_graph():
-    """Constructs and compiles the triage graph."""
+    """
+    Constructs and compiles the triage graph.
+
+    Returns:
+        A tuple containing the compiled StateGraph and the MemorySaver checkpointer.
+    """
     builder = StateGraph(TriageState)  # type: ignore
 
     # Register all nodes

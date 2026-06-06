@@ -26,7 +26,15 @@ _credential_lock = threading.Lock()
 
 
 def _get_credential() -> DefaultAzureCredential:
-    """Return the shared DefaultAzureCredential, creating it on first use."""
+    """
+    Returns the shared DefaultAzureCredential, creating it on first use.
+
+    Returns:
+        The DefaultAzureCredential singleton instance.
+
+    Raises:
+        Exception: If Azure identity authentication fails.
+    """
     global _credential
     if _credential is None:
         with _credential_lock:
@@ -43,10 +51,20 @@ _token_lock = threading.Lock()
 def get_access_token(scope: str = MANAGEMENT_SCOPE) -> str:
     """
     Get cached bearer token using DefaultAzureCredential.
+
     This architecture is strictly secretless, relying on Managed Identity (prod) and Azure CLI (local).
     Tokens are cached locally to avoid unnecessary function call overhead and potential round-trip latency.
     The token is refreshed only if missing or within 5 minutes of expiration.
-    """ 
+
+    Args:
+        scope: The Azure scope to request a token for.
+
+    Returns:
+        The JWT access token string.
+
+    Raises:
+        ClientAuthenticationError: If token acquisition fails.
+    """
     with _token_lock:
         cached = _cached_tokens.get(scope) # Check cache for token 
         if (cached is None or
@@ -67,15 +85,30 @@ Instead of writing the URLs every time, we define functions to do this.
 """
 
 def get_graph_token() -> str:
-    """Get a token scoped to Microsoft Graph."""
+    """
+    Get a token scoped to Microsoft Graph.
+
+    Returns:
+        The JWT access token string.
+    """
     return get_access_token("https://graph.microsoft.com/.default")
 
 def get_mde_token() -> str:
-    """Get a token scoped to Microsoft Defender for Endpoint."""
+    """
+    Get a token scoped to Microsoft Defender for Endpoint.
+
+    Returns:
+        The JWT access token string.
+    """
     return get_access_token("https://api.securitycenter.microsoft.com/.default")
 
 def get_auth_headers() -> dict:
-    """Return authorization headers with Bearer token."""
+    """
+    Return authorization headers with Bearer token.
+
+    Returns:
+        A dict containing the Authorization and Content-Type headers.
+    """
     token = get_access_token()
     return {
         "Authorization": f"Bearer {token}",

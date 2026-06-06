@@ -144,9 +144,13 @@ MITRE_CATALOG = {
 
 
 def _build_inverse_lookup() -> MappingProxyType[str, tuple[str, str]]:
-    """Build an immutable technique-ID → (name, tactic) index from MITRE_CATALOG.
+    """
+    Builds an immutable technique-ID → (name, tactic) index from MITRE_CATALOG.
 
     Keeps the first tactic mapping when a technique appears under multiple tactics.
+
+    Returns:
+        An immutable mapping of technique ID to a tuple of (name, tactic).
     """
     result: dict[str, tuple[str, str]] = {}
     for tactic_name, techniques in MITRE_CATALOG.items():
@@ -163,9 +167,14 @@ INVERSE_LOOKUP = _build_inverse_lookup()
 
 
 def _resolve_id_by_name(raw_name: str) -> tuple[str, str] | None:
-    """Search the catalog for a technique matching *raw_name* (case-insensitive).
+    """
+    Searches the catalog for a technique matching raw_name (case-insensitive).
 
-    Returns (technique_id, official_name) on match, or None.
+    Args:
+        raw_name: The name of the technique to search for.
+
+    Returns:
+        A tuple of (technique_id, official_name) on match, or None.
     """
     target = raw_name.lower()
     for _tactic, techs in MITRE_CATALOG.items():
@@ -179,6 +188,12 @@ def normalize_tactic(raw_tactic: str) -> str:
     """
     Standardizes a Sentinel or raw tactic name to official MITRE ATT&CK spelling.
     E.g. 'InitialAccess' -> 'Initial Access', 'credentialaccess' -> 'Credential Access'.
+
+    Args:
+        raw_tactic: The raw tactic name to normalize.
+
+    Returns:
+        The normalized tactic name string.
     """
     if not raw_tactic:
         return "Unknown"
@@ -191,18 +206,18 @@ def normalize_tactic(raw_tactic: str) -> str:
 def validate_and_enrich_techniques(suggested_techniques: list[dict], incident_tactics: list[str]) -> tuple[list[dict], list[str]]:
     """
     Validates, normalizes, and enriches suggested MITRE techniques.
-    
+
     Auto-corrects:
       - Typos/variations in technique names if the ID is valid.
       - Technique IDs if a exact name match is found.
       - Normalizes tactic names.
-      
+
     Args:
         suggested_techniques: A list of dicts like [{"technique_id": "T1098", "name": "...", "confidence": 90}]
         incident_tactics: List of raw tactic names detected on the incident.
-        
+
     Returns:
-        A tuple: (list of verified techniques, list of non-fatal warnings or error strings)
+        A tuple: (list of verified techniques, list of non-fatal warnings or error strings).
     """
     verified = []
     warnings = []

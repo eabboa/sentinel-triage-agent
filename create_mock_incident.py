@@ -467,6 +467,9 @@ def create_mock_incidents():
                 logger.error(response.text)
         except Exception as e:
             logger.error(f"❌ Failed to create Rule {scenario['id']}: {e}")
+            resp = getattr(e, 'response', None)
+            if resp is not None:
+                logger.error(f"Response body: {resp.text}")
 
     logger.info("\\n" + "="*80)
     logger.info("🎯 All 10 Scenario Analytics Rules have been successfully created via the Sentinel REST API!")

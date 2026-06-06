@@ -6,7 +6,7 @@ set -euo pipefail
 # Pipeline: slopcheck (phantom packages) → uv sync --locked (hash verify) → pip-audit (CVEs)
 
 echo "=== [1/3] Slopcheck: scanning for hallucinated/phantom packages ==="
-uvx slopcheck scan --config .slopconfig.yaml .
+uvx slopcheck scan .
 
 echo "=== [2/3] Installing dependencies (locked) ==="
 uv sync --dev --locked

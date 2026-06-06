@@ -8,6 +8,8 @@ Rate limit strategy:
 - Run this script manually or via Windows Task Scheduler / cron for polling
 """
 
+import sys
+import random
 import asyncio
 from dotenv import load_dotenv
 import uuid
@@ -225,8 +227,21 @@ async def process_incident(incident, graph, semaphore, console_lock):
 async def main():
     logger.info("Sentinel Triage Agent starting...")
 
-    # Fetch new, unprocessed incidents
-    incidents = list_incidents(status_filter="New", max_results=5)
+    # Fetch new, unprocessed incidents with retries
+    incidents = None
+    max_attempts = 5
+    for attempt in range(1, max_attempts + 1):
+        try:
+            incidents = list_incidents(status_filter="New", max_results=5)
+            break
+        except Exception as e:
+            if attempt < max_attempts:
+                delay = (2 ** attempt) + random.uniform(0, 1)
+                logger.warning(f"Failed to fetch incidents (attempt {attempt}/{max_attempts}): {e}. Retrying in {delay:.2f} seconds...")
+                await asyncio.sleep(delay)
+            else:
+                logger.error(f"Failed to fetch incidents after {max_attempts} attempts: {e}", exc_info=True)
+                sys.exit(1)
 
     if not incidents:
         logger.info("No new incidents found. Exiting.")
@@ -251,12 +266,8 @@ async def main():
         logger.info("\nBatch complete.")
     finally:
         logger.info("Flushing learning queue before exit...")
-        await flush_and_shutdown()
+        await flush_and_shutdown() # flush_and_shutdown() drains all pending ChromaDB writes and shuts down the process pool executor cleanly.
         await close_enrich_session()
-
-
-# flush_and_shutdown() is called automatically in main() via a try/finally block.
-# It drains all pending ChromaDB writes and shuts down the process pool executor cleanly.
 
 if __name__ == "__main__":
     asyncio.run(main())

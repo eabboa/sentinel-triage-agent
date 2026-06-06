@@ -364,8 +364,8 @@ def generate_scenario_datatable(scenario: dict) -> str:
             rows.append(f"now(), '{ip}', '{hostname}', 'SHA256', '{hash_val}', '{domain}', '{payload_escaped}'")
             
     kql = (
-        "let events = datatable(TimeGenerated:datetime, AttackerIP:string, TargetHost:string, HashType:string, MaliciousHash:string, C2Domain:string, EncodedPayload:string)\\n"
-        "[\\n    " + ",\\n    ".join(rows) + "\\n];\\nevents"
+        "let events = datatable(TimeGenerated:datetime, AttackerIP:string, TargetHost:string, HashType:string, MaliciousHash:string, C2Domain:string, EncodedPayload:string)\n"
+        "[\n    " + ",\n    ".join(rows) + "\n];\nevents"
     )
     return kql
 

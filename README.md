@@ -198,7 +198,11 @@ sentinel-triage-agent/
 ├── graph.py                  # StateGraph assembly with conditional routing
 ├── llm_utils.py              # Centralized LLM retry logic and helpers
 ├── throttle.py               # Sliding-window async rate limiter for Gemini
+├── metrics.py                # Prometheus metric definitions (counters, histograms)
 ├── main.py                   # Entry point (async batch processing with HITL prompts)
+├── create_mock_incident.py   # Generates 10 adversarial Sentinel analytics rules for testing
+├── seed_learning.py          # Offline CSV-to-ChromaDB seed script for RAG bootstrap
+├── safe_install.sh           # Supply-chain security gate (slopcheck → uv sync → pip-audit)
 ├── test_model.py             # Smoke test for Gemini connectivity
 ├── .env.example              # Template environment variables
 ├── pyproject.toml            # uv/pip project metadata and dependencies
@@ -224,7 +228,7 @@ Concurrent CTI lookups utilizing a global `aiohttp` connection pool:
 - **AbuseIPDB v2** - IP reputation via Bayesian-weighted community abuse reports. Returns `abuse_score`, `total_reports`, ISP, country, and usage type.
 - **VirusTotal v3** - URL and file hash multi-engine analysis. VT calls are fully concurrent, throttled by a Token Bucket rate limiter (`aiolimiter`) to strictly enforce the free-tier limit of 4 requests per minute without blocking the thread.
 
-All external calls use `tenacity` retries with exponential backoff on transient HTTP errors (429, 503, 504).
+All external calls use `tenacity` retries with exponential backoff on transient HTTP errors (429, 503, 504). Individual API call latency is recorded via Prometheus histograms (`ENRICHMENT_LATENCY`).
 
 **Pre-computed verdict fields.** Each CTI result includes a `verdict` field resolved by the enrichment layer before the LLM sees it - removing threshold inference from the model entirely:
 
@@ -238,6 +242,8 @@ All external calls use `tenacity` retries with exponential backoff on transient 
 Thresholds are tunable via environment variables (`VT_MALICIOUS_THRESHOLD`, `ABUSEIPDB_MALICIOUS_THRESHOLD`).
 
 **Architectural neutral baseline.** Failed CTI lookups (timeouts, HTTP errors, exhausted retries) are stripped from `cti_results` entirely and written to the graph's `errors` list instead. The LLM prompt contains only verified signals - a missing IOC entry is a true null, not an ambiguous error object the model could misinterpret (e.g. inferring a timeout implies the IP is blocking scanners).
+
+**Graceful degradation.** If an entire CTI source becomes unavailable (missing API key, DNS failure), its name is appended to the `degraded_sources` state field. The analyst prompt explicitly discloses degraded sources so the LLM can lower its confidence score accordingly, rather than silently triaging with an incomplete intelligence picture.
 
 ### analyst_node
 The reasoning core. Sends the condensed summary, CTI results, and MITRE ATT&CK tactics to `gemini-2.5-flash` via `with_structured_output(AnalystVerdict)`. The Pydantic schema enforces deterministic JSON: `classification`, `is_true_positive`, `triage_summary`, `mitre_analysis`, `confidence` (0–100), and `recommended_action`.
@@ -346,6 +352,11 @@ This prototype includes hardened design decisions that reflect real-world SOC en
 - Explicit timeout and retry handling ensures the system remains responsive rather than hanging indefinitely on external dependencies.
 - These changes align the prototype with enterprise-grade incident handling expectations rather than a purely exploratory proof-of-concept.
 
+### 7. Per-Incident Correlation IDs
+- Every log line emitted during an incident's triage run is tagged with the Sentinel `incident_id` via a `contextvars.ContextVar` and a custom `logging.Filter` (`CorrelationIdFilter`).
+- This enables grep-based filtering of concurrent triage logs (e.g., `grep "[abc123]"`) without relying on external tracing infrastructure.
+- The context variable is set once per `process_incident()` call and propagated automatically across all `await` boundaries within that coroutine.
+
 ---
 
 ## Data Validation & Type Safety
@@ -356,7 +367,79 @@ To ensure predictable failure modes and protect against malformed data, the pipe
 
 ---
 
+## Observability
+
+The pipeline exports Prometheus metrics via `prometheus_client` (defined in `metrics.py`). To expose them, call `start_http_server(port)` to serve a `/metrics` endpoint for Prometheus to scrape.
+
+| Metric | Type | Description |
+|---|---|---|
+| `triage_duration_seconds` | Histogram | End-to-end triage duration per incident |
+| `enrichment_api_latency_ms` | Histogram | Per-call latency for each CTI API (`virustotal_url`, `virustotal_hash`, `abuseipdb`) |
+| `llm_response_tokens_total` | Counter | Cumulative LLM response tokens consumed |
+| `triage_total` | Counter | Total incidents triaged with a human decision |
+| `triage_false_positives_total` | Counter | Incidents where the human reclassified as FalsePositive |
+
+False-positive rate is derived as `triage_false_positives_total / triage_total`.
+
+---
+
+## Operational Tooling
+
+### create_mock_incident.py
+Generates 10 scenario-driven Sentinel Scheduled Analytics Rules via the ARM REST API. Each scenario contains adversarial telemetry designed to stress-test the triage pipeline:
+- LOLBin execution chains with base64/hex/URL-encoded payloads
+- IDN homograph phishing with OAuth token replay
+- Obfuscated wget/curl with decimal and hexadecimal IP notation
+- Behavioral UEBA anomaly clusters with zero extractable IOCs
+- Multi-incident campaign correlation via shared C2 infrastructure
+- Malformed entity data (emoji, special characters, oversized buffers)
+
+Rules fire every 5 minutes. Delete them from **Sentinel → Analytics** when done.
+
+```bash
+uv run python create_mock_incident.py
+```
+
+### seed_learning.py
+Offline bootstrap script that populates ChromaDB with historical analyst-classified incidents before the agent goes live. Seeds the RAG correction loop (`learning_node`) with a non-zero knowledge base so the first triage runs benefit from few-shot examples.
+
+```bash
+# Validate CSV without writing
+uv run python seed_learning.py --csv incidents.csv --dry-run
+
+# Seed ChromaDB
+uv run python seed_learning.py --csv incidents.csv --batch-size 32
+```
+
+CSV format: `condensed_summary, triage_summary, human_classification, human_classification_reason`
+
+### safe_install.sh
+Supply-chain security gate for local and agentic workflows. Replaces raw `uv sync` with a three-stage pipeline:
+1. **slopcheck** — Scans for hallucinated/phantom package names
+2. **uv sync --locked** — Installs from the pinned lockfile with hash verification
+3. **pip-audit** — Scans installed packages for known CVEs
+
+```bash
+bash safe_install.sh
+```
+
+---
+
 ## Changelog
+
+### [v1.0.0] - 2026-06-07 (Observability, Correlation & Operational Tooling)
+
+**Prometheus Metrics:** Added `metrics.py` defining five in-process Prometheus metrics: `triage_duration_seconds` (histogram), `enrichment_api_latency_ms` (histogram by API name), `llm_response_tokens_total` (counter), `triage_total` (counter), and `triage_false_positives_total` (counter). Metrics are instrumented in `main.py` (triage duration, FP rate), `enrich_node.py` (CTI call latency), and `analyst_node.py` (LLM token consumption).
+
+**Per-Incident Correlation IDs:** Implemented `contextvars.ContextVar`-based correlation in `main.py`. A custom `CorrelationIdFilter` injects the Sentinel `incident_id` into every log record, enabling per-incident log filtering across concurrent triage runs without external tracing infrastructure.
+
+**Graceful CTI Degradation:** Added `degraded_sources` field to `TriageState`. When an entire CTI source is unavailable (missing API key, DNS failure), the source name is tracked and explicitly disclosed in the analyst LLM prompt so confidence scores reflect the incomplete intelligence picture.
+
+**Adversarial Test Scenario Generator (`create_mock_incident.py`):** Generates 10 scenario-driven Sentinel Scheduled Analytics Rules via the ARM REST API. Scenarios include LOLBin chains, IDN homograph phishing, obfuscated IP notation, zero-entity UEBA clusters, multi-incident campaign correlation via shared C2 IOCs, and malformed entity data.
+
+**RAG Bootstrap Script (`seed_learning.py`):** Offline CSV-to-ChromaDB seed script that populates the `triage_corrections` collection with historical analyst-classified incidents before the agent goes live, giving the RAG few-shot loop a non-zero knowledge base.
+
+**Supply-Chain Security Gate (`safe_install.sh`):** Three-stage dependency installation pipeline (slopcheck → uv sync --locked → pip-audit) for use in local and agentic CI workflows.
 
 ### [v0.9.0] - 2026-05-27 (Technical Debt Remediation & Test Suite)
 

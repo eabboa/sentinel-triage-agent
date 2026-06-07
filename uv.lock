@@ -2720,7 +2720,7 @@ requires-dist = [
     { name = "aiohttp", specifier = ">=3.14.0" },
     { name = "aiolimiter", specifier = ">=1.2.1" },
     { name = "azure-identity", specifier = ">=1.15.0" },
-    { name = "chromadb", specifier = ">=0.4.0" },
+    { name = "chromadb", specifier = ">=1.5.9" },
     { name = "langchain-google-genai", specifier = ">=4.2.2" },
     { name = "langgraph", specifier = ">=1.2.4" },
     { name = "prometheus-client", specifier = ">=0.21.0" },

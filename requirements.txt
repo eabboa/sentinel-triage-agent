@@ -2200,9 +2200,9 @@ torch==2.12.0 \
     --hash=sha256:e2ad3eb85d39c3cab62dfa93ed5a73516e6a53c6713cb97d004004fe089f0f1f \
     --hash=sha256:f7dfae4a519197dfa050e98d8e36378a0fb5899625a875c2b54445005a2e404e
     # via sentence-transformers
-tqdm==4.67.3 \
-    --hash=sha256:7d825f03f89244ef73f1d4ce193cb1774a8179fd96f31d7e1dcde62092b960bb \
-    --hash=sha256:ee1e4c0e59148062281c49d80b25b67771a127c85fc9676d3be5f243206826bf
+tqdm==4.68.1 \
+    --hash=sha256:fc163d96b287bd031e1aa24421ce4411b25559bd0a1be4fe649bdaa4d2c02bf5 \
+    --hash=sha256:fea4a90e4023f764914569f7802a297277c5ab1a66be5144143e142e1a4031d8
     # via
     #   chromadb
     #   huggingface-hub

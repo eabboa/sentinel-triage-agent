@@ -313,7 +313,7 @@ async def analyst_node(state: TriageState) -> dict:
         google_api_key=os.getenv("GOOGLE_API_KEY"),
         temperature=0,
         max_retries=0,
-    ).with_structured_output(AnalystVerdict)
+    ).with_structured_output(AnalystVerdict, include_raw=True)
 
     from throttle import gemini_rate_limiter
     from llm_utils import llm_retry
@@ -330,16 +330,23 @@ async def analyst_node(state: TriageState) -> dict:
             async with gemini_rate_limiter:
                 return await llm.ainvoke(messages)
 
-        raw_response = await _invoke_llm()
+        structured_response = await _invoke_llm()
+
+        # with_structured_output(include_raw=True) returns dict with 'raw', 'parsed', and 'parsing_error'
+        raw_msg = structured_response.get("raw", structured_response) if isinstance(structured_response, dict) else structured_response
 
         # ── Prometheus: track LLM token usage ─────────────────────────
-        usage = getattr(raw_response, "response_metadata", {}).get("usage_metadata", {})
+        usage = getattr(raw_msg, "response_metadata", {}).get("usage_metadata", {})
         output_tokens = usage.get("candidates_token_count") or usage.get("completion_tokens", 0)
         if output_tokens:
             LLM_RESPONSE_TOKENS.inc(output_tokens)
         # ──────────────────────────────────────────────────────────────
 
-        verdict_dict = _parse_llm_response(raw_response)
+        if isinstance(structured_response, dict) and structured_response.get("parsing_error"):
+            raise structured_response["parsing_error"]
+
+        parsed_obj = structured_response.get("parsed") if isinstance(structured_response, dict) and "parsed" in structured_response else structured_response
+        verdict_dict = _parse_llm_response(parsed_obj)
 
         # Programmatically validate and enrich MITRE techniques
         from nodes.mitre_utils import validate_and_enrich_techniques

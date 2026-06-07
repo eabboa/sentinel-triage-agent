@@ -138,8 +138,8 @@ def _encode_batch(documents: list[str]) -> list[list[float]]:
         RuntimeError: If the worker embedding model is not initialized.
     """
     if _worker_state.embedding_model is None:
-    if _worker_state.embedding_model is None:
-        raise RuntimeError("Worker embedding model not initialized")
+        if _worker_state.embedding_model is None:
+            raise RuntimeError("Worker embedding model not initialized")
     return _worker_state.embedding_model.encode(documents).tolist()
 
 

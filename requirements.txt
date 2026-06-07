@@ -2096,9 +2096,9 @@ tqdm==4.67.3 \
     #   huggingface-hub
     #   sentence-transformers
     #   transformers
-transformers==5.7.0 \
-    --hash=sha256:869660cd8fc92badc041f5551bf755a42f4b9558c93341bf3fa3eeed7065079c \
-    --hash=sha256:a9d35cf39804e3456c1f9bc1a79ad5ffa878640a61f51f66f71c97f4b4e2ce10
+transformers==5.10.2 \
+    --hash=sha256:8a669db546f82c7c3618cb46ceb0f0afd89292bc70f319c058f8332ec63e268d \
+    --hash=sha256:f9a44b9c8ca9ab1156b467f574d832ea066284299c2fd0ed84641ccb592751fc
     # via sentence-transformers
 triton==3.6.0 ; sys_platform == 'linux' \
     --hash=sha256:0b3a97e8ed304dfa9bd23bb41ca04cdf6b2e617d5e782a8653d616037a5d537d \

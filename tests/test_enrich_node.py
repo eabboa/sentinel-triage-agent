@@ -139,24 +139,26 @@ async def test_abuseipdb_http_error(empty_triage_state, cleanup_session):
 
 @pytest.mark.asyncio
 async def test_enrich_node_missing_vt_key(empty_triage_state, cleanup_session):
-    """Asserts ValueError when URLs are present but VT_API_KEY is empty."""
+    """Asserts missing VT_API_KEY degrades gracefully instead of crashing."""
     state = empty_triage_state.copy()
     state["entities"] = {"ips": [], "urls": ["http://evil.com"], "hashes": [], "internal_ips": []}
 
     with patch("nodes.enrich_node.VT_API_KEY", ""):
-        with pytest.raises(ValueError, match="VT_API_KEY"):
-            await enrich_node(state)
+        result = await enrich_node(state)
+        assert "virustotal" in result.get("degraded_sources", [])
+        assert any("VT_API_KEY" in e for e in result.get("errors", []))
 
 
 @pytest.mark.asyncio
 async def test_enrich_node_missing_vt_key_hashes(empty_triage_state, cleanup_session):
-    """Asserts ValueError when hashes are present but VT_API_KEY is empty."""
+    """Asserts missing VT_API_KEY with hashes degrades gracefully instead of crashing."""
     state = empty_triage_state.copy()
     state["entities"] = {"ips": [], "urls": [], "hashes": ["abc123"], "internal_ips": []}
 
     with patch("nodes.enrich_node.VT_API_KEY", ""):
-        with pytest.raises(ValueError, match="VT_API_KEY"):
-            await enrich_node(state)
+        result = await enrich_node(state)
+        assert "virustotal" in result.get("degraded_sources", [])
+        assert any("VT_API_KEY" in e for e in result.get("errors", []))
 
 
 # ── enrich_node: internal IPs only (no external calls) ──────────────────────

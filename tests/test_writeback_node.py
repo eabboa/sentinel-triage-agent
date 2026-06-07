@@ -26,7 +26,8 @@ def test_writeback_node_success(empty_triage_state):
     """Asserts comment is successfully posted."""
     state = empty_triage_state.copy()
 
-    with patch("nodes.writeback_node.post_incident_comment") as mock_post:
+    with patch("nodes.writeback_node.fetch_incident_comments", return_value=[]), \
+         patch("nodes.writeback_node.post_incident_comment") as mock_post:
         result = writeback_node(state)
         assert result["comment_posted"] is True
         mock_post.assert_called_once()

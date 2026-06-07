@@ -36,7 +36,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Slopcheck scan
-        run: uvx slopcheck scan --config .slopconfig.yaml .
+        run: uvx slopcheck scan .
 
       - name: Export requirements
         run: uv export --format requirements-txt --no-emit-project -o requirements.txt

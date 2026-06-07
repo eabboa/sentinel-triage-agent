@@ -59,7 +59,8 @@ def test_list_incidents_success():
         json={"value": [{"name": "inc1"}]},
         status=200,
     )
-    result = list_incidents()
+    with patch("sentinel_api.get_auth_headers", return_value={"Authorization": "Bearer mock"}):
+        result = list_incidents()
     assert isinstance(result, list)
     assert len(result) == 1
     assert result[0]["name"] == "inc1"
@@ -88,7 +89,8 @@ def test_update_incident_status_success():
         status=200,
     )
 
-    result = update_incident_status("123", "Closed", "TruePositive")
+    with patch("sentinel_api.get_auth_headers", return_value={"Authorization": "Bearer mock"}):
+        result = update_incident_status("123", "Closed", "TruePositive")
     assert result["properties"]["status"] == "Closed"
     assert result["properties"]["classification"] == "TruePositive"
 
@@ -126,7 +128,8 @@ def test_update_incident_status_etag_conflict_retry():
         status=200,
     )
 
-    result = update_incident_status("123", "Closed")
+    with patch("sentinel_api.get_auth_headers", return_value={"Authorization": "Bearer mock"}):
+        result = update_incident_status("123", "Closed")
     assert result["properties"]["status"] == "Closed"
 
 
@@ -142,7 +145,8 @@ def test_transient_http_error_retry():
         status=200,
     )
 
-    result = get_incident("123")
+    with patch("sentinel_api.get_auth_headers", return_value={"Authorization": "Bearer mock"}):
+        result = get_incident("123")
     assert result["properties"]["status"] == "New"
     assert len(responses.calls) == 2
 
@@ -182,7 +186,8 @@ def test_update_incident_status_no_etag():
         status=200,
     )
 
-    result = update_incident_status("123", "Active")
+    with patch("sentinel_api.get_auth_headers", return_value={"Authorization": "Bearer mock"}):
+        result = update_incident_status("123", "Active")
     assert result["properties"]["status"] == "Active"
     # Verify If-Match was NOT set in the PUT request
     put_request = responses.calls[1].request
@@ -217,7 +222,8 @@ def test_update_incident_status_classification_reasons():
             status=200,
         )
 
-        result = update_incident_status("123", "Closed", classification)
+        with patch("sentinel_api.get_auth_headers", return_value={"Authorization": "Bearer mock"}):
+            result = update_incident_status("123", "Closed", classification)
         # Verify the PUT body contained the correct classificationReason
         import json
         body = responses.calls[-1].request.body
@@ -239,7 +245,8 @@ def test_list_incident_alerts_success():
         status=200,
     )
 
-    result = list_incident_alerts("123")
+    with patch("sentinel_api.get_auth_headers", return_value={"Authorization": "Bearer mock"}):
+        result = list_incident_alerts("123")
     assert len(result) == 2
     assert result[0]["id"] == "alert-1"
 
@@ -259,7 +266,8 @@ def test_post_incident_comment_success():
         status=200,
     )
 
-    result = post_incident_comment("123", "Test comment")
+    with patch("sentinel_api.get_auth_headers", return_value={"Authorization": "Bearer mock"}):
+        result = post_incident_comment("123", "Test comment")
     assert result["id"] == "comment-123"
 
 

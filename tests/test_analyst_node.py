@@ -27,6 +27,13 @@ from nodes.analyst_node import analyst_node
 from models.validation import MitreTechnique, AnalystVerdict
 
 
+def _mock_structured_llm_response(verdict):
+    """Build the dict shape returned by with_structured_output(include_raw=True)."""
+    raw_msg = MagicMock()
+    raw_msg.response_metadata = {}
+    return {"raw": raw_msg, "parsed": verdict, "parsing_error": None}
+
+
 @pytest.mark.asyncio
 async def test_analyst_node_success(empty_triage_state, valid_analyst_verdict):
     """Asserts correct Pydantic structured output mapping to state when LLM returns valid data."""
@@ -35,21 +42,17 @@ async def test_analyst_node_success(empty_triage_state, valid_analyst_verdict):
     state["cti_results"] = {"ip_reports": [{"ioc": "8.8.8.8", "verdict": "malicious"}]}
     state["incident_tactics"] = ["Execution"]
 
-    # The LLM pipeline in analyst_node is:
-    #   ChatGoogleGenerativeAI(...).with_structured_output(AnalystVerdict)
-    # This creates a RunnableSequence. We need to mock the final ainvoke on that chain.
-    # The cleanest way is to mock the entire _invoke_llm inner function's return value
-    # by patching the chain at the point where it's called.
-
     # Mock ChromaDB RAG retrieval to return empty results
     mock_rag = AsyncMock(return_value={"documents": []})
 
     # Create a mock structured LLM chain that returns our valid verdict directly
     mock_structured_llm = AsyncMock()
-    mock_structured_llm.ainvoke = AsyncMock(return_value=valid_analyst_verdict)
+    mock_structured_llm.ainvoke = AsyncMock(
+        return_value=_mock_structured_llm_response(valid_analyst_verdict)
+    )
 
     with patch("nodes.analyst_node.retrieve_similar_mismatches", mock_rag), \
-         patch("nodes.analyst_node.ChatGoogleGenerativeAI") as MockLLMClass:
+         patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLMClass:
 
         # Make the constructor return a mock, and .with_structured_output() return our mock chain
         mock_instance = MagicMock()
@@ -84,7 +87,7 @@ async def test_analyst_node_validation_failure_fallback(empty_triage_state):
     )
 
     with patch("nodes.analyst_node.retrieve_similar_mismatches", mock_rag), \
-         patch("nodes.analyst_node.ChatGoogleGenerativeAI") as MockLLMClass:
+         patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLMClass:
 
         mock_instance = MagicMock()
         mock_instance.with_structured_output.return_value = mock_structured_llm
@@ -143,10 +146,12 @@ async def test_analyst_node_dict_verdict_path(empty_triage_state):
     }
 
     mock_structured_llm = AsyncMock()
-    mock_structured_llm.ainvoke = AsyncMock(return_value=raw_dict)
+    mock_structured_llm.ainvoke = AsyncMock(
+        return_value=_mock_structured_llm_response(raw_dict)
+    )
 
     with patch("nodes.analyst_node.retrieve_similar_mismatches", mock_rag), \
-         patch("nodes.analyst_node.ChatGoogleGenerativeAI") as MockLLMClass:
+         patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLMClass:
 
         mock_instance = MagicMock()
         mock_instance.with_structured_output.return_value = mock_structured_llm
@@ -170,10 +175,12 @@ async def test_analyst_node_unrecognizable_output(empty_triage_state):
 
     # Return a plain string — exercises the else branch (non-dict, non-AnalystVerdict)
     mock_structured_llm = AsyncMock()
-    mock_structured_llm.ainvoke = AsyncMock(return_value="just a string")
+    mock_structured_llm.ainvoke = AsyncMock(
+        return_value=_mock_structured_llm_response("just a string")
+    )
 
     with patch("nodes.analyst_node.retrieve_similar_mismatches", mock_rag), \
-         patch("nodes.analyst_node.ChatGoogleGenerativeAI") as MockLLMClass:
+         patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLMClass:
 
         mock_instance = MagicMock()
         mock_instance.with_structured_output.return_value = mock_structured_llm
@@ -197,10 +204,12 @@ async def test_analyst_node_invalid_dict_verdict(empty_triage_state):
 
     # Dict missing required fields
     mock_structured_llm = AsyncMock()
-    mock_structured_llm.ainvoke = AsyncMock(return_value={"classification": "TruePositive"})
+    mock_structured_llm.ainvoke = AsyncMock(
+        return_value=_mock_structured_llm_response({"classification": "TruePositive"})
+    )
 
     with patch("nodes.analyst_node.retrieve_similar_mismatches", mock_rag), \
-         patch("nodes.analyst_node.ChatGoogleGenerativeAI") as MockLLMClass:
+         patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLMClass:
 
         mock_instance = MagicMock()
         mock_instance.with_structured_output.return_value = mock_structured_llm
@@ -224,10 +233,12 @@ async def test_analyst_node_with_few_shot_examples(empty_triage_state, valid_ana
     })
 
     mock_structured_llm = AsyncMock()
-    mock_structured_llm.ainvoke = AsyncMock(return_value=valid_analyst_verdict)
+    mock_structured_llm.ainvoke = AsyncMock(
+        return_value=_mock_structured_llm_response(valid_analyst_verdict)
+    )
 
     with patch("nodes.analyst_node.retrieve_similar_mismatches", mock_rag), \
-         patch("nodes.analyst_node.ChatGoogleGenerativeAI") as MockLLMClass:
+         patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLMClass:
 
         mock_instance = MagicMock()
         mock_instance.with_structured_output.return_value = mock_structured_llm
@@ -260,10 +271,12 @@ async def test_analyst_node_mitre_warnings(empty_triage_state):
     )
 
     mock_structured_llm = AsyncMock()
-    mock_structured_llm.ainvoke = AsyncMock(return_value=verdict)
+    mock_structured_llm.ainvoke = AsyncMock(
+        return_value=_mock_structured_llm_response(verdict)
+    )
 
     with patch("nodes.analyst_node.retrieve_similar_mismatches", mock_rag), \
-         patch("nodes.analyst_node.ChatGoogleGenerativeAI") as MockLLMClass:
+         patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLMClass:
 
         mock_instance = MagicMock()
         mock_instance.with_structured_output.return_value = mock_structured_llm
@@ -272,5 +285,3 @@ async def test_analyst_node_mitre_warnings(empty_triage_state):
         result = await analyst_node(state)
         # The INVALID_ID technique should produce a MITRE warning
         assert "errors" in result
-
-

@@ -16,7 +16,7 @@ Concurrency Invariants:
 """
 
 import pytest
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch, AsyncMock, MagicMock
 from nodes.kql_node import kql_node
 
 @pytest.mark.asyncio
@@ -35,7 +35,7 @@ async def test_kql_node_success(empty_triage_state):
     state["classification"] = "TruePositive"
     state["incident_tactics"] = ["InitialAccess"]
     
-    mock_llm_response = AsyncMock()
+    mock_llm_response = MagicMock()
     mock_llm_response.content = '''
     ```json
     {
@@ -51,7 +51,11 @@ async def test_kql_node_success(empty_triage_state):
     ```
     '''
     
-    with patch("nodes.kql_node.ChatGoogleGenerativeAI.ainvoke", return_value=mock_llm_response):
+    with patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLMClass:
+        mock_instance = MagicMock()
+        mock_instance.ainvoke = AsyncMock(return_value=mock_llm_response)
+        MockLLMClass.return_value = mock_instance
+
         result = await kql_node(state)
         assert len(result["kql_queries"]) == 1
         assert "SigninLogs | limit 10" in result["kql_queries"][0]
@@ -64,9 +68,13 @@ async def test_kql_node_escaping(empty_triage_state):
     state = empty_triage_state.copy()
     state["classification"] = "TruePositive"
     
-    mock_llm_response = AsyncMock()
+    mock_llm_response = MagicMock()
     mock_llm_response.content = '''{"queries": [{"title": "T", "table": "T", "purpose": "P", "kql": "Table | where ip == \\"8.8.8.8\\""}]}'''
     
-    with patch("nodes.kql_node.ChatGoogleGenerativeAI.ainvoke", return_value=mock_llm_response):
+    with patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLMClass:
+        mock_instance = MagicMock()
+        mock_instance.ainvoke = AsyncMock(return_value=mock_llm_response)
+        MockLLMClass.return_value = mock_instance
+
         result = await kql_node(state)
         assert 'where ip == "8.8.8.8"' in result["kql_queries"][0]

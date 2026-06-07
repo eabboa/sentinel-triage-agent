@@ -985,9 +985,10 @@ nvidia-cuda-runtime==13.0.96 ; sys_platform == 'linux' \
     --hash=sha256:7f82250d7782aa23b6cfe765ecc7db554bd3c2870c43f3d1821f1d18aebf0548 \
     --hash=sha256:ef9bcbe90493a2b9d810e43d249adb3d02e98dd30200d86607d8d02687c43f55
     # via cuda-toolkit
-nvidia-cudnn-cu13==9.19.0.56 ; sys_platform == 'linux' \
-    --hash=sha256:6ed29ffaee1176c612daf442e4dd6cfeb6a0caa43ddcbeb59da94953030b1be4 \
-    --hash=sha256:d20e1734305e9d68889a96e3f35094d733ff1f83932ebe462753973e53a572bf
+nvidia-cudnn-cu13==9.23.0.39 ; sys_platform == 'linux' \
+    --hash=sha256:877173104cb1bb5ed96b4f2faaecc29f91ae82c88c073a7991064557c0573475 \
+    --hash=sha256:c9a51d02b1d8f0e366d9978f205ca3be0c8bb8dd45582a919a7585fd66d48ba0 \
+    --hash=sha256:e13f527eb070e2b6c32edaff625d92b29c9959e9076ab024e650090047e531a2
     # via torch
 nvidia-cufft==12.0.0.61 ; sys_platform == 'linux' \
     --hash=sha256:2708c852ef8cd89d1d2068bdbece0aa188813a0c934db3779b9b1faa8442e5f5 \

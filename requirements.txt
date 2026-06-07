@@ -1111,9 +1111,10 @@ nvidia-cusolver==12.0.4.66 ; sys_platform == 'linux' \
     --hash=sha256:02c2457eaa9e39de20f880f4bd8820e6a1cfb9f9a34f820eb12a155aa5bc92d2 \
     --hash=sha256:0a759da5dea5c0ea10fd307de75cdeb59e7ea4fcb8add0924859b944babf1112
     # via cuda-toolkit
-nvidia-cusparse==12.6.3.3 ; sys_platform == 'linux' \
-    --hash=sha256:2b3c89c88d01ee0e477cb7f82ef60a11a4bcd57b6b87c33f789350b59759360b \
-    --hash=sha256:80bcc4662f23f1054ee334a15c72b8940402975e0eab63178fc7e670aa59472c
+nvidia-cusparse==12.8.1.7 ; sys_platform == 'linux' \
+    --hash=sha256:bf56df502219a71068d938a1d8035343446fe1cd93e4595bc0da5ea88dc47345 \
+    --hash=sha256:da917f853e1c7d221f17d86067ff165c9ebee99fdefd992caca91fd7c5ec462c \
+    --hash=sha256:ddba3dc1d5a265e4d38ef516f9e3843834dc27f8ad99ca6d193a714275e5d21a
     # via
     #   cuda-toolkit
     #   nvidia-cusolver

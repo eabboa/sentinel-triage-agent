@@ -747,9 +747,9 @@ langchain-core==1.4.0 \
     #   langgraph
     #   langgraph-checkpoint
     #   langgraph-prebuilt
-langchain-google-genai==4.2.2 \
-    --hash=sha256:5fc774bf41d1dc1c1a5ba8d7b9f2017dfa77e30653c9b44d2dfbaf0e877e7388 \
-    --hash=sha256:c8d09aac0304d26f1c2483e41a350f15587af1fbe034c39a304e1e17a3b743f3
+langchain-google-genai==4.2.4 \
+    --hash=sha256:0e2c1021a15c91e60b68d813bb3e793bd1d9396b3f8639b943ab4e56e5652e04 \
+    --hash=sha256:2f5de7a8a6552ffb64b907aca7503fd5e34d1a3240e280abcdc5f7eef480edd5
     # via sentinel-triage-agent
 langchain-protocol==0.0.15 \
     --hash=sha256:461eb794358f83d5e42635a5797799ffec7b4702314e34edf73ac21e75d3ef79 \

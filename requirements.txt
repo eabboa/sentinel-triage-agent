@@ -1011,9 +1011,10 @@ nvidia-cusparse==12.6.3.3 ; sys_platform == 'linux' \
     # via
     #   cuda-toolkit
     #   nvidia-cusolver
-nvidia-cusparselt-cu13==0.8.0 ; sys_platform == 'linux' \
-    --hash=sha256:25e30a8a7323935d4ad0340b95a0b69926eee755767e8e0b1cf8dd85b197d3fd \
-    --hash=sha256:400c6ed1cf6780fc6efedd64ec9f1345871767e6a1a0a552a1ea0578117ea77c
+nvidia-cusparselt-cu13==0.9.1 ; sys_platform == 'linux' \
+    --hash=sha256:49e54b7cecb049b039381d4cb8389afd2f18d83cdca285ba8231ee0ff4341dc1 \
+    --hash=sha256:514a84d71b4edb8609108253d3d9ea283542162a0861787f600b704ed663e58c \
+    --hash=sha256:a7dd536f0fd2ea7c65395a6d63568bcd98c2522349112e1e61f8b1d19d559528
     # via torch
 nvidia-nccl-cu13==2.28.9 ; sys_platform == 'linux' \
     --hash=sha256:01c873ba1626b54caa12272ed228dc5b2781545e0ae8ba3f432a8ef1c6d78643 \

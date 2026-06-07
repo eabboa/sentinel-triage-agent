@@ -1107,9 +1107,10 @@ nvidia-curand==10.4.0.35 ; sys_platform == 'linux' \
     --hash=sha256:133df5a7509c3e292aaa2b477afd0194f06ce4ea24d714d616ff36439cee349a \
     --hash=sha256:1aee33a5da6e1db083fe2b90082def8915f30f3248d5896bcec36a579d941bfc
     # via cuda-toolkit
-nvidia-cusolver==12.0.4.66 ; sys_platform == 'linux' \
-    --hash=sha256:02c2457eaa9e39de20f880f4bd8820e6a1cfb9f9a34f820eb12a155aa5bc92d2 \
-    --hash=sha256:0a759da5dea5c0ea10fd307de75cdeb59e7ea4fcb8add0924859b944babf1112
+nvidia-cusolver==12.2.2.18 ; sys_platform == 'linux' \
+    --hash=sha256:a1332369d90bde2e6508aded44b96eb479ce7ed8e0e76536b4600b2f45e7b36c \
+    --hash=sha256:c3597aa0992b8252d82e3d01b836fb732df0e3de8a9b65dd11a036916f619cf6 \
+    --hash=sha256:cd449f75e0005d51d964291101f92c7963c73f86a30c90c522ae5c2ace0e0fa4
     # via cuda-toolkit
 nvidia-cusparse==12.6.3.3 ; sys_platform == 'linux' \
     --hash=sha256:2b3c89c88d01ee0e477cb7f82ef60a11a4bcd57b6b87c33f789350b59759360b \

@@ -24,12 +24,12 @@ from nodes.extract_node import extract_node
 @pytest.mark.asyncio
 async def test_extract_node_success(empty_triage_state):
     """Asserts valid IOC extraction combining regex and LLM outputs."""
-    summary = "User admin@corp.local logged in from 8.8.8.8 and downloaded http://evil.com/malware.exe with hash 11111111111111111111111111111111. Internal traffic from 10.0.0.5."
+    summary = "User admin@corp.local logged in from 8.8.8.8 and downloaded http://example.com/malware.exe with hash 11111111111111111111111111111111. Internal traffic from 10.0.0.5."
     state = empty_triage_state.copy()
     state["condensed_summary"] = summary
     
     mock_llm_response = AsyncMock()
-    mock_llm_response.content = '{"usernames": ["admin@corp.local"], "hostnames": [], "domains": ["evil.com"]}'
+    mock_llm_response.content = '{"usernames": ["admin@corp.local"], "hostnames": [], "domains": ["example.com"]}'
 
     mock_llm_instance = MagicMock()
     mock_llm_instance.ainvoke = AsyncMock(return_value=mock_llm_response)
@@ -40,10 +40,10 @@ async def test_extract_node_success(empty_triage_state):
         entities = result["entities"]
         assert "8.8.8.8" in entities["ips"]
         assert "10.0.0.5" in entities["internal_ips"]
-        assert "http://evil.com/malware.exe" in entities["urls"]
+        assert "http://example.com/malware.exe" in entities["urls"]
         assert "11111111111111111111111111111111" in entities["hashes"]
         assert "admin@corp.local" in entities["usernames"]
-        assert "evil.com" in entities["domains"]
+        assert "example.com" in set(entities["domains"])
 
 @pytest.mark.asyncio
 async def test_extract_node_llm_failure_fallback(empty_triage_state):

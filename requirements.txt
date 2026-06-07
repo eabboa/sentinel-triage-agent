@@ -1027,9 +1027,9 @@ nvidia-nvjitlink==13.0.88 ; sys_platform == 'linux' \
     #   nvidia-cufft
     #   nvidia-cusolver
     #   nvidia-cusparse
-nvidia-nvshmem-cu13==3.4.5 ; sys_platform == 'linux' \
-    --hash=sha256:290f0a2ee94c9f3687a02502f3b9299a9f9fe826e6d0287ee18482e78d495b80 \
-    --hash=sha256:6dc2a197f38e5d0376ad52cd1a2a3617d3cdc150fd5966f4aee9bcebb1d68fe9
+nvidia-nvshmem-cu13==3.6.5 ; sys_platform == 'linux' \
+    --hash=sha256:4001aabc72ead32ecc3c9add3c6781befcb71adcbe286d7f5956042e68668c70 \
+    --hash=sha256:94aa0149490be658cf95945ce9f16ba90a90edbd6a564366f996ead7496f2f22
     # via torch
 nvidia-nvtx==13.0.85 ; sys_platform == 'linux' \
     --hash=sha256:4936d1d6780fbe68db454f5e72a42ff64d1fd6397df9f363ae786930fd5c1cd4 \

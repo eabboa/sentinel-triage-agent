@@ -36,7 +36,13 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Slopcheck scan
-        run: uvx slopcheck scan .
+        run: |
+          uvx slopcheck scan . > slopcheck.log || true
+          cat slopcheck.log
+          if grep -q "Package does not exist on PyPI" slopcheck.log; then
+              echo "❌ Slopcheck found hallucinated packages. Aborting."
+              exit 1
+          fi
 
       - name: Export requirements
         run: uv export --format requirements-txt --no-emit-project -o requirements.txt

@@ -966,9 +966,10 @@ numpy==2.4.4 \
     #   scipy
     #   sentence-transformers
     #   transformers
-nvidia-cublas==13.1.0.3 ; sys_platform == 'linux' \
-    --hash=sha256:c86fc7f7ae36d7528288c5d88098edcb7b02c633d262e7ddbb86b0ad91be5df2 \
-    --hash=sha256:ee8722c1f0145ab246bccb9e452153b5e0515fd094c3678df50b2a0888b8b171
+nvidia-cublas==13.5.1.27 ; sys_platform == 'linux' \
+    --hash=sha256:234a2e89682080421431d2f2ea422fc2ad7d0b462336ccdfde76c559c906c670 \
+    --hash=sha256:bc355b10e35b01cf88e8dcc0fbe0fd1ef86a05fddae78a44dc133d7e63eaf973 \
+    --hash=sha256:db3a1f0c8bc24945a4d195ba199d83f27e650ffdfc0c32e6b8362c314f14d553
     # via
     #   cuda-toolkit
     #   nvidia-cudnn-cu13

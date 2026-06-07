@@ -1019,9 +1019,10 @@ nvidia-nccl-cu13==2.28.9 ; sys_platform == 'linux' \
     --hash=sha256:01c873ba1626b54caa12272ed228dc5b2781545e0ae8ba3f432a8ef1c6d78643 \
     --hash=sha256:e4553a30f34195f3fa1da02a6da3d6337d28f2003943aa0a3d247bbc25fefc42
     # via torch
-nvidia-nvjitlink==13.0.88 ; sys_platform == 'linux' \
-    --hash=sha256:13a74f429e23b921c1109976abefacc69835f2f433ebd323d3946e11d804e47b \
-    --hash=sha256:e931536ccc7d467a98ba1d8b89ff7fa7f1fa3b13f2b0069118cd7f47bff07d0c
+nvidia-nvjitlink==13.3.33 ; sys_platform == 'linux' \
+    --hash=sha256:26a6de7fb4c8fdaa7703d3dad720d6d427ddfea5c48a528fd97c11733ad830e5 \
+    --hash=sha256:4297ee49639b4f2e07255a1d69b3acc7ab2d011bb892b403e91ac98368962e3b \
+    --hash=sha256:ce48b37dfeb3cb1eae4cf85adacb47d7a6539ea2272870c9a3628ce275c2037e
     # via
     #   cuda-toolkit
     #   nvidia-cufft

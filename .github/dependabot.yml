@@ -8,3 +8,7 @@ updates:
     open-pull-requests-limit: 50
     # Automatically apply security updates as soon as they are found
     target-branch: "main"
+    groups:
+      all-dependencies:
+        patterns:
+          - "*"

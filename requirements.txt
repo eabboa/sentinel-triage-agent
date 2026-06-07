@@ -973,9 +973,10 @@ nvidia-cublas==13.1.0.3 ; sys_platform == 'linux' \
     #   cuda-toolkit
     #   nvidia-cudnn-cu13
     #   nvidia-cusolver
-nvidia-cuda-cupti==13.0.85 ; sys_platform == 'linux' \
-    --hash=sha256:4eb01c08e859bf924d222250d2e8f8b8ff6d3db4721288cf35d14252a4d933c8 \
-    --hash=sha256:796bd679890ee55fb14a94629b698b6db54bcfd833d391d5e94017dd9d7d3151
+nvidia-cuda-cupti==13.3.35 ; sys_platform == 'linux' \
+    --hash=sha256:1363b54afb034cb571fcc7a1e5ace039f7ec6ad62032b3944e5e8c019c5cd9dc \
+    --hash=sha256:50eaf329ee2b5830a51d078c24375cba791570779b953580b259ec0cf0cdbdc0 \
+    --hash=sha256:99a61919e4917a81cd083bb7082291ebb58c8f9dd42da036c78cefdb3acc7323
     # via cuda-toolkit
 nvidia-cuda-nvrtc==13.0.88 ; sys_platform == 'linux' \
     --hash=sha256:ad9b6d2ead2435f11cbb6868809d2adeeee302e9bb94bcf0539c7a40d80e8575 \

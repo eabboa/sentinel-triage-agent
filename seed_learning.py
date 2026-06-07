@@ -24,7 +24,7 @@ import argparse
 import csv
 import logging
 import sys
-import uuid
+import hashlib
 from pathlib import Path
 from typing import Any, cast
 
@@ -144,7 +144,7 @@ def seed(csv_path: Path, batch_size: int, dry_run: bool) -> None:
         batch = rows[start : start + batch_size]
         documents = [build_document(r) for r in batch]
         metadatas = [{"human_classification": r["human_classification"]} for r in batch]
-        ids = [f"seed_{uuid.uuid4()}" for _ in batch]
+        ids = [f"seed_{hashlib.sha256(d.encode()).hexdigest()[:16]}" for d in documents]
 
         logger.info(
             "Encoding batch %d–%d (%d docs)...",
@@ -154,7 +154,7 @@ def seed(csv_path: Path, batch_size: int, dry_run: bool) -> None:
         )
         embeddings = model.encode(documents).tolist()
 
-        collection.add(
+        collection.upsert(
             documents=documents,
             embeddings=embeddings,
             metadatas=cast(Any, metadatas),

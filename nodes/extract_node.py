@@ -77,9 +77,70 @@ def _extract_regex_iocs(text: str) -> dict:
     }
 
 
+def _extract_iocs_from_raw_alerts(raw_alerts: list[dict]) -> dict:
+    """
+    Extracts IOCs from ALL raw alert objects using structured entity fields and regex.
+
+    Iterates every alert (not capped) to ensure IOCs beyond the summarize_node
+    cap are captured for CTI enrichment.
+
+    Args:
+        raw_alerts: The full list of raw alert dicts from Sentinel.
+
+    Returns:
+        A dictionary of extracted IOC lists keyed by type.
+    """
+    ips: set[str] = set()
+    internal_ips: set[str] = set()
+    hashes: set[str] = set()
+    urls: set[str] = set()
+
+    for alert in raw_alerts:
+        props = alert.get("properties", {})
+
+        # ── Structured entity extraction ───────────────────────────────────
+        for entity in props.get("entities", []):
+            entity_type = entity.get("Type", "").lower()
+            if entity_type == "ip":
+                addr = entity.get("Address", "")
+                if addr:
+                    if _is_public_ip(addr):
+                        ips.add(addr)
+                    elif _is_internal_ip(addr):
+                        internal_ips.add(addr)
+            elif entity_type == "filehash":
+                val = entity.get("Value", "")
+                if val:
+                    hashes.add(val)
+            elif entity_type == "url":
+                url = entity.get("Url", "")
+                if url:
+                    urls.add(url)
+
+        # ── Regex over alert text fields ───────────────────────────────────
+        text_fields = [
+            props.get("description", ""),
+            props.get("alertDisplayName", ""),
+        ]
+        combined_text = " ".join(text_fields)
+        if combined_text.strip():
+            text_iocs = _extract_regex_iocs(combined_text)
+            ips.update(text_iocs["ips"])
+            internal_ips.update(text_iocs["internal_ips"])
+            hashes.update(text_iocs["hashes"])
+            urls.update(text_iocs["urls"])
+
+    return {
+        "ips": list(ips),
+        "internal_ips": list(internal_ips),
+        "hashes": list(hashes),
+        "urls": list(urls),
+    }
+
+
 async def extract_node(state: TriageState) -> dict:
     """
-    Extracts IOCs from the condensed summary using regex + LLM fallback.
+    Extracts IOCs from raw_alerts (all alerts) and condensed_summary (LLM context).
 
     Args:
         state: The current TriageState dictionary.
@@ -94,8 +155,11 @@ async def extract_node(state: TriageState) -> dict:
         raise ValueError("NO API KEY: GOOGLE_API_KEY")
     text = state["condensed_summary"]
 
-    # ── Phase 1: Regex extraction ──────────────────────────────────────────────
-    regex_iocs = _extract_regex_iocs(text)
+    # ── Phase 1: Structured + regex extraction from ALL raw alerts ─────────────
+    raw_alerts_iocs = _extract_iocs_from_raw_alerts(state.get("raw_alerts", []))
+
+    # ── Phase 2: Regex extraction from condensed summary (fallback coverage) ───
+    summary_iocs = _extract_regex_iocs(text)
 
     # ── Phase 2: LLM extraction for contextual entities ───────────────────────
     from langchain_google_genai import ChatGoogleGenerativeAI
@@ -158,8 +222,12 @@ TEXT:
         )
         llm_entities = {"usernames": [], "hostnames": [], "domains": []}
 
+    # ── Merge: raw_alerts (complete) + summary regex (fallback) + LLM contextual
     entities = {
-        **regex_iocs,
+        "ips": list(set(raw_alerts_iocs["ips"]) | set(summary_iocs["ips"])),
+        "internal_ips": list(set(raw_alerts_iocs["internal_ips"]) | set(summary_iocs["internal_ips"])),
+        "hashes": list(set(raw_alerts_iocs["hashes"]) | set(summary_iocs["hashes"])),
+        "urls": list(set(raw_alerts_iocs["urls"]) | set(summary_iocs["urls"])),
         "usernames": llm_entities.get("usernames", []),
         "hostnames": llm_entities.get("hostnames", []),
         "domains": llm_entities.get("domains", []),

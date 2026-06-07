@@ -773,9 +773,9 @@ langgraph-sdk==0.3.13 \
     --hash=sha256:419ca5663eec3cec192ad194ac0647c0c826866b446073eb40f384f950986cd5 \
     --hash=sha256:aee09e345c90775f6de9d6f4c7b847cfc652e49055c27a2aed0d981af2af3bd0
     # via langgraph
-langsmith==0.8.5 \
-    --hash=sha256:3615243d99c12f4047f13042bdc05a373dce232d106a6511b3ca7b48c5af1c2c \
-    --hash=sha256:efc779f9d450dcaf9d97bc8894f4926276509d6e730e05289af9a64debce06ae
+langsmith==0.8.9 \
+    --hash=sha256:c9519cabc75568d088df045710d1b86eae9780c91054528b2aa7e6cb1fc80c52 \
+    --hash=sha256:f16e37fcd5a8a2d4db30eae0e399a866a65ce5cc86218825c59409ed57a3bf53
     # via langchain-core
 markdown-it-py==4.0.0 \
     --hash=sha256:87327c59b172c5011896038353a81343b6754500a08cd7a4973bb48c6d578147 \

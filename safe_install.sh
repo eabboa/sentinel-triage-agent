@@ -6,7 +6,13 @@ set -euo pipefail
 # Pipeline: slopcheck (phantom packages) → uv sync --locked (hash verify) → pip-audit (CVEs)
 
 echo "=== [1/3] Slopcheck: scanning for hallucinated/phantom packages ==="
-uvx slopcheck scan .
+uvx slopcheck scan . | tee .slopcheck.log || true
+if grep -q "Package does not exist on PyPI" .slopcheck.log; then
+    echo "❌ Slopcheck found hallucinated packages. Aborting."
+    rm -f .slopcheck.log
+    exit 1
+fi
+rm -f .slopcheck.log
 
 echo "=== [2/3] Installing dependencies (locked) ==="
 uv sync --dev --locked

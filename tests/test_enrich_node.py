@@ -277,3 +277,66 @@ async def test_get_session_reuse(cleanup_session):
     s2 = await get_session()
     assert s1 is s2
     await close_session()
+
+@pytest.mark.asyncio
+async def test_close_session_coverage():
+    """Asserts close_session gracefully closes an open session."""
+    s1 = await get_session()
+    assert not s1.closed
+    await close_session()
+    assert s1.closed
+    # Multiple calls should not crash
+    await close_session()
+
+@pytest.mark.asyncio
+async def test_enrich_node_vt_url_transient(empty_triage_state, cleanup_session):
+    """Asserts VT URL 429 raises TransientHTTPError internally."""
+    state = empty_triage_state.copy()
+    state["entities"] = {"ips": [], "urls": ["http://evil.com"], "hashes": [], "internal_ips": []}
+
+    with aioresponses.aioresponses() as m:
+        m.get('https://www.virustotal.com/api/v3/urls/aHR0cDovL2V2aWwuY29t', status=429, repeat=True)
+
+        result = await enrich_node(state)
+        assert len(result["cti_results"]["url_reports"]) == 0
+        assert any("429" in e for e in result.get("errors", []))
+
+@pytest.mark.asyncio
+async def test_enrich_node_vt_hash_transient(empty_triage_state, cleanup_session):
+    """Asserts VT hash 503 raises TransientHTTPError."""
+    state = empty_triage_state.copy()
+    state["entities"] = {"ips": [], "urls": [], "hashes": ["deadbeef"], "internal_ips": []}
+
+    with aioresponses.aioresponses() as m:
+        m.get('https://www.virustotal.com/api/v3/files/deadbeef', status=503, repeat=True)
+
+        result = await enrich_node(state)
+        assert len(result["cti_results"]["hash_reports"]) == 0
+        assert any("503" in e for e in result.get("errors", []))
+
+@pytest.mark.asyncio
+async def test_enrich_node_abuseipdb_validation_error(empty_triage_state, cleanup_session):
+    """Asserts AbuseIPDB ValidationError is caught."""
+    state = empty_triage_state.copy()
+    state["entities"] = {"ips": ["8.8.8.8"], "urls": [], "hashes": [], "internal_ips": []}
+
+    with aioresponses.aioresponses() as m:
+        m.get('https://api.abuseipdb.com/api/v2/check?ipAddress=8.8.8.8&maxAgeInDays=90&verbose=true',
+              payload={"data": {}})
+
+        result = await enrich_node(state)
+        assert len(result["cti_results"]["ip_reports"]) == 0
+        assert any("schema mismatch" in e.lower() for e in result.get("errors", []))
+
+@pytest.mark.asyncio
+async def test_enrich_node_vt_url_validation_error(empty_triage_state, cleanup_session):
+    """Asserts VT URL ValidationError is caught."""
+    state = empty_triage_state.copy()
+    state["entities"] = {"ips": [], "urls": ["http://evil.com"], "hashes": [], "internal_ips": []}
+
+    with aioresponses.aioresponses() as m:
+        m.get('https://www.virustotal.com/api/v3/urls/aHR0cDovL2V2aWwuY29t', payload={"data": {}})
+
+        result = await enrich_node(state)
+        assert len(result["cti_results"]["url_reports"]) == 0
+        assert any("schema mismatch" in e.lower() for e in result.get("errors", []))

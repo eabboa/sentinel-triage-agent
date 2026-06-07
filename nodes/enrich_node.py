@@ -36,6 +36,7 @@ Graceful degradation:
 """
 
 import asyncio
+import time
 import logging
 import os
 import aiohttp
@@ -43,6 +44,7 @@ import aiohttp
 from aiolimiter import AsyncLimiter
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 from state import TriageState
+from metrics import ENRICHMENT_LATENCY
 from pydantic import ValidationError
 from models.validation import AbuseIPDBResponse
 from models.exceptions import AbuseIPDBResponseValidationError
@@ -189,7 +191,11 @@ async def _check_vt_url(session: aiohttp.ClientSession, url: str) -> dict:
     encoded = base64.urlsafe_b64encode(url.encode()).rstrip(b"=").decode()
     endpoint = f"https://www.virustotal.com/api/v3/urls/{encoded}"
 
+    t0 = time.monotonic()
     async with session.get(endpoint, headers={"x-apikey": VT_API_KEY}) as resp:
+        ENRICHMENT_LATENCY.labels(api_name="virustotal_url").observe(
+            (time.monotonic() - t0) * 1000
+        )
         if resp.status in (429, 503, 504):
             raise TransientHTTPError(f"VirusTotal URL lookup transient HTTP {resp.status} for {url}")
         if resp.status == 200:
@@ -219,7 +225,11 @@ async def _check_vt_hash(session: aiohttp.ClientSession, file_hash: str) -> dict
     """
     endpoint = f"https://www.virustotal.com/api/v3/files/{file_hash}"
 
+    t0 = time.monotonic()
     async with session.get(endpoint, headers={"x-apikey": VT_API_KEY}) as resp:
+        ENRICHMENT_LATENCY.labels(api_name="virustotal_hash").observe(
+            (time.monotonic() - t0) * 1000
+        )
         if resp.status in (429, 503, 504):
             raise TransientHTTPError(f"VirusTotal hash lookup transient HTTP {resp.status} for {file_hash}")
         if resp.status == 200:
@@ -304,7 +314,11 @@ async def _check_abuseipdb(session: aiohttp.ClientSession, ip: str) -> dict:
     params = {"ipAddress": ip, "maxAgeInDays": "90", "verbose": "true"}
     headers = {"Key": ABUSEIPDB_API_KEY, "Accept": "application/json"}
 
+    t0 = time.monotonic()
     async with session.get(endpoint, headers=headers, params=params) as resp:
+        ENRICHMENT_LATENCY.labels(api_name="abuseipdb").observe(
+            (time.monotonic() - t0) * 1000
+        )
         if resp.status in (429, 503, 504):
             raise TransientHTTPError(f"AbuseIPDB lookup transient HTTP {resp.status} for {ip}")
         if resp.status == 200:

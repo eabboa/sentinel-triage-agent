@@ -11,16 +11,33 @@ Rate limit strategy:
 import sys
 import random
 import asyncio
+import time
 from dotenv import load_dotenv
 import uuid
 import logging
+import contextvars
 from typing import Any
+from metrics import TRIAGE_DURATION, TRIAGE_TOTAL, TRIAGE_FP_TOTAL
 from sentinel_api import list_incidents
 from graph import build_graph
 from nodes.learning_node import flush_and_shutdown
 from nodes.enrich_node import close_session as close_enrich_session
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+incident_context = contextvars.ContextVar("incident_id", default="-")
+
+class CorrelationIdFilter(logging.Filter):
+    def filter(self, record):
+        record.incident_id = incident_context.get()
+        return True
+
+logging.basicConfig(
+    level=logging.INFO, 
+    format='%(asctime)s - [%(incident_id)s] - %(name)s - %(levelname)s - %(message)s'
+)
+
+for handler in logging.root.handlers:
+    handler.addFilter(CorrelationIdFilter())
+
 logger = logging.getLogger(__name__)
 
 load_dotenv()
@@ -102,6 +119,14 @@ async def _collect_human_decisions(
             break
         # ─────────────────────────────────────────────────────────────
 
+        # ── Prometheus: false-positive rate tracking ──────────────────
+        final_label = updates.get("human_classification", llm_classification)
+        if final_label in VALID_CLASSIFICATIONS:
+            TRIAGE_TOTAL.inc()
+            if final_label == "FalsePositive":
+                TRIAGE_FP_TOTAL.inc()
+        # ─────────────────────────────────────────────────────────────
+
     return updates
 
 
@@ -119,6 +144,7 @@ async def process_incident(incident, graph, semaphore, console_lock):
         None
     """
     incident_id = incident["name"]  # Sentinel uses 'name' as the unique ID
+    incident_context.set(incident_id)
     incident_title = incident["properties"]["title"]
     
     logger.info(f"Processing: {incident_title} (ID: {incident_id})")
@@ -157,6 +183,7 @@ async def process_incident(incident, graph, semaphore, console_lock):
     thread_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"sentinel-triage:{incident_id}"))
     config = {"configurable": {"thread_id": thread_id}}
 
+    triage_start = time.monotonic()
     async with semaphore: # Limit concurrent processing to respect API rate limits
 
         # ── Phase 1: Graph engine pre-HITL execution ──────────────────────
@@ -242,6 +269,8 @@ async def process_incident(incident, graph, semaphore, console_lock):
 
         if final_state.get("errors"):
             logger.warning(f"  ⚠ Non-fatal errors: {final_state['errors']}")
+
+        TRIAGE_DURATION.observe(time.monotonic() - triage_start)
 
 
 async def main():

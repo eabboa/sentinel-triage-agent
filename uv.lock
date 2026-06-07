@@ -1883,6 +1883,15 @@ wheels = [
 ]
 
 [[package]]
+name = "prometheus-client"
+version = "0.25.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/1b/fb/d9aa83ffe43ce1f19e557c0971d04b90561b0cfd50762aafb01968285553/prometheus_client-0.25.0.tar.gz", hash = "sha256:5e373b75c31afb3c86f1a52fa1ad470c9aace18082d39ec0d2f918d11cc9ba28", size = 86035, upload-time = "2026-04-09T19:53:42.359Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8d/9b/d4b1e644385499c8346fa9b622a3f030dce14cd6ef8a1871c221a17a67e7/prometheus_client-0.25.0-py3-none-any.whl", hash = "sha256:d5aec89e349a6ec230805d0df882f3807f74fd6c1a2fa86864e3c2279059fed1", size = 64154, upload-time = "2026-04-09T19:53:41.324Z" },
+]
+
+[[package]]
 name = "propcache"
 version = "0.4.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2674,6 +2683,7 @@ dependencies = [
     { name = "chromadb" },
     { name = "langchain-google-genai" },
     { name = "langgraph" },
+    { name = "prometheus-client" },
     { name = "python-dotenv" },
     { name = "requests" },
     { name = "sentence-transformers" },
@@ -2696,6 +2706,7 @@ requires-dist = [
     { name = "chromadb", specifier = ">=0.4.0" },
     { name = "langchain-google-genai", specifier = ">=4.2.2" },
     { name = "langgraph", specifier = ">=1.1.9" },
+    { name = "prometheus-client", specifier = ">=0.21.0" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "requests", specifier = ">=2.33.1" },
     { name = "sentence-transformers", specifier = ">=2.2.0" },

@@ -6,14 +6,13 @@ We use strictly, JSON output to prevent LLM from prose and babbling.
 import asyncio
 import json
 import os
-from typing import Literal, Optional
 import logging
-
 from pydantic import ValidationError
-from models.validation import AnalystVerdict, MitreTechnique
+from models.validation import AnalystVerdict
 from models.exceptions import LLMOutputValidationError
 from state import TriageState
 from nodes.mitre_utils import MITRE_CATALOG
+from metrics import LLM_RESPONSE_TOKENS
 
 logger = logging.getLogger(__name__)
 
@@ -331,7 +330,16 @@ async def analyst_node(state: TriageState) -> dict:
             async with gemini_rate_limiter:
                 return await llm.ainvoke(messages)
 
-        verdict_dict = _parse_llm_response(await _invoke_llm())
+        raw_response = await _invoke_llm()
+
+        # ── Prometheus: track LLM token usage ─────────────────────────
+        usage = getattr(raw_response, "response_metadata", {}).get("usage_metadata", {})
+        output_tokens = usage.get("candidates_token_count") or usage.get("completion_tokens", 0)
+        if output_tokens:
+            LLM_RESPONSE_TOKENS.inc(output_tokens)
+        # ──────────────────────────────────────────────────────────────
+
+        verdict_dict = _parse_llm_response(raw_response)
 
         # Programmatically validate and enrich MITRE techniques
         from nodes.mitre_utils import validate_and_enrich_techniques

@@ -407,8 +407,8 @@ cuda-bindings==13.2.0 ; sys_platform == 'linux' \
     --hash=sha256:e8a16384c6494e5485f39314b0b4afb04bee48d49edb16d5d8593fd35bbd231b \
     --hash=sha256:f4af9f3e1be603fa12d5ad6cfca7844c9d230befa9792b5abdf7dd79979c3626
     # via torch
-cuda-pathfinder==1.5.4 ; sys_platform == 'linux' \
-    --hash=sha256:9563d3175ce1828531acf4b94e1c1c7d67208c347ca002493e2654878b26f4b7
+cuda-pathfinder==1.5.5 ; sys_platform == 'linux' \
+    --hash=sha256:0228c023f95d1480f143ef5c8922d27a2ab052087a942e81dc289c9eb8f91689
     # via cuda-bindings
 cuda-toolkit==13.0.2 ; sys_platform == 'linux' \
     --hash=sha256:b198824cf2f54003f50d64ada3a0f184b42ca0846c1c94192fa269ecd97a66eb

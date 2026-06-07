@@ -1121,9 +1121,9 @@ nvidia-cusparselt-cu13==0.9.1 ; sys_platform == 'linux' \
     --hash=sha256:514a84d71b4edb8609108253d3d9ea283542162a0861787f600b704ed663e58c \
     --hash=sha256:a7dd536f0fd2ea7c65395a6d63568bcd98c2522349112e1e61f8b1d19d559528
     # via torch
-nvidia-nccl-cu13==2.28.9 ; sys_platform == 'linux' \
-    --hash=sha256:01c873ba1626b54caa12272ed228dc5b2781545e0ae8ba3f432a8ef1c6d78643 \
-    --hash=sha256:e4553a30f34195f3fa1da02a6da3d6337d28f2003943aa0a3d247bbc25fefc42
+nvidia-nccl-cu13==2.30.4 ; sys_platform == 'linux' \
+    --hash=sha256:534dbf3058cadb625f08ab0d17f1dffad3b961a2bfa360d66633fcf21be53f57 \
+    --hash=sha256:e99308a3a89fba78918d50886e81072a6c8b0b4199feb02c3903e63713a6525a
     # via torch
 nvidia-nvjitlink==13.3.33 ; sys_platform == 'linux' \
     --hash=sha256:26a6de7fb4c8fdaa7703d3dad720d6d427ddfea5c48a528fd97c11733ad830e5 \

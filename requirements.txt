@@ -2114,9 +2114,9 @@ scipy==1.17.1 \
     # via
     #   scikit-learn
     #   sentence-transformers
-sentence-transformers==5.4.1 \
-    --hash=sha256:436bcb1182a0ff42a8fb2b1c43498a70d0a75b688d182f2cd0d1dd115af61ddc \
-    --hash=sha256:a6d640fc363849b63affb8e140e9d328feabab86f83d58ac3e16b1c28140b790
+sentence-transformers==5.5.1 \
+    --hash=sha256:02b7740dfc60bdbbcb6061625f5d97a5c1a4e2d3baac5f9391b912bb5eae2290 \
+    --hash=sha256:4fe11d433badc5282d32f7fc08bc714216b7a5aca426f9df77a45a554756deb7
     # via sentinel-triage-agent
 setuptools==81.0.0 \
     --hash=sha256:487b53915f52501f0a79ccfd0c02c165ffe06631443a886740b91af4b7a5845a \

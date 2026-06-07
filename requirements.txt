@@ -610,9 +610,9 @@ httpx==0.28.1 \
     #   huggingface-hub
     #   langgraph-sdk
     #   langsmith
-huggingface-hub==1.12.2 \
-    --hash=sha256:282c4999e641c89affdc4c02c265eddea944c1390dc19e89dac8ad3ae76dbdaf \
-    --hash=sha256:7968e897fdbc6343c871c240d87d4434efe0ad9f80d57daa1cc5678c6d148529
+huggingface-hub==1.18.0 \
+    --hash=sha256:729be4a976fb706dcc02d176bcda8a3f32bdf21a294e8f4b3dda6fbcbc9c1ab1 \
+    --hash=sha256:f0c5ecd1ef8c6a60f86f61ee278f2c1570ba9e279c9f54de9094210723b3613b
     # via
     #   sentence-transformers
     #   tokenizers

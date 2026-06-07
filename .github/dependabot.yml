@@ -1,10 +1,10 @@
 version: 2
 updates:
-  # Maintain dependencies for Python via pip (Dependabot natively supports uv.lock)
-  - package-ecosystem: "pip"
+  # Maintain dependencies for Python via uv
+  - package-ecosystem: "uv"
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 50
     # Automatically apply security updates as soon as they are found
     target-branch: "main"

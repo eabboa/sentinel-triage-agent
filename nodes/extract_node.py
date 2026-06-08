@@ -6,13 +6,13 @@ This node uses BOTH regex and LLM extraction in a hybrid approach.
 
 import re
 import json
-import logging
+import structlog
 import os
 
 from state import TriageState
 from models.exceptions import LLMExtractionError, LLMOutputValidationError
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # ── Compiled regex patterns ────────────────────────────────────────────────────
 # IPv4 address pattern (excludes private/loopback ranges in the filter step)
@@ -153,6 +153,7 @@ async def extract_node(state: TriageState) -> dict:
     """
     if not os.getenv("GOOGLE_API_KEY"):
         raise ValueError("NO API KEY: GOOGLE_API_KEY")
+    logger.info("node_entry", node="extract")
     text = state["condensed_summary"]
 
     # ── Phase 1: Structured + regex extraction from ALL raw alerts ─────────────
@@ -200,10 +201,19 @@ TEXT:
     @llm_retry
     async def _invoke_llm():
         async with gemini_rate_limiter:
+            logger.info("llm_call_start", node="extract")
             return await llm.ainvoke(prompt)
 
     try:
         response = await _invoke_llm()
+        metadata = getattr(response, "response_metadata", None)
+        if isinstance(metadata, dict):
+            usage_dict = metadata.get("usage_metadata", {})
+            output_tokens = usage_dict.get("candidates_token_count") or usage_dict.get("completion_tokens", 0)
+        else:
+            output_tokens = 0
+        logger.info("llm_call_end", node="extract", output_tokens=output_tokens)
+        
         # Strip markdown fences if the model adds them despite instructions
         clean = response.content.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
         try:
@@ -233,4 +243,5 @@ TEXT:
         "domains": llm_entities.get("domains", []),
     }
 
+    logger.info("node_exit", node="extract")
     return {"entities": entities}

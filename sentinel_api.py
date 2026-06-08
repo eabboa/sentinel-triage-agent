@@ -1,7 +1,7 @@
 # this script fetches and lists incidents filtered by "New", lists incident alerts granularly for IoC extraction, then agent writes comments + updates incident status.
 
 import asyncio
-import logging
+import structlog
 import os
 import re
 import uuid
@@ -14,7 +14,7 @@ from sentinel_auth import get_auth_headers, get_graph_token, get_mde_token
 
 load_dotenv()
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 DEFAULT_HTTP_TIMEOUT = 10
 RETRY_ATTEMPTS = 3
 
@@ -49,6 +49,7 @@ def _http_request(method: str, url: str, *, headers=None, params=None, json=None
         RequestException: On any other HTTP failure.
     """
     try:
+        logger.info("api_call_start", method=method, url=url)
         response = requests.request(
             method,
             url,
@@ -57,6 +58,7 @@ def _http_request(method: str, url: str, *, headers=None, params=None, json=None
             json=json,
             timeout=DEFAULT_HTTP_TIMEOUT,
         )
+        logger.info("api_call_end", method=method, url=url, status_code=response.status_code)
         if response.status_code in (429, 503, 504):
             logger.warning("Transient HTTP %s for %s; retrying", response.status_code, url)
             raise TransientHTTPError(

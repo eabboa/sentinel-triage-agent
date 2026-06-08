@@ -6,7 +6,7 @@ We use strictly, JSON output to prevent LLM from prose and babbling.
 import asyncio
 import json
 import os
-import logging
+import structlog
 from pydantic import ValidationError
 from models.validation import AnalystVerdict
 from models.exceptions import LLMOutputValidationError
@@ -14,7 +14,7 @@ from state import TriageState
 from nodes.mitre_utils import MITRE_CATALOG
 from metrics import LLM_RESPONSE_TOKENS
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 mitre_catalog_str = json.dumps(MITRE_CATALOG, indent=2)
 
@@ -303,6 +303,7 @@ async def analyst_node(state: TriageState) -> dict:
     Raises:
         ValueError: If GOOGLE_API_KEY is not set.
     """
+    logger.info("node_entry", node="analyst")
     if not os.getenv("GOOGLE_API_KEY"):
         raise ValueError("NO API KEY: GOOGLE_API_KEY")
 
@@ -328,6 +329,7 @@ async def analyst_node(state: TriageState) -> dict:
         @llm_retry
         async def _invoke_llm():
             async with gemini_rate_limiter:
+                logger.info("llm_call_start", node="analyst")
                 return await llm.ainvoke(messages)
 
         structured_response = await _invoke_llm()
@@ -336,10 +338,16 @@ async def analyst_node(state: TriageState) -> dict:
         raw_msg = structured_response.get("raw", structured_response) if isinstance(structured_response, dict) else structured_response
 
         # ── Prometheus: track LLM token usage ─────────────────────────
-        usage = getattr(raw_msg, "response_metadata", {}).get("usage_metadata", {})
-        output_tokens = usage.get("candidates_token_count") or usage.get("completion_tokens", 0)
+        metadata = getattr(raw_msg, "response_metadata", None)
+        if isinstance(metadata, dict):
+            usage = metadata.get("usage_metadata", {})
+            output_tokens = usage.get("candidates_token_count") or usage.get("completion_tokens", 0)
+        else:
+            output_tokens = 0
+            
         if output_tokens:
             LLM_RESPONSE_TOKENS.inc(output_tokens)
+        logger.info("llm_call_end", node="analyst", output_tokens=output_tokens)
         # ──────────────────────────────────────────────────────────────
 
         if isinstance(structured_response, dict) and structured_response.get("parsing_error"):
@@ -358,9 +366,11 @@ async def analyst_node(state: TriageState) -> dict:
         if warnings:
             verdict_dict["errors"] = warnings
 
+        logger.info("node_exit", node="analyst")
         return verdict_dict
 
     except Exception as e:
+        logger.error("node_error", node="analyst", exc_info=True)
         return {
             "classification": "Undetermined",
             "is_true_positive": False,

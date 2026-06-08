@@ -4,9 +4,12 @@ Closure is deferred until human review and approval.
 """
 
 import hashlib
+import structlog
 
 from sentinel_api import fetch_incident_comments, post_incident_comment, update_incident_status
 from state import TriageState
+
+logger = structlog.get_logger(__name__)
 
 _HASH_TAG = "<!--sentinel-triage-agent-hash:{}-->"
 
@@ -187,6 +190,7 @@ def writeback_node(state: TriageState) -> dict:
     Returns:
         A dictionary containing state updates for the writeback node.
     """
+    logger.info("node_entry", node="writeback")
     incident_id = state["incident_id"]
     comment_posted = False
     incident_closed = False
@@ -204,8 +208,10 @@ def writeback_node(state: TriageState) -> dict:
             post_incident_comment(incident_id, comment_text + "\n" + fingerprint)
             comment_posted = True
     except Exception as e:
+        logger.error("node_error", node="writeback", exc_info=True)
         errors.append(f"Comment post failed: {str(e)}")
 
+    logger.info("node_exit", node="writeback")
     return {
         "comment_posted": comment_posted,
         "incident_closed": incident_closed,
@@ -224,6 +230,7 @@ def close_review_node(state: TriageState) -> dict:
     Returns:
         A dictionary containing state updates for the close review node.
     """
+    logger.info("node_entry", node="close_review")
     incident_closed = False
     errors = []
 
@@ -237,8 +244,10 @@ def close_review_node(state: TriageState) -> dict:
             )
             incident_closed = True
         except Exception as e:
+            logger.error("node_error", node="close_review", exc_info=True)
             errors.append(f"Close approval failed: {str(e)}")
 
+    logger.info("node_exit", node="close_review")
     return {
         "incident_closed": incident_closed,
         "errors": errors,

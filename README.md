@@ -106,6 +106,11 @@ ABUSEIPDB_API_KEY=
 CHROMA_HOST=localhost
 CHROMA_PORT=8000
 
+# LangSmith Tracing
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_API_KEY=
+LANGCHAIN_PROJECT=sentinel-triage-agent
+
 # CTI enrichment thresholds - tunable per environment (see .env.example for rationale)
 VT_MALICIOUS_THRESHOLD=5
 ABUSEIPDB_MALICIOUS_THRESHOLD=75

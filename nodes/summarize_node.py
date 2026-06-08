@@ -3,6 +3,9 @@ Condenses the raw incident data before passing it to the LLM.
 """
 
 from state import TriageState
+import structlog
+
+logger = structlog.get_logger(__name__)
 
 MAX_DESCRIPTION_CHARS = 500
 MAX_ALERT_CHARS = 300
@@ -18,6 +21,7 @@ def summarize_node(state: TriageState) -> dict:
     Returns:
         A dictionary containing the state updates for the condensed summary.
     """
+    logger.info("node_entry", node="summarize")
     # Truncate the incident description to avoid blowing the context window
     description = state["incident_description"][:MAX_DESCRIPTION_CHARS]
     if len(state["incident_description"]) > MAX_DESCRIPTION_CHARS:
@@ -46,4 +50,5 @@ ASSOCIATED ALERTS ({len(state["raw_alerts"])} total, showing first 5):
 {chr(10).join(alert_summaries) or "No alerts attached."}
 """.strip()
 
+    logger.info("node_exit", node="summarize")
     return {"condensed_summary": condensed}

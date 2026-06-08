@@ -14,31 +14,17 @@ import asyncio
 import time
 from dotenv import load_dotenv
 import uuid
-import logging
-import contextvars
+import structlog
 from typing import Any
 from metrics import TRIAGE_DURATION, TRIAGE_TOTAL, TRIAGE_FP_TOTAL
 from sentinel_api import list_incidents
 from graph import build_graph
 from nodes.learning_node import flush_and_shutdown
 from nodes.enrich_node import close_session as close_enrich_session
+from logging_config import setup_logging
 
-incident_context = contextvars.ContextVar("incident_id", default="-")
-
-class CorrelationIdFilter(logging.Filter):
-    def filter(self, record):
-        record.incident_id = incident_context.get()
-        return True
-
-logging.basicConfig(
-    level=logging.INFO, 
-    format='%(asctime)s - [%(incident_id)s] - %(name)s - %(levelname)s - %(message)s'
-)
-
-for handler in logging.root.handlers:
-    handler.addFilter(CorrelationIdFilter())
-
-logger = logging.getLogger(__name__)
+setup_logging()
+logger = structlog.get_logger(__name__)
 
 load_dotenv()
 
@@ -144,7 +130,8 @@ async def process_incident(incident, graph, semaphore, console_lock):
         None
     """
     incident_id = incident["name"]  # Sentinel uses 'name' as the unique ID
-    incident_context.set(incident_id)
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(incident_id=incident_id)
     incident_title = incident["properties"]["title"]
     
     logger.info(f"Processing: {incident_title} (ID: {incident_id})")

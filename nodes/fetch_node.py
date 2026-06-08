@@ -1,7 +1,7 @@
 """
 Fetches a Sentinel incident and its associated alerts.
 """
-import logging
+import structlog
 from pydantic import ValidationError
 from models.validation import SentinelAlert
 from models.exceptions import SentinelAlertValidationError
@@ -9,7 +9,7 @@ from typing import Any
 from sentinel_api import get_incident, list_incident_alerts
 from state import TriageState
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 def fetch_node(state: TriageState) -> dict:
     """
@@ -23,6 +23,7 @@ def fetch_node(state: TriageState) -> dict:
         A dictionary containing the state updates for the fetched incident.
     """
     incident_id = state["incident_id"]
+    logger.info("node_entry", node="fetch")
     errors: list[str] = []
 
     # Single canonical result with safe defaults - avoids duplicating
@@ -50,6 +51,7 @@ def fetch_node(state: TriageState) -> dict:
     except Exception as e:
         # Incident fetch is fatal - record the error and return early with
         # whatever partial data we have (all defaults in this case).
+        logger.error("node_error", node="fetch", exc_info=True)
         errors.append(f"Fatal fetch error: {str(e)}")
         return result
 
@@ -72,8 +74,11 @@ def fetch_node(state: TriageState) -> dict:
         result["raw_alerts"] = valid_alerts
 
     except SentinelAlertValidationError as e:
+        logger.error("node_error", node="fetch", exc_info=True)
         errors.append(f"Alert validation failed: {str(e)}")
     except Exception as e:
+        logger.error("node_error", node="fetch", exc_info=True)
         errors.append(f"Alert fetch failed: {str(e)}")
     
+    logger.info("node_exit", node="fetch")
     return result

@@ -1,0 +1,357 @@
+2026-06-08T06:15:50.879700Z [info     ] Sentinel Triage Agent starting... [__main__] _from_structlog=True _record=<LogRecord: __main__, 20, C:\sentinel-triage-agent\main.py, 270, "{'event': 'Sentinel Triage Agent starting...', 'level': 'info', 'logger': '__main__', 'timestamp': '2026-06-08T06:15:50.879700Z'}">
+2026-06-08T06:15:50.880032Z [warning  ] Failed to fetch incidents (attempt 1/5): Missing required environment variables: SUBSCRIPTION_ID, RESOURCE_GROUP, WORKSPACE_NAME. Set them in .env or the deployment environment.. Retrying in 2.39 seconds... [__main__] _from_structlog=True _record=<LogRecord: __main__, 30, C:\sentinel-triage-agent\main.py, 282, "{'event': 'Failed to fetch incidents (attempt 1/5): Missing required environment variables: SUBSCRIPTION_ID, RESOURCE_GROUP, WORKSPACE_NAME. Set them in .env or the deployment environment.. Retrying in 2.39 seconds...', 'level': 'warning', 'logger': '__main__', 'timestamp': '2026-06-08T06:15:50.880032Z'}">
+2026-06-08T06:15:53.269777Z [warning  ] Failed to fetch incidents (attempt 2/5): Missing required environment variables: SUBSCRIPTION_ID, RESOURCE_GROUP, WORKSPACE_NAME. Set them in .env or the deployment environment.. Retrying in 4.53 seconds... [__main__] _from_structlog=True _record=<LogRecord: __main__, 30, C:\sentinel-triage-agent\main.py, 282, "{'event': 'Failed to fetch incidents (attempt 2/5): Missing required environment variables: SUBSCRIPTION_ID, RESOURCE_GROUP, WORKSPACE_NAME. Set them in .env or the deployment environment.. Retrying in 4.53 seconds...', 'level': 'warning', 'logger': '__main__', 'timestamp': '2026-06-08T06:15:53.269777Z'}">
+2026-06-08T06:15:57.816120Z [warning  ] Failed to fetch incidents (attempt 3/5): Missing required environment variables: SUBSCRIPTION_ID, RESOURCE_GROUP, WORKSPACE_NAME. Set them in .env or the deployment environment.. Retrying in 8.22 seconds... [__main__] _from_structlog=True _record=<LogRecord: __main__, 30, C:\sentinel-triage-agent\main.py, 282, "{'event': 'Failed to fetch incidents (attempt 3/5): Missing required environment variables: SUBSCRIPTION_ID, RESOURCE_GROUP, WORKSPACE_NAME. Set them in .env or the deployment environment.. Retrying in 8.22 seconds...', 'level': 'warning', 'logger': '__main__', 'timestamp': '2026-06-08T06:15:57.816120Z'}">
+2026-06-08T06:16:40.350479Z [info     ] Processing mock incident: ID mock-incident-1e978341 [__main__] _from_structlog=True _record=<LogRecord: __main__, 20, C:\sentinel-triage-agent\run_mock.py, 22, "{'event': 'Processing mock incident: ID mock-incident-1e978341', 'incident_id': 'mock-incident-1e978341', 'level': 'info', 'logger': '__main__', 'timestamp': '2026-06-08T06:16:40.350479Z'}"> incident_id=mock-incident-1e978341
+2026-06-08T06:17:01.033062Z [info     ] Processing mock incident: ID mock-incident-46823c08 [__main__] _from_structlog=True _record=<LogRecord: __main__, 20, C:\sentinel-triage-agent\run_mock.py, 22, "{'event': 'Processing mock incident: ID mock-incident-46823c08', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': '__main__', 'timestamp': '2026-06-08T06:17:01.033062Z'}"> incident_id=mock-incident-46823c08
+2026-06-08T06:17:03.415334Z [info     ] Starting graph execution...    [__main__] _from_structlog=True _record=<LogRecord: __main__, 20, C:\sentinel-triage-agent\run_mock.py, 80, "{'event': 'Starting graph execution...', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': '__main__', 'timestamp': '2026-06-08T06:17:03.415334Z'}"> incident_id=mock-incident-46823c08
+2026-06-08T06:17:03.418074Z [info     ] node_entry                     [nodes.fetch_node] _from_structlog=True _record=<LogRecord: nodes.fetch_node, 20, C:\sentinel-triage-agent\nodes\fetch_node.py, 26, "{'node': 'fetch', 'event': 'node_entry', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': 'nodes.fetch_node', 'timestamp': '2026-06-08T06:17:03.418074Z'}"> incident_id=mock-incident-46823c08 node=fetch
+2026-06-08T06:17:03.418602Z [error    ] Sentinel alert validation failed. Raw input: %s [nodes.fetch_node] _from_structlog=True _record=<LogRecord: nodes.fetch_node, 40, C:\sentinel-triage-agent\nodes\fetch_node.py, 69, "{'positional_args': ({'id': 'alert1', 'name': 'Alert', 'properties': {'alertDisplayName': 'Mock Alert', 'description': 'Mock desc', 'entities': [{'Type': 'ip', 'Address': '8.8.8.8'}], 'timeGenerated': '2024-01-01T00:00:00Z', 'providerName': 'Test'}},), 'event': 'Sentinel alert validation failed. Raw input: %s', 'incident_id': 'mock-incident-46823c08', 'level': 'error', 'logger': 'nodes.fetch_node', 'timestamp': '2026-06-08T06:17:03.418602Z'}"> incident_id=mock-incident-46823c08 positional_args=({'id': 'alert1', 'name': 'Alert', 'properties': {'alertDisplayName': 'Mock Alert', 'description': 'Mock desc', 'entities': [{'Type': 'ip', 'Address': '8.8.8.8'}], 'timeGenerated': '2024-01-01T00:00:00Z', 'providerName': 'Test'}},)
+2026-06-08T06:17:03.419244Z [error    ] node_error                     [nodes.fetch_node] _from_structlog=True _record=<LogRecord: nodes.fetch_node, 40, C:\sentinel-triage-agent\nodes\fetch_node.py, 77, "{'node': 'fetch', 'event': 'node_error', 'incident_id': 'mock-incident-46823c08', 'level': 'error', 'logger': 'nodes.fetch_node', 'timestamp': '2026-06-08T06:17:03.419244Z', 'exception': 'Traceback (most recent call last):\n  File "C:\\sentinel-triage-agent\\nodes\\fetch_node.py", line 65, in fetch_node\n    valid_alert = SentinelAlert.model_validate(raw_alert)\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\pydantic\\main.py", line 732, in model_validate\n    return cls.__pydantic_validator__.validate_python(\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^\n        obj,\n        ^^^^\n    ...<5 lines>...\n        by_name=by_name,\n        ^^^^^^^^^^^^^^^^\n    )\n    ^\npydantic_core._pydantic_core.ValidationError: 4 validation errors for SentinelAlert\nproperties.severity\n  Field required [type=missing, input_value={\'alertDisplayName\': \'Moc... \'providerName\': \'Test\'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nproperties.startTimeUtc\n  Field required [type=missing, input_value={\'alertDisplayName\': \'Moc... \'providerName\': \'Test\'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nproperties.endTimeUtc\n  Field required [type=missing, input_value={\'alertDisplayName\': \'Moc... \'providerName\': \'Test\'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nproperties.entities.0.type\n  Field required [type=missing, input_value={\'Type\': \'ip\', \'Address\': \'8.8.8.8\'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File "C:\\sentinel-triage-agent\\nodes\\fetch_node.py", line 70, in fetch_node\n    raise SentinelAlertValidationError(\n    ...<2 lines>...\n    ) from exc\nmodels.exceptions.SentinelAlertValidationError: Alert schema mismatch: 4 validation errors for SentinelAlert\nproperties.severity\n  Field required [type=missing, input_value={\'alertDisplayName\': \'Moc... \'providerName\': \'Test\'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nproperties.startTimeUtc\n  Field required [type=missing, input_value={\'alertDisplayName\': \'Moc... \'providerName\': \'Test\'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nproperties.endTimeUtc\n  Field required [type=missing, input_value={\'alertDisplayName\': \'Moc... \'providerName\': \'Test\'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nproperties.entities.0.type\n  Field required [type=missing, input_value={\'Type\': \'ip\', \'Address\': \'8.8.8.8\'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing'}"> incident_id=mock-incident-46823c08 node=fetch
+Traceback (most recent call last):
+  File "C:\sentinel-triage-agent\nodes\fetch_node.py", line 65, in fetch_node
+    valid_alert = SentinelAlert.model_validate(raw_alert)
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\pydantic\main.py", line 732, in model_validate
+    return cls.__pydantic_validator__.validate_python(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        obj,
+        ^^^^
+    ...<5 lines>...
+        by_name=by_name,
+        ^^^^^^^^^^^^^^^^
+    )
+    ^
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for SentinelAlert
+properties.severity
+  Field required [type=missing, input_value={'alertDisplayName': 'Moc... 'providerName': 'Test'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+properties.startTimeUtc
+  Field required [type=missing, input_value={'alertDisplayName': 'Moc... 'providerName': 'Test'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+properties.endTimeUtc
+  Field required [type=missing, input_value={'alertDisplayName': 'Moc... 'providerName': 'Test'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+properties.entities.0.type
+  Field required [type=missing, input_value={'Type': 'ip', 'Address': '8.8.8.8'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\sentinel-triage-agent\nodes\fetch_node.py", line 70, in fetch_node
+    raise SentinelAlertValidationError(
+    ...<2 lines>...
+    ) from exc
+models.exceptions.SentinelAlertValidationError: Alert schema mismatch: 4 validation errors for SentinelAlert
+properties.severity
+  Field required [type=missing, input_value={'alertDisplayName': 'Moc... 'providerName': 'Test'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+properties.startTimeUtc
+  Field required [type=missing, input_value={'alertDisplayName': 'Moc... 'providerName': 'Test'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+properties.endTimeUtc
+  Field required [type=missing, input_value={'alertDisplayName': 'Moc... 'providerName': 'Test'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+properties.entities.0.type
+  Field required [type=missing, input_value={'Type': 'ip', 'Address': '8.8.8.8'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+2026-06-08T06:17:03.420479Z [info     ] node_exit                      [nodes.fetch_node] _from_structlog=True _record=<LogRecord: nodes.fetch_node, 20, C:\sentinel-triage-agent\nodes\fetch_node.py, 83, "{'node': 'fetch', 'event': 'node_exit', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': 'nodes.fetch_node', 'timestamp': '2026-06-08T06:17:03.420479Z'}"> incident_id=mock-incident-46823c08 node=fetch
+2026-06-08T06:17:03.421380Z [info     ] node_entry                     [nodes.summarize_node] _from_structlog=True _record=<LogRecord: nodes.summarize_node, 20, C:\sentinel-triage-agent\nodes\summarize_node.py, 24, "{'node': 'summarize', 'event': 'node_entry', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': 'nodes.summarize_node', 'timestamp': '2026-06-08T06:17:03.421380Z'}"> incident_id=mock-incident-46823c08 node=summarize
+2026-06-08T06:17:03.421564Z [info     ] node_exit                      [nodes.summarize_node] _from_structlog=True _record=<LogRecord: nodes.summarize_node, 20, C:\sentinel-triage-agent\nodes\summarize_node.py, 53, "{'node': 'summarize', 'event': 'node_exit', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': 'nodes.summarize_node', 'timestamp': '2026-06-08T06:17:03.421564Z'}"> incident_id=mock-incident-46823c08 node=summarize
+2026-06-08T06:17:03.422102Z [info     ] node_entry                     [nodes.extract_node] _from_structlog=True _record=<LogRecord: nodes.extract_node, 20, C:\sentinel-triage-agent\nodes\extract_node.py, 156, "{'node': 'extract', 'event': 'node_entry', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': 'nodes.extract_node', 'timestamp': '2026-06-08T06:17:03.422102Z'}"> incident_id=mock-incident-46823c08 node=extract
+2026-06-08T06:17:03.422826Z [info     ] llm_call_start                 [nodes.extract_node] _from_structlog=True _record=<LogRecord: nodes.extract_node, 20, C:\sentinel-triage-agent\nodes\extract_node.py, 204, "{'node': 'extract', 'event': 'llm_call_start', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': 'nodes.extract_node', 'timestamp': '2026-06-08T06:17:03.422826Z'}"> incident_id=mock-incident-46823c08 node=extract
+2026-06-08T06:17:03.423084Z [info     ] llm_call_end                   [nodes.extract_node] _from_structlog=True _record=<LogRecord: nodes.extract_node, 20, C:\sentinel-triage-agent\nodes\extract_node.py, 215, "{'node': 'extract', 'output_tokens': 100, 'event': 'llm_call_end', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': 'nodes.extract_node', 'timestamp': '2026-06-08T06:17:03.423084Z'}"> incident_id=mock-incident-46823c08 node=extract output_tokens=100
+2026-06-08T06:17:03.423277Z [info     ] node_exit                      [nodes.extract_node] _from_structlog=True _record=<LogRecord: nodes.extract_node, 20, C:\sentinel-triage-agent\nodes\extract_node.py, 246, "{'node': 'extract', 'event': 'node_exit', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': 'nodes.extract_node', 'timestamp': '2026-06-08T06:17:03.423277Z'}"> incident_id=mock-incident-46823c08 node=extract
+2026-06-08T06:17:03.424021Z [info     ] node_entry                     [nodes.analyst_node] _from_structlog=True _record=<LogRecord: nodes.analyst_node, 20, C:\sentinel-triage-agent\nodes\analyst_node.py, 306, "{'node': 'analyst', 'event': 'node_entry', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': 'nodes.analyst_node', 'timestamp': '2026-06-08T06:17:03.424021Z'}"> incident_id=mock-incident-46823c08 node=analyst
+2026-06-08T06:17:12.132537Z [error    ] node_error                     [nodes.analyst_node] _from_structlog=True _record=<LogRecord: nodes.analyst_node, 40, C:\sentinel-triage-agent\nodes\analyst_node.py, 373, "{'node': 'analyst', 'event': 'node_error', 'incident_id': 'mock-incident-46823c08', 'level': 'error', 'logger': 'nodes.analyst_node', 'timestamp': '2026-06-08T06:17:12.132537Z', 'exception': 'Traceback (most recent call last):\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpx\\_transports\\default.py", line 101, in map_httpcore_exceptions\n    yield\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpx\\_transports\\default.py", line 250, in handle_request\n    resp = self._pool.handle_request(req)\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpcore\\_sync\\connection_pool.py", line 256, in handle_request\n    raise exc from None\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpcore\\_sync\\connection_pool.py", line 236, in handle_request\n    response = connection.handle_request(\n        pool_request.request\n    )\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpcore\\_sync\\connection.py", line 101, in handle_request\n    raise exc\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpcore\\_sync\\connection.py", line 78, in handle_request\n    stream = self._connect(request)\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpcore\\_sync\\connection.py", line 124, in _connect\n    stream = self._network_backend.connect_tcp(**kwargs)\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpcore\\_backends\\sync.py", line 207, in connect_tcp\n    with map_exceptions(exc_map):\n         ~~~~~~~~~~~~~~^^^^^^^^^\n  File "C:\\Users\\enesa\\AppData\\Roaming\\uv\\python\\cpython-3.13.5-windows-x86_64-none\\Lib\\contextlib.py", line 162, in __exit__\n    self.gen.throw(value)\n    ~~~~~~~~~~~~~~^^^^^^^\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpcore\\_exceptions.py", line 14, in map_exceptions\n    raise to_exc(exc) from exc\nhttpcore.ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\chromadb\\api\\client.py", line 134, in get_user_identity\n    return self._server.get_user_identity()\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\chromadb\\telemetry\\opentelemetry\\__init__.py", line 150, in wrapper\n    return f(*args, **kwargs)\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\chromadb\\api\\fastapi.py", line 226, in get_user_identity\n    return UserIdentity(**self._make_request("get", "/auth/identity"))\n                          ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\chromadb\\api\\fastapi.py", line 131, in _make_request\n    response = self._session.request(method, url, **cast(Any, kwargs))\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpx\\_client.py", line 825, in request\n    return self.send(request, auth=auth, follow_redirects=follow_redirects)\n           ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpx\\_client.py", line 914, in send\n    response = self._send_handling_auth(\n        request,\n    ...<2 lines>...\n        history=[],\n    )\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpx\\_client.py", line 942, in _send_handling_auth\n    response = self._send_handling_redirects(\n        request,\n        follow_redirects=follow_redirects,\n        history=history,\n    )\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpx\\_client.py", line 979, in _send_handling_redirects\n    response = self._send_single_request(request)\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpx\\_client.py", line 1014, in _send_single_request\n    response = transport.handle_request(request)\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpx\\_transports\\default.py", line 249, in handle_request\n    with map_httpcore_exceptions():\n         ~~~~~~~~~~~~~~~~~~~~~~~^^\n  File "C:\\Users\\enesa\\AppData\\Roaming\\uv\\python\\cpython-3.13.5-windows-x86_64-none\\Lib\\contextlib.py", line 162, in __exit__\n    self.gen.throw(value)\n    ~~~~~~~~~~~~~~^^^^^^^\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpx\\_transports\\default.py", line 118, in map_httpcore_exceptions\n    raise mapped_exc(message) from exc\nhttpx.ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File "C:\\sentinel-triage-agent\\nodes\\analyst_node.py", line 324, in analyst_node\n    results = await retrieve_similar_mismatches(\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        state.get("condensed_summary", "No summary available."), top_k=3\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File "C:\\sentinel-triage-agent\\nodes\\analyst_node.py", line 93, in retrieve_similar_mismatches\n    return await _analyst_chroma.retrieve_similar_mismatches(condensed_summary, top_k)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "C:\\sentinel-triage-agent\\nodes\\analyst_node.py", line 57, in retrieve_similar_mismatches\n    self._ensure_initialized()\n    ~~~~~~~~~~~~~~~~~~~~~~~~^^\n  File "C:\\sentinel-triage-agent\\nodes\\analyst_node.py", line 42, in _ensure_initialized\n    self.client = chromadb.HttpClient(host=host, port=port)\n                  ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\chromadb\\__init__.py", line 311, in HttpClient\n    return ClientCreator(tenant=tenant, database=database, settings=settings)\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\chromadb\\api\\client.py", line 79, in __init__\n    user_identity = self.get_user_identity()\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\chromadb\\api\\client.py", line 136, in get_user_identity\n    raise ValueError(\n        "Could not connect to a Chroma server. Are you sure it is running?"\n    )\nValueError: Could not connect to a Chroma server. Are you sure it is running?'}"> incident_id=mock-incident-46823c08 node=analyst
+Traceback (most recent call last):
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpx\_transports\default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpx\_transports\default.py", line 250, in handle_request
+    resp = self._pool.handle_request(req)
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpcore\_sync\connection_pool.py", line 256, in handle_request
+    raise exc from None
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpcore\_sync\connection_pool.py", line 236, in handle_request
+    response = connection.handle_request(
+        pool_request.request
+    )
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpcore\_sync\connection.py", line 101, in handle_request
+    raise exc
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpcore\_sync\connection.py", line 78, in handle_request
+    stream = self._connect(request)
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpcore\_sync\connection.py", line 124, in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpcore\_backends\sync.py", line 207, in connect_tcp
+    with map_exceptions(exc_map):
+         ~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\enesa\AppData\Roaming\uv\python\cpython-3.13.5-windows-x86_64-none\Lib\contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpcore\_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\chromadb\api\client.py", line 134, in get_user_identity
+    return self._server.get_user_identity()
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\chromadb\telemetry\opentelemetry\__init__.py", line 150, in wrapper
+    return f(*args, **kwargs)
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\chromadb\api\fastapi.py", line 226, in get_user_identity
+    return UserIdentity(**self._make_request("get", "/auth/identity"))
+                          ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\chromadb\api\fastapi.py", line 131, in _make_request
+    response = self._session.request(method, url, **cast(Any, kwargs))
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpx\_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpx\_client.py", line 914, in send
+    response = self._send_handling_auth(
+        request,
+    ...<2 lines>...
+        history=[],
+    )
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpx\_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+        request,
+        follow_redirects=follow_redirects,
+        history=history,
+    )
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpx\_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpx\_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpx\_transports\default.py", line 249, in handle_request
+    with map_httpcore_exceptions():
+         ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\enesa\AppData\Roaming\uv\python\cpython-3.13.5-windows-x86_64-none\Lib\contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpx\_transports\default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\sentinel-triage-agent\nodes\analyst_node.py", line 324, in analyst_node
+    results = await retrieve_similar_mismatches(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        state.get("condensed_summary", "No summary available."), top_k=3
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\sentinel-triage-agent\nodes\analyst_node.py", line 93, in retrieve_similar_mismatches
+    return await _analyst_chroma.retrieve_similar_mismatches(condensed_summary, top_k)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\sentinel-triage-agent\nodes\analyst_node.py", line 57, in retrieve_similar_mismatches
+    self._ensure_initialized()
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\sentinel-triage-agent\nodes\analyst_node.py", line 42, in _ensure_initialized
+    self.client = chromadb.HttpClient(host=host, port=port)
+                  ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\chromadb\__init__.py", line 311, in HttpClient
+    return ClientCreator(tenant=tenant, database=database, settings=settings)
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\chromadb\api\client.py", line 79, in __init__
+    user_identity = self.get_user_identity()
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\chromadb\api\client.py", line 136, in get_user_identity
+    raise ValueError(
+        "Could not connect to a Chroma server. Are you sure it is running?"
+    )
+ValueError: Could not connect to a Chroma server. Are you sure it is running?
+2026-06-08T06:17:12.140693Z [info     ] node_entry                     [nodes.kql_node] _from_structlog=True _record=<LogRecord: nodes.kql_node, 20, C:\sentinel-triage-agent\nodes\kql_node.py, 141, "{'node': 'kql', 'event': 'node_entry', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': 'nodes.kql_node', 'timestamp': '2026-06-08T06:17:12.140693Z'}"> incident_id=mock-incident-46823c08 node=kql
+2026-06-08T06:17:12.141173Z [info     ] llm_call_start                 [nodes.kql_node] _from_structlog=True _record=<LogRecord: nodes.kql_node, 20, C:\sentinel-triage-agent\nodes\kql_node.py, 176, "{'node': 'kql', 'event': 'llm_call_start', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': 'nodes.kql_node', 'timestamp': '2026-06-08T06:17:12.141173Z'}"> incident_id=mock-incident-46823c08 node=kql
+2026-06-08T06:17:12.141458Z [info     ] llm_call_end                   [nodes.kql_node] _from_structlog=True _record=<LogRecord: nodes.kql_node, 20, C:\sentinel-triage-agent\nodes\kql_node.py, 187, "{'node': 'kql', 'output_tokens': 100, 'event': 'llm_call_end', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': 'nodes.kql_node', 'timestamp': '2026-06-08T06:17:12.141458Z'}"> incident_id=mock-incident-46823c08 node=kql output_tokens=100
+2026-06-08T06:17:12.141862Z [info     ] node_exit                      [nodes.kql_node] _from_structlog=True _record=<LogRecord: nodes.kql_node, 20, C:\sentinel-triage-agent\nodes\kql_node.py, 197, "{'node': 'kql', 'event': 'node_exit', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': 'nodes.kql_node', 'timestamp': '2026-06-08T06:17:12.141862Z'}"> incident_id=mock-incident-46823c08 node=kql
+2026-06-08T06:17:12.142731Z [info     ] node_entry                     [nodes.writeback_node] _from_structlog=True _record=<LogRecord: nodes.writeback_node, 20, C:\sentinel-triage-agent\nodes\writeback_node.py, 193, "{'node': 'writeback', 'event': 'node_entry', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': 'nodes.writeback_node', 'timestamp': '2026-06-08T06:17:12.142731Z'}"> incident_id=mock-incident-46823c08 node=writeback
+2026-06-08T06:17:12.143006Z [info     ] node_exit                      [nodes.writeback_node] _from_structlog=True _record=<LogRecord: nodes.writeback_node, 20, C:\sentinel-triage-agent\nodes\writeback_node.py, 214, "{'node': 'writeback', 'event': 'node_exit', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': 'nodes.writeback_node', 'timestamp': '2026-06-08T06:17:12.143006Z'}"> incident_id=mock-incident-46823c08 node=writeback
+2026-06-08T06:17:12.144481Z [info     ] Applying human decisions: %s   [__main__] _from_structlog=True _record=<LogRecord: __main__, 20, C:\sentinel-triage-agent\run_mock.py, 90, "{'positional_args': ({'containment_approved': True, 'close_approved': True, 'human_classification': 'TruePositive', 'human_classification_reason': 'Confirmed malicious IP and behavior.'},), 'event': 'Applying human decisions: %s', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': '__main__', 'timestamp': '2026-06-08T06:17:12.144481Z'}"> incident_id=mock-incident-46823c08 positional_args=({'containment_approved': True, 'close_approved': True, 'human_classification': 'TruePositive', 'human_classification_reason': 'Confirmed malicious IP and behavior.'},)
+2026-06-08T06:17:12.145469Z [info     ] Resuming graph execution post-HITL... [__main__] _from_structlog=True _record=<LogRecord: __main__, 20, C:\sentinel-triage-agent\run_mock.py, 93, "{'event': 'Resuming graph execution post-HITL...', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': '__main__', 'timestamp': '2026-06-08T06:17:12.145469Z'}"> incident_id=mock-incident-46823c08
+2026-06-08T06:17:12.146253Z [info     ] node_entry                     [nodes.containment_node] _from_structlog=True _record=<LogRecord: nodes.containment_node, 20, C:\sentinel-triage-agent\nodes\containment_node.py, 74, "{'node': 'containment', 'event': 'node_entry', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': 'nodes.containment_node', 'timestamp': '2026-06-08T06:17:12.146253Z'}"> incident_id=mock-incident-46823c08 node=containment
+2026-06-08T06:17:12.146441Z [info     ] Containment approved; proceeding with device isolation [nodes.containment_node] _from_structlog=True _record=<LogRecord: nodes.containment_node, 20, C:\sentinel-triage-agent\nodes\containment_node.py, 83, "{'event': 'Containment approved; proceeding with device isolation', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': 'nodes.containment_node', 'timestamp': '2026-06-08T06:17:12.146441Z'}"> incident_id=mock-incident-46823c08
+2026-06-08T06:17:12.146590Z [info     ] Attempting to isolate 1 targets: ['server1'] [nodes.containment_node] _from_structlog=True _record=<LogRecord: nodes.containment_node, 20, C:\sentinel-triage-agent\nodes\containment_node.py, 106, "{'event': "Attempting to isolate 1 targets: ['server1']", 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': 'nodes.containment_node', 'timestamp': '2026-06-08T06:17:12.146590Z'}"> incident_id=mock-incident-46823c08
+2026-06-08T06:17:12.146750Z [info     ] node_exit                      [nodes.containment_node] _from_structlog=True _record=<LogRecord: nodes.containment_node, 20, C:\sentinel-triage-agent\nodes\containment_node.py, 119, "{'node': 'containment', 'event': 'node_exit', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': 'nodes.containment_node', 'timestamp': '2026-06-08T06:17:12.146750Z'}"> incident_id=mock-incident-46823c08 node=containment
+2026-06-08T06:17:12.147383Z [info     ] node_entry                     [nodes.writeback_node] _from_structlog=True _record=<LogRecord: nodes.writeback_node, 20, C:\sentinel-triage-agent\nodes\writeback_node.py, 233, "{'node': 'close_review', 'event': 'node_entry', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': 'nodes.writeback_node', 'timestamp': '2026-06-08T06:17:12.147383Z'}"> incident_id=mock-incident-46823c08 node=close_review
+2026-06-08T06:17:12.147633Z [info     ] node_exit                      [nodes.writeback_node] _from_structlog=True _record=<LogRecord: nodes.writeback_node, 20, C:\sentinel-triage-agent\nodes\writeback_node.py, 250, "{'node': 'close_review', 'event': 'node_exit', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': 'nodes.writeback_node', 'timestamp': '2026-06-08T06:17:12.147633Z'}"> incident_id=mock-incident-46823c08 node=close_review
+2026-06-08T06:17:12.148330Z [info     ] node_entry                     [nodes.learning_node] _from_structlog=True _record=<LogRecord: nodes.learning_node, 20, C:\sentinel-triage-agent\nodes\learning_node.py, 341, "{'node': 'learning', 'event': 'node_entry', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': 'nodes.learning_node', 'timestamp': '2026-06-08T06:17:12.148330Z'}"> incident_id=mock-incident-46823c08 node=learning
+2026-06-08T06:17:12.148649Z [info     ] node_exit                      [nodes.learning_node] _from_structlog=True _record=<LogRecord: nodes.learning_node, 20, C:\sentinel-triage-agent\nodes\learning_node.py, 355, "{'node': 'learning', 'event': 'node_exit', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': 'nodes.learning_node', 'timestamp': '2026-06-08T06:17:12.148649Z'}"> incident_id=mock-incident-46823c08 node=learning
+2026-06-08T06:17:12.149132Z [info     ] Final Classification: Undetermined [__main__] _from_structlog=True _record=<LogRecord: __main__, 20, C:\sentinel-triage-agent\run_mock.py, 96, "{'event': 'Final Classification: Undetermined', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': '__main__', 'timestamp': '2026-06-08T06:17:12.149132Z'}"> incident_id=mock-incident-46823c08
+2026-06-08T06:17:12.149314Z [info     ] Comment posted: True           [__main__] _from_structlog=True _record=<LogRecord: __main__, 20, C:\sentinel-triage-agent\run_mock.py, 97, "{'event': 'Comment posted: True', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': '__main__', 'timestamp': '2026-06-08T06:17:12.149314Z'}"> incident_id=mock-incident-46823c08
+2026-06-08T06:17:12.149452Z [info     ] Incident closed: True          [__main__] _from_structlog=True _record=<LogRecord: __main__, 20, C:\sentinel-triage-agent\run_mock.py, 98, "{'event': 'Incident closed: True', 'incident_id': 'mock-incident-46823c08', 'level': 'info', 'logger': '__main__', 'timestamp': '2026-06-08T06:17:12.149452Z'}"> incident_id=mock-incident-46823c08
+2026-06-08T06:17:16.405996Z [error    ] Failed to initialize ChromaDB singleton for learning node [nodes.learning_node] _from_structlog=True _record=<LogRecord: nodes.learning_node, 40, C:\sentinel-triage-agent\nodes\learning_node.py, 80, "{'event': 'Failed to initialize ChromaDB singleton for learning node', 'incident_id': 'mock-incident-46823c08', 'level': 'error', 'logger': 'nodes.learning_node', 'timestamp': '2026-06-08T06:17:16.405996Z', 'exception': 'Traceback (most recent call last):\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpx\\_transports\\default.py", line 101, in map_httpcore_exceptions\n    yield\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpx\\_transports\\default.py", line 250, in handle_request\n    resp = self._pool.handle_request(req)\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpcore\\_sync\\connection_pool.py", line 256, in handle_request\n    raise exc from None\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpcore\\_sync\\connection_pool.py", line 236, in handle_request\n    response = connection.handle_request(\n        pool_request.request\n    )\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpcore\\_sync\\connection.py", line 101, in handle_request\n    raise exc\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpcore\\_sync\\connection.py", line 78, in handle_request\n    stream = self._connect(request)\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpcore\\_sync\\connection.py", line 124, in _connect\n    stream = self._network_backend.connect_tcp(**kwargs)\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpcore\\_backends\\sync.py", line 207, in connect_tcp\n    with map_exceptions(exc_map):\n         ~~~~~~~~~~~~~~^^^^^^^^^\n  File "C:\\Users\\enesa\\AppData\\Roaming\\uv\\python\\cpython-3.13.5-windows-x86_64-none\\Lib\\contextlib.py", line 162, in __exit__\n    self.gen.throw(value)\n    ~~~~~~~~~~~~~~^^^^^^^\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpcore\\_exceptions.py", line 14, in map_exceptions\n    raise to_exc(exc) from exc\nhttpcore.ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\chromadb\\api\\client.py", line 134, in get_user_identity\n    return self._server.get_user_identity()\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\chromadb\\telemetry\\opentelemetry\\__init__.py", line 150, in wrapper\n    return f(*args, **kwargs)\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\chromadb\\api\\fastapi.py", line 226, in get_user_identity\n    return UserIdentity(**self._make_request("get", "/auth/identity"))\n                          ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\chromadb\\api\\fastapi.py", line 131, in _make_request\n    response = self._session.request(method, url, **cast(Any, kwargs))\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpx\\_client.py", line 825, in request\n    return self.send(request, auth=auth, follow_redirects=follow_redirects)\n           ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpx\\_client.py", line 914, in send\n    response = self._send_handling_auth(\n        request,\n    ...<2 lines>...\n        history=[],\n    )\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpx\\_client.py", line 942, in _send_handling_auth\n    response = self._send_handling_redirects(\n        request,\n        follow_redirects=follow_redirects,\n        history=history,\n    )\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpx\\_client.py", line 979, in _send_handling_redirects\n    response = self._send_single_request(request)\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpx\\_client.py", line 1014, in _send_single_request\n    response = transport.handle_request(request)\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpx\\_transports\\default.py", line 249, in handle_request\n    with map_httpcore_exceptions():\n         ~~~~~~~~~~~~~~~~~~~~~~~^^\n  File "C:\\Users\\enesa\\AppData\\Roaming\\uv\\python\\cpython-3.13.5-windows-x86_64-none\\Lib\\contextlib.py", line 162, in __exit__\n    self.gen.throw(value)\n    ~~~~~~~~~~~~~~^^^^^^^\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpx\\_transports\\default.py", line 118, in map_httpcore_exceptions\n    raise mapped_exc(message) from exc\nhttpx.ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File "C:\\sentinel-triage-agent\\nodes\\learning_node.py", line 76, in __init__\n    self.client = chromadb.HttpClient(host=host, port=port)\n                  ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\chromadb\\__init__.py", line 311, in HttpClient\n    return ClientCreator(tenant=tenant, database=database, settings=settings)\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\chromadb\\api\\client.py", line 79, in __init__\n    user_identity = self.get_user_identity()\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\chromadb\\api\\client.py", line 136, in get_user_identity\n    raise ValueError(\n        "Could not connect to a Chroma server. Are you sure it is running?"\n    )\nValueError: Could not connect to a Chroma server. Are you sure it is running?'}"> incident_id=mock-incident-46823c08
+Traceback (most recent call last):
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpx\_transports\default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpx\_transports\default.py", line 250, in handle_request
+    resp = self._pool.handle_request(req)
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpcore\_sync\connection_pool.py", line 256, in handle_request
+    raise exc from None
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpcore\_sync\connection_pool.py", line 236, in handle_request
+    response = connection.handle_request(
+        pool_request.request
+    )
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpcore\_sync\connection.py", line 101, in handle_request
+    raise exc
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpcore\_sync\connection.py", line 78, in handle_request
+    stream = self._connect(request)
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpcore\_sync\connection.py", line 124, in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpcore\_backends\sync.py", line 207, in connect_tcp
+    with map_exceptions(exc_map):
+         ~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\enesa\AppData\Roaming\uv\python\cpython-3.13.5-windows-x86_64-none\Lib\contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpcore\_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\chromadb\api\client.py", line 134, in get_user_identity
+    return self._server.get_user_identity()
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\chromadb\telemetry\opentelemetry\__init__.py", line 150, in wrapper
+    return f(*args, **kwargs)
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\chromadb\api\fastapi.py", line 226, in get_user_identity
+    return UserIdentity(**self._make_request("get", "/auth/identity"))
+                          ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\chromadb\api\fastapi.py", line 131, in _make_request
+    response = self._session.request(method, url, **cast(Any, kwargs))
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpx\_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpx\_client.py", line 914, in send
+    response = self._send_handling_auth(
+        request,
+    ...<2 lines>...
+        history=[],
+    )
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpx\_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+        request,
+        follow_redirects=follow_redirects,
+        history=history,
+    )
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpx\_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpx\_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpx\_transports\default.py", line 249, in handle_request
+    with map_httpcore_exceptions():
+         ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\enesa\AppData\Roaming\uv\python\cpython-3.13.5-windows-x86_64-none\Lib\contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpx\_transports\default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\sentinel-triage-agent\nodes\learning_node.py", line 76, in __init__
+    self.client = chromadb.HttpClient(host=host, port=port)
+                  ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\chromadb\__init__.py", line 311, in HttpClient
+    return ClientCreator(tenant=tenant, database=database, settings=settings)
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\chromadb\api\client.py", line 79, in __init__
+    user_identity = self.get_user_identity()
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\chromadb\api\client.py", line 136, in get_user_identity
+    raise ValueError(
+        "Could not connect to a Chroma server. Are you sure it is running?"
+    )
+ValueError: Could not connect to a Chroma server. Are you sure it is running?
+2026-06-08T06:17:16.411345Z [error    ] Unable to obtain ChromaDB singleton instance for learning_node flush_and_shutdown [nodes.learning_node] _from_structlog=True _record=<LogRecord: nodes.learning_node, 40, C:\sentinel-triage-agent\nodes\learning_node.py, 287, "{'event': 'Unable to obtain ChromaDB singleton instance for learning_node flush_and_shutdown', 'incident_id': 'mock-incident-46823c08', 'level': 'error', 'logger': 'nodes.learning_node', 'timestamp': '2026-06-08T06:17:16.411345Z', 'exception': 'Traceback (most recent call last):\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpx\\_transports\\default.py", line 101, in map_httpcore_exceptions\n    yield\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpx\\_transports\\default.py", line 250, in handle_request\n    resp = self._pool.handle_request(req)\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpcore\\_sync\\connection_pool.py", line 256, in handle_request\n    raise exc from None\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpcore\\_sync\\connection_pool.py", line 236, in handle_request\n    response = connection.handle_request(\n        pool_request.request\n    )\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpcore\\_sync\\connection.py", line 101, in handle_request\n    raise exc\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpcore\\_sync\\connection.py", line 78, in handle_request\n    stream = self._connect(request)\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpcore\\_sync\\connection.py", line 124, in _connect\n    stream = self._network_backend.connect_tcp(**kwargs)\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpcore\\_backends\\sync.py", line 207, in connect_tcp\n    with map_exceptions(exc_map):\n         ~~~~~~~~~~~~~~^^^^^^^^^\n  File "C:\\Users\\enesa\\AppData\\Roaming\\uv\\python\\cpython-3.13.5-windows-x86_64-none\\Lib\\contextlib.py", line 162, in __exit__\n    self.gen.throw(value)\n    ~~~~~~~~~~~~~~^^^^^^^\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpcore\\_exceptions.py", line 14, in map_exceptions\n    raise to_exc(exc) from exc\nhttpcore.ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\chromadb\\api\\client.py", line 134, in get_user_identity\n    return self._server.get_user_identity()\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\chromadb\\telemetry\\opentelemetry\\__init__.py", line 150, in wrapper\n    return f(*args, **kwargs)\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\chromadb\\api\\fastapi.py", line 226, in get_user_identity\n    return UserIdentity(**self._make_request("get", "/auth/identity"))\n                          ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\chromadb\\api\\fastapi.py", line 131, in _make_request\n    response = self._session.request(method, url, **cast(Any, kwargs))\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpx\\_client.py", line 825, in request\n    return self.send(request, auth=auth, follow_redirects=follow_redirects)\n           ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpx\\_client.py", line 914, in send\n    response = self._send_handling_auth(\n        request,\n    ...<2 lines>...\n        history=[],\n    )\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpx\\_client.py", line 942, in _send_handling_auth\n    response = self._send_handling_redirects(\n        request,\n        follow_redirects=follow_redirects,\n        history=history,\n    )\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpx\\_client.py", line 979, in _send_handling_redirects\n    response = self._send_single_request(request)\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpx\\_client.py", line 1014, in _send_single_request\n    response = transport.handle_request(request)\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpx\\_transports\\default.py", line 249, in handle_request\n    with map_httpcore_exceptions():\n         ~~~~~~~~~~~~~~~~~~~~~~~^^\n  File "C:\\Users\\enesa\\AppData\\Roaming\\uv\\python\\cpython-3.13.5-windows-x86_64-none\\Lib\\contextlib.py", line 162, in __exit__\n    self.gen.throw(value)\n    ~~~~~~~~~~~~~~^^^^^^^\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\httpx\\_transports\\default.py", line 118, in map_httpcore_exceptions\n    raise mapped_exc(message) from exc\nhttpx.ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File "C:\\sentinel-triage-agent\\nodes\\learning_node.py", line 285, in flush_and_shutdown\n    instance = ChromaSingleton.get_instance()\n  File "C:\\sentinel-triage-agent\\nodes\\learning_node.py", line 92, in get_instance\n    cls._instance = cls()\n                    ~~~^^\n  File "C:\\sentinel-triage-agent\\nodes\\learning_node.py", line 76, in __init__\n    self.client = chromadb.HttpClient(host=host, port=port)\n                  ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\chromadb\\__init__.py", line 311, in HttpClient\n    return ClientCreator(tenant=tenant, database=database, settings=settings)\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\chromadb\\api\\client.py", line 79, in __init__\n    user_identity = self.get_user_identity()\n  File "C:\\sentinel-triage-agent\\.venv\\Lib\\site-packages\\chromadb\\api\\client.py", line 136, in get_user_identity\n    raise ValueError(\n        "Could not connect to a Chroma server. Are you sure it is running?"\n    )\nValueError: Could not connect to a Chroma server. Are you sure it is running?'}"> incident_id=mock-incident-46823c08
+Traceback (most recent call last):
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpx\_transports\default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpx\_transports\default.py", line 250, in handle_request
+    resp = self._pool.handle_request(req)
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpcore\_sync\connection_pool.py", line 256, in handle_request
+    raise exc from None
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpcore\_sync\connection_pool.py", line 236, in handle_request
+    response = connection.handle_request(
+        pool_request.request
+    )
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpcore\_sync\connection.py", line 101, in handle_request
+    raise exc
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpcore\_sync\connection.py", line 78, in handle_request
+    stream = self._connect(request)
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpcore\_sync\connection.py", line 124, in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpcore\_backends\sync.py", line 207, in connect_tcp
+    with map_exceptions(exc_map):
+         ~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\enesa\AppData\Roaming\uv\python\cpython-3.13.5-windows-x86_64-none\Lib\contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpcore\_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\chromadb\api\client.py", line 134, in get_user_identity
+    return self._server.get_user_identity()
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\chromadb\telemetry\opentelemetry\__init__.py", line 150, in wrapper
+    return f(*args, **kwargs)
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\chromadb\api\fastapi.py", line 226, in get_user_identity
+    return UserIdentity(**self._make_request("get", "/auth/identity"))
+                          ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\chromadb\api\fastapi.py", line 131, in _make_request
+    response = self._session.request(method, url, **cast(Any, kwargs))
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpx\_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpx\_client.py", line 914, in send
+    response = self._send_handling_auth(
+        request,
+    ...<2 lines>...
+        history=[],
+    )
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpx\_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+        request,
+        follow_redirects=follow_redirects,
+        history=history,
+    )
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpx\_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpx\_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpx\_transports\default.py", line 249, in handle_request
+    with map_httpcore_exceptions():
+         ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\enesa\AppData\Roaming\uv\python\cpython-3.13.5-windows-x86_64-none\Lib\contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\httpx\_transports\default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\sentinel-triage-agent\nodes\learning_node.py", line 285, in flush_and_shutdown
+    instance = ChromaSingleton.get_instance()
+  File "C:\sentinel-triage-agent\nodes\learning_node.py", line 92, in get_instance
+    cls._instance = cls()
+                    ~~~^^
+  File "C:\sentinel-triage-agent\nodes\learning_node.py", line 76, in __init__
+    self.client = chromadb.HttpClient(host=host, port=port)
+                  ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\chromadb\__init__.py", line 311, in HttpClient
+    return ClientCreator(tenant=tenant, database=database, settings=settings)
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\chromadb\api\client.py", line 79, in __init__
+    user_identity = self.get_user_identity()
+  File "C:\sentinel-triage-agent\.venv\Lib\site-packages\chromadb\api\client.py", line 136, in get_user_identity
+    raise ValueError(
+        "Could not connect to a Chroma server. Are you sure it is running?"
+    )
+ValueError: Could not connect to a Chroma server. Are you sure it is running?

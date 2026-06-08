@@ -9,12 +9,12 @@ All API failures are captured as non-fatal errors in the errors list.
 """
 
 import asyncio
-import logging
+import structlog
 import re
 from sentinel_api import isolate_mde_device, resolve_mde_machine_id
 from state import TriageState
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Allow only safe hostname characters (letters, digits, hyphens, dots)
 _SAFE_HOSTNAME_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9.\-]{0,253}[a-zA-Z0-9]$")
@@ -71,11 +71,13 @@ async def containment_node(state: TriageState) -> dict:
     Returns:
         A dictionary containing the state updates for errors.
     """
+    logger.info("node_entry", node="containment")
     errors: list[str] = []
     
     # Guard clause: only execute if containment is approved
     if not state.get("containment_approved", False):
         logger.debug("Containment not approved; skipping containment_node")
+        logger.info("node_exit", node="containment")
         return {"errors": errors}
     
     logger.info("Containment approved; proceeding with device isolation")
@@ -98,6 +100,7 @@ async def containment_node(state: TriageState) -> dict:
 
     if not isolation_targets:
         logger.info("No valid hostnames or internal IPs found in entities; skipping MDE isolation")
+        logger.info("node_exit", node="containment")
         return {"errors": errors}
 
     logger.info(f"Attempting to isolate {len(isolation_targets)} targets: {isolation_targets}")
@@ -110,7 +113,8 @@ async def containment_node(state: TriageState) -> dict:
                 errors.append(err)
         except Exception as exc:
             error_msg = f"MDE isolation failed for {target}: {str(exc)}"
-            logger.error(error_msg)
+            logger.error("node_error", node="containment", exc_info=True)
             errors.append(error_msg)
     
+    logger.info("node_exit", node="containment")
     return {"errors": errors}

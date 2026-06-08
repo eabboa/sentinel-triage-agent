@@ -37,7 +37,7 @@ Graceful degradation:
 
 import asyncio
 import time
-import logging
+import structlog
 import os
 import aiohttp
 # pyrefly: ignore [missing-import]
@@ -51,7 +51,7 @@ from models.exceptions import AbuseIPDBResponseValidationError
 from models.exceptions import VirusTotalResponseValidationError
 from models.validation import VirusTotalResponse
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 DEFAULT_HTTP_TIMEOUT = 10
 RETRY_ATTEMPTS = 3
 
@@ -527,9 +527,11 @@ async def enrich_node(state: TriageState) -> dict:
     Returns:
         A dictionary containing state updates for cti_results, errors, and degraded_sources.
     """
+    logger.info("node_entry", node="enrich")
     entities = state.get("entities", {}) or {}
 
     if not any([entities.get("ips"), entities.get("urls"), entities.get("hashes"), entities.get("internal_ips")]):
+        logger.info("node_exit", node="enrich")
         return {"cti_results": {"ip_reports": [], "url_reports": [], "hash_reports": [], "internal_ip_reports": []}}
 
     cti_results, enrichment_errors, degraded = await _run_enrichment(entities)
@@ -540,4 +542,5 @@ async def enrich_node(state: TriageState) -> dict:
     if degraded:
         update["degraded_sources"] = degraded
 
+    logger.info("node_exit", node="enrich")
     return update

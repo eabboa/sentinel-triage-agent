@@ -11,8 +11,11 @@ This does not solve hallucination completely. But it tunes out.
 
 import json
 import os
+import structlog
 
 from state import TriageState
+
+logger = structlog.get_logger(__name__)
 
 
 # ── Schema Map: The KQL Reliability Layer ─────────────────────────────────────
@@ -135,8 +138,10 @@ async def kql_node(state: TriageState) -> dict:
     Raises:
         ValueError: If GOOGLE_API_KEY is not set.
     """
+    logger.info("node_entry", node="kql")
     # Skip KQL generation for false positives
     if state.get("classification") == "FalsePositive":
+        logger.info("node_exit", node="kql")
         return {"kql_queries": ["# No hunting queries generated - classified as FalsePositive"]}
 
     if not os.getenv("GOOGLE_API_KEY"):
@@ -168,10 +173,19 @@ async def kql_node(state: TriageState) -> dict:
     @llm_retry
     async def _invoke_llm():
         async with gemini_rate_limiter:
+            logger.info("llm_call_start", node="kql")
             return await llm.ainvoke(prompt)
 
     try:
         response = await _invoke_llm()
+        metadata = getattr(response, "response_metadata", None)
+        if isinstance(metadata, dict):
+            usage_dict = metadata.get("usage_metadata", {})
+            output_tokens = usage_dict.get("candidates_token_count") or usage_dict.get("completion_tokens", 0)
+        else:
+            output_tokens = 0
+        logger.info("llm_call_end", node="kql", output_tokens=output_tokens)
+        
         clean = response.content.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
         result = json.loads(clean)
         
@@ -179,7 +193,10 @@ async def kql_node(state: TriageState) -> dict:
             f"// {q['title']}\n// Purpose: {q['purpose']}\n{q['kql']}"
             for q in result.get("queries", [])
         ]
+        
+        logger.info("node_exit", node="kql")
         return {"kql_queries": queries}
 
     except Exception as e:
+        logger.error("node_error", node="kql", exc_info=True)
         return {"kql_queries": [f"// KQL generation failed: {str(e)}"]}

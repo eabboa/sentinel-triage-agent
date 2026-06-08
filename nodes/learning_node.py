@@ -5,16 +5,15 @@ Compares LLM classification with human classification and stores mismatches for 
 
 import asyncio
 import concurrent.futures
-import logging
+import structlog
 import os
 import threading
 import time
 import uuid
 
-
 from state import TriageState
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 class _WorkerState:
     """Module-level state for the embedding process pool."""
@@ -339,6 +338,7 @@ async def learning_node(state: TriageState) -> dict:
     Returns:
         An empty dictionary.
     """
+    logger.info("node_entry", node="learning")
     llm_classification = state.get("classification", "")
     # 'human_classification' is injected into state during the HITL pause.
     # Defaults to llm_classification when absent to avoid false positives in the RAG loop.
@@ -352,5 +352,5 @@ async def learning_node(state: TriageState) -> dict:
         # Non-blocking queue insertion
         await embed_and_store(condensed, triage, human_classification, reason)
 
-    # Return empty dict or update state flags as needed by your TriageState schema
+    logger.info("node_exit", node="learning")
     return {}

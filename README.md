@@ -386,6 +386,12 @@ The pipeline exports Prometheus metrics via `prometheus_client` (defined in `met
 
 False-positive rate is derived as `triage_false_positives_total / triage_total`.
 
+### LangSmith Tracing
+
+The pipeline is fully instrumented with LangSmith tracing to provide deep visibility into LLM calls, tool execution, and the overall LangGraph execution flow.
+
+<img width="1792" height="928" alt="image" src="https://github.com/user-attachments/assets/9f8a07e2-7fed-4667-a674-984121752bc4" />
+
 ---
 
 ## Operational Tooling

@@ -18,15 +18,13 @@ Concurrency Invariants:
 - aiolimiter ensures VirusTotal rate limits are strictly respected even when concurrently bursting.
 """
 
-import pytest
+from unittest.mock import AsyncMock, patch
+
 import aioresponses
-from unittest.mock import patch, AsyncMock
-from nodes.enrich_node import (
-    enrich_node,
-    close_session,
-    get_session,
-    _is_error_result,
-)
+import pytest
+
+from nodes.enrich_node import (_is_error_result, close_session, enrich_node,
+                               get_session)
 
 
 @pytest.fixture
@@ -37,18 +35,28 @@ async def cleanup_session():
 
 # ── Existing tests ────────────────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_enrich_node_success(empty_triage_state, cleanup_session):
     """Asserts concurrent IOC enrichment yields correct results without cross-contamination."""
     state = empty_triage_state.copy()
-    state["entities"] = {"ips": ["8.8.8.8", "1.1.1.1"], "urls": [], "hashes": [], "internal_ips": []}
+    state["entities"] = {
+        "ips": ["8.8.8.8", "1.1.1.1"],
+        "urls": [],
+        "hashes": [],
+        "internal_ips": [],
+    }
 
     with aioresponses.aioresponses() as m:
         # Mock successful AbuseIPDB responses
-        m.get('https://api.abuseipdb.com/api/v2/check?ipAddress=8.8.8.8&maxAgeInDays=90&verbose=true',
-              payload={"data": {"abuseConfidenceScore": 100, "totalReports": 50}})
-        m.get('https://api.abuseipdb.com/api/v2/check?ipAddress=1.1.1.1&maxAgeInDays=90&verbose=true',
-              payload={"data": {"abuseConfidenceScore": 0, "totalReports": 0}})
+        m.get(
+            "https://api.abuseipdb.com/api/v2/check?ipAddress=8.8.8.8&maxAgeInDays=90&verbose=true",
+            payload={"data": {"abuseConfidenceScore": 100, "totalReports": 50}},
+        )
+        m.get(
+            "https://api.abuseipdb.com/api/v2/check?ipAddress=1.1.1.1&maxAgeInDays=90&verbose=true",
+            payload={"data": {"abuseConfidenceScore": 0, "totalReports": 0}},
+        )
 
         result = await enrich_node(state)
 
@@ -72,16 +80,27 @@ async def test_enrich_node_success(empty_triage_state, cleanup_session):
         assert report_1 is not None
         assert report_1["verdict"] == "clean"
 
+
 @pytest.mark.asyncio
-async def test_enrich_node_failure_graceful_degradation(empty_triage_state, cleanup_session):
+async def test_enrich_node_failure_graceful_degradation(
+    empty_triage_state, cleanup_session
+):
     """Asserts an API failure strips the result from CTI payload and adds to errors list."""
     state = empty_triage_state.copy()
-    state["entities"] = {"ips": ["8.8.8.8"], "urls": [], "hashes": [], "internal_ips": []}
+    state["entities"] = {
+        "ips": ["8.8.8.8"],
+        "urls": [],
+        "hashes": [],
+        "internal_ips": [],
+    }
 
     with aioresponses.aioresponses() as m:
         # Mock repeated 503 failures
-        m.get('https://api.abuseipdb.com/api/v2/check?ipAddress=8.8.8.8&maxAgeInDays=90&verbose=true',
-              status=503, repeat=True)
+        m.get(
+            "https://api.abuseipdb.com/api/v2/check?ipAddress=8.8.8.8&maxAgeInDays=90&verbose=true",
+            status=503,
+            repeat=True,
+        )
 
         result = await enrich_node(state)
 
@@ -89,6 +108,7 @@ async def test_enrich_node_failure_graceful_degradation(empty_triage_state, clea
         assert len(result["cti_results"]["ip_reports"]) == 0
         assert len(result["errors"]) > 0
         assert "503" in result["errors"][0]
+
 
 @pytest.mark.asyncio
 async def test_enrich_node_empty_entities(empty_triage_state, cleanup_session):
@@ -103,15 +123,23 @@ async def test_enrich_node_empty_entities(empty_triage_state, cleanup_session):
 
 # ── AbuseIPDB suspicious verdict branch ─────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_abuseipdb_suspicious_verdict(empty_triage_state, cleanup_session):
     """Asserts AbuseIPDB score 25-74 yields 'suspicious' verdict."""
     state = empty_triage_state.copy()
-    state["entities"] = {"ips": ["8.8.8.8"], "urls": [], "hashes": [], "internal_ips": []}
+    state["entities"] = {
+        "ips": ["8.8.8.8"],
+        "urls": [],
+        "hashes": [],
+        "internal_ips": [],
+    }
 
     with aioresponses.aioresponses() as m:
-        m.get('https://api.abuseipdb.com/api/v2/check?ipAddress=8.8.8.8&maxAgeInDays=90&verbose=true',
-              payload={"data": {"abuseConfidenceScore": 50, "totalReports": 10}})
+        m.get(
+            "https://api.abuseipdb.com/api/v2/check?ipAddress=8.8.8.8&maxAgeInDays=90&verbose=true",
+            payload={"data": {"abuseConfidenceScore": 50, "totalReports": 10}},
+        )
 
         result = await enrich_node(state)
         report = result["cti_results"]["ip_reports"][0]
@@ -120,15 +148,24 @@ async def test_abuseipdb_suspicious_verdict(empty_triage_state, cleanup_session)
 
 # ── AbuseIPDB HTTP error (non-200) branch ────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_abuseipdb_http_error(empty_triage_state, cleanup_session):
     """Asserts a 403 from AbuseIPDB strips the result and logs an error."""
     state = empty_triage_state.copy()
-    state["entities"] = {"ips": ["8.8.8.8"], "urls": [], "hashes": [], "internal_ips": []}
+    state["entities"] = {
+        "ips": ["8.8.8.8"],
+        "urls": [],
+        "hashes": [],
+        "internal_ips": [],
+    }
 
     with aioresponses.aioresponses() as m:
-        m.get('https://api.abuseipdb.com/api/v2/check?ipAddress=8.8.8.8&maxAgeInDays=90&verbose=true',
-              status=403, repeat=True)
+        m.get(
+            "https://api.abuseipdb.com/api/v2/check?ipAddress=8.8.8.8&maxAgeInDays=90&verbose=true",
+            status=403,
+            repeat=True,
+        )
 
         result = await enrich_node(state)
         assert len(result["cti_results"]["ip_reports"]) == 0
@@ -137,11 +174,17 @@ async def test_abuseipdb_http_error(empty_triage_state, cleanup_session):
 
 # ── enrich_node: missing API key branches ────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_enrich_node_missing_vt_key(empty_triage_state, cleanup_session):
     """Asserts missing VT_API_KEY degrades gracefully instead of crashing."""
     state = empty_triage_state.copy()
-    state["entities"] = {"ips": [], "urls": ["http://evil.com"], "hashes": [], "internal_ips": []}
+    state["entities"] = {
+        "ips": [],
+        "urls": ["http://evil.com"],
+        "hashes": [],
+        "internal_ips": [],
+    }
 
     with patch("nodes.enrich_node.VT_API_KEY", ""):
         result = await enrich_node(state)
@@ -153,7 +196,12 @@ async def test_enrich_node_missing_vt_key(empty_triage_state, cleanup_session):
 async def test_enrich_node_missing_vt_key_hashes(empty_triage_state, cleanup_session):
     """Asserts missing VT_API_KEY with hashes degrades gracefully instead of crashing."""
     state = empty_triage_state.copy()
-    state["entities"] = {"ips": [], "urls": [], "hashes": ["abc123"], "internal_ips": []}
+    state["entities"] = {
+        "ips": [],
+        "urls": [],
+        "hashes": ["abc123"],
+        "internal_ips": [],
+    }
 
     with patch("nodes.enrich_node.VT_API_KEY", ""):
         result = await enrich_node(state)
@@ -163,11 +211,17 @@ async def test_enrich_node_missing_vt_key_hashes(empty_triage_state, cleanup_ses
 
 # ── enrich_node: internal IPs only (no external calls) ──────────────────────
 
+
 @pytest.mark.asyncio
 async def test_enrich_node_internal_ips_only(empty_triage_state, cleanup_session):
     """Asserts internal IPs are tagged as lateral_movement_candidate without external CTI calls."""
     state = empty_triage_state.copy()
-    state["entities"] = {"ips": [], "urls": [], "hashes": [], "internal_ips": ["10.0.0.5", "192.168.1.1"]}
+    state["entities"] = {
+        "ips": [],
+        "urls": [],
+        "hashes": [],
+        "internal_ips": ["10.0.0.5", "192.168.1.1"],
+    }
 
     result = await enrich_node(state)
     internal = result["cti_results"]["internal_ip_reports"]
@@ -178,15 +232,32 @@ async def test_enrich_node_internal_ips_only(empty_triage_state, cleanup_session
 
 # ── enrich_node with VT URL and hash enrichment ─────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_enrich_node_url_enrichment(empty_triage_state, cleanup_session):
     """Asserts VT URL enrichment through enrich_node via mocked _check_vt_url."""
     state = empty_triage_state.copy()
-    state["entities"] = {"ips": [], "urls": ["http://evil.com"], "hashes": [], "internal_ips": []}
+    state["entities"] = {
+        "ips": [],
+        "urls": ["http://evil.com"],
+        "hashes": [],
+        "internal_ips": [],
+    }
 
-    mock_result = {"ioc": "http://evil.com", "type": "url", "verdict": "malicious", "malicious": 10, "suspicious": 0, "threshold_used": 5}
+    mock_result = {
+        "ioc": "http://evil.com",
+        "type": "url",
+        "verdict": "malicious",
+        "malicious": 10,
+        "suspicious": 0,
+        "threshold_used": 5,
+    }
 
-    with patch("nodes.enrich_node._check_vt_url", new_callable=AsyncMock, return_value=mock_result):
+    with patch(
+        "nodes.enrich_node._check_vt_url",
+        new_callable=AsyncMock,
+        return_value=mock_result,
+    ):
         result = await enrich_node(state)
         assert len(result["cti_results"]["url_reports"]) == 1
         assert result["cti_results"]["url_reports"][0]["verdict"] == "malicious"
@@ -196,11 +267,27 @@ async def test_enrich_node_url_enrichment(empty_triage_state, cleanup_session):
 async def test_enrich_node_hash_enrichment(empty_triage_state, cleanup_session):
     """Asserts VT hash enrichment through enrich_node via mocked _check_vt_hash."""
     state = empty_triage_state.copy()
-    state["entities"] = {"ips": [], "urls": [], "hashes": ["deadbeef" * 5], "internal_ips": []}
+    state["entities"] = {
+        "ips": [],
+        "urls": [],
+        "hashes": ["deadbeef" * 5],
+        "internal_ips": [],
+    }
 
-    mock_result = {"ioc": "deadbeef" * 5, "type": "hash", "verdict": "clean", "malicious": 0, "suspicious": 0, "threshold_used": 5}
+    mock_result = {
+        "ioc": "deadbeef" * 5,
+        "type": "hash",
+        "verdict": "clean",
+        "malicious": 0,
+        "suspicious": 0,
+        "threshold_used": 5,
+    }
 
-    with patch("nodes.enrich_node._check_vt_hash", new_callable=AsyncMock, return_value=mock_result):
+    with patch(
+        "nodes.enrich_node._check_vt_hash",
+        new_callable=AsyncMock,
+        return_value=mock_result,
+    ):
         result = await enrich_node(state)
         assert len(result["cti_results"]["hash_reports"]) == 1
         assert result["cti_results"]["hash_reports"][0]["verdict"] == "clean"
@@ -208,13 +295,25 @@ async def test_enrich_node_hash_enrichment(empty_triage_state, cleanup_session):
 
 # ── VT wrapper exception handling in _run_enrichment ─────────────────────────
 
+
 @pytest.mark.asyncio
-async def test_enrich_node_vt_url_wrapper_exception(empty_triage_state, cleanup_session):
+async def test_enrich_node_vt_url_wrapper_exception(
+    empty_triage_state, cleanup_session
+):
     """Asserts VT URL wrapper catches exceptions and adds to errors."""
     state = empty_triage_state.copy()
-    state["entities"] = {"ips": [], "urls": ["http://evil.com"], "hashes": [], "internal_ips": []}
+    state["entities"] = {
+        "ips": [],
+        "urls": ["http://evil.com"],
+        "hashes": [],
+        "internal_ips": [],
+    }
 
-    with patch("nodes.enrich_node._check_vt_url", new_callable=AsyncMock, side_effect=Exception("VT down")):
+    with patch(
+        "nodes.enrich_node._check_vt_url",
+        new_callable=AsyncMock,
+        side_effect=Exception("VT down"),
+    ):
         result = await enrich_node(state)
         assert len(result["cti_results"]["url_reports"]) == 0
         # The wrapper catches exceptions and returns error dicts which are then stripped
@@ -223,28 +322,51 @@ async def test_enrich_node_vt_url_wrapper_exception(empty_triage_state, cleanup_
 
 
 @pytest.mark.asyncio
-async def test_enrich_node_vt_hash_wrapper_exception(empty_triage_state, cleanup_session):
+async def test_enrich_node_vt_hash_wrapper_exception(
+    empty_triage_state, cleanup_session
+):
     """Asserts VT hash wrapper catches exceptions and adds to errors."""
     state = empty_triage_state.copy()
-    state["entities"] = {"ips": [], "urls": [], "hashes": ["deadbeef" * 5], "internal_ips": []}
+    state["entities"] = {
+        "ips": [],
+        "urls": [],
+        "hashes": ["deadbeef" * 5],
+        "internal_ips": [],
+    }
 
-    with patch("nodes.enrich_node._check_vt_hash", new_callable=AsyncMock, side_effect=Exception("VT down")):
+    with patch(
+        "nodes.enrich_node._check_vt_hash",
+        new_callable=AsyncMock,
+        side_effect=Exception("VT down"),
+    ):
         result = await enrich_node(state)
         assert len(result["cti_results"]["hash_reports"]) == 0
 
 
 # ── enrich_node: enrichment errors appended to state ─────────────────────────
 
+
 @pytest.mark.asyncio
-async def test_enrich_node_enrichment_errors_in_result(empty_triage_state, cleanup_session):
+async def test_enrich_node_enrichment_errors_in_result(
+    empty_triage_state, cleanup_session
+):
     """Asserts enrichment errors are populated in the returned update dict."""
     state = empty_triage_state.copy()
-    state["entities"] = {"ips": ["8.8.8.8"], "urls": [], "hashes": [], "internal_ips": []}
+    state["entities"] = {
+        "ips": ["8.8.8.8"],
+        "urls": [],
+        "hashes": [],
+        "internal_ips": [],
+    }
 
     # Return an error dict from AbuseIPDB (simulating HTTP error)
     mock_result = {"ioc": "8.8.8.8", "type": "ip", "error": "HTTP 422"}
 
-    with patch("nodes.enrich_node._check_abuseipdb", new_callable=AsyncMock, return_value=mock_result):
+    with patch(
+        "nodes.enrich_node._check_abuseipdb",
+        new_callable=AsyncMock,
+        return_value=mock_result,
+    ):
         result = await enrich_node(state)
         assert len(result["cti_results"]["ip_reports"]) == 0
         assert "errors" in result
@@ -258,6 +380,7 @@ async def test_enrich_node_enrichment_errors_in_result(empty_triage_state, clean
 
 # ── _is_error_result ─────────────────────────────────────────────────────────
 
+
 def test_is_error_result_true():
     """Dict with 'error' key is an error result."""
     assert _is_error_result({"ioc": "x", "error": "HTTP 503"}) is True
@@ -270,6 +393,7 @@ def test_is_error_result_false():
 
 # ── get_session reuse ────────────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_get_session_reuse(cleanup_session):
     """Asserts get_session returns the same session on successive calls (reuse branch)."""
@@ -277,6 +401,7 @@ async def test_get_session_reuse(cleanup_session):
     s2 = await get_session()
     assert s1 is s2
     await close_session()
+
 
 @pytest.mark.asyncio
 async def test_close_session_coverage():
@@ -288,54 +413,91 @@ async def test_close_session_coverage():
     # Multiple calls should not crash
     await close_session()
 
+
 @pytest.mark.asyncio
 async def test_enrich_node_vt_url_transient(empty_triage_state, cleanup_session):
     """Asserts VT URL 429 raises TransientHTTPError internally."""
     state = empty_triage_state.copy()
-    state["entities"] = {"ips": [], "urls": ["http://evil.com"], "hashes": [], "internal_ips": []}
+    state["entities"] = {
+        "ips": [],
+        "urls": ["http://evil.com"],
+        "hashes": [],
+        "internal_ips": [],
+    }
 
     with aioresponses.aioresponses() as m:
-        m.get('https://www.virustotal.com/api/v3/urls/aHR0cDovL2V2aWwuY29t', status=429, repeat=True)
+        m.get(
+            "https://www.virustotal.com/api/v3/urls/aHR0cDovL2V2aWwuY29t",
+            status=429,
+            repeat=True,
+        )
 
         result = await enrich_node(state)
         assert len(result["cti_results"]["url_reports"]) == 0
         assert any("429" in e for e in result.get("errors", []))
 
+
 @pytest.mark.asyncio
 async def test_enrich_node_vt_hash_transient(empty_triage_state, cleanup_session):
     """Asserts VT hash 503 raises TransientHTTPError."""
     state = empty_triage_state.copy()
-    state["entities"] = {"ips": [], "urls": [], "hashes": ["deadbeef"], "internal_ips": []}
+    state["entities"] = {
+        "ips": [],
+        "urls": [],
+        "hashes": ["deadbeef"],
+        "internal_ips": [],
+    }
 
     with aioresponses.aioresponses() as m:
-        m.get('https://www.virustotal.com/api/v3/files/deadbeef', status=503, repeat=True)
+        m.get(
+            "https://www.virustotal.com/api/v3/files/deadbeef", status=503, repeat=True
+        )
 
         result = await enrich_node(state)
         assert len(result["cti_results"]["hash_reports"]) == 0
         assert any("503" in e for e in result.get("errors", []))
 
+
 @pytest.mark.asyncio
-async def test_enrich_node_abuseipdb_validation_error(empty_triage_state, cleanup_session):
+async def test_enrich_node_abuseipdb_validation_error(
+    empty_triage_state, cleanup_session
+):
     """Asserts AbuseIPDB ValidationError is caught."""
     state = empty_triage_state.copy()
-    state["entities"] = {"ips": ["8.8.8.8"], "urls": [], "hashes": [], "internal_ips": []}
+    state["entities"] = {
+        "ips": ["8.8.8.8"],
+        "urls": [],
+        "hashes": [],
+        "internal_ips": [],
+    }
 
     with aioresponses.aioresponses() as m:
-        m.get('https://api.abuseipdb.com/api/v2/check?ipAddress=8.8.8.8&maxAgeInDays=90&verbose=true',
-              payload={"data": {}})
+        m.get(
+            "https://api.abuseipdb.com/api/v2/check?ipAddress=8.8.8.8&maxAgeInDays=90&verbose=true",
+            payload={"data": {}},
+        )
 
         result = await enrich_node(state)
         assert len(result["cti_results"]["ip_reports"]) == 0
         assert any("schema mismatch" in e.lower() for e in result.get("errors", []))
 
+
 @pytest.mark.asyncio
 async def test_enrich_node_vt_url_validation_error(empty_triage_state, cleanup_session):
     """Asserts VT URL ValidationError is caught."""
     state = empty_triage_state.copy()
-    state["entities"] = {"ips": [], "urls": ["http://evil.com"], "hashes": [], "internal_ips": []}
+    state["entities"] = {
+        "ips": [],
+        "urls": ["http://evil.com"],
+        "hashes": [],
+        "internal_ips": [],
+    }
 
     with aioresponses.aioresponses() as m:
-        m.get('https://www.virustotal.com/api/v3/urls/aHR0cDovL2V2aWwuY29t', payload={"data": {}})
+        m.get(
+            "https://www.virustotal.com/api/v3/urls/aHR0cDovL2V2aWwuY29t",
+            payload={"data": {}},
+        )
 
         result = await enrich_node(state)
         assert len(result["cti_results"]["url_reports"]) == 0

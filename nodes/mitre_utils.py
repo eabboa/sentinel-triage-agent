@@ -3,8 +3,8 @@ Utilities for normalizing, validating, and enriching MITRE ATT&CK tactics and te
 Prevents LLM hallucination of technique IDs/names and provides structured mapping.
 """
 
-import re
 import logging
+import re
 from types import MappingProxyType
 from typing import Optional
 
@@ -165,7 +165,6 @@ def _build_inverse_lookup() -> MappingProxyType[str, tuple[str, str]]:
 INVERSE_LOOKUP = _build_inverse_lookup()
 
 
-
 def _resolve_id_by_name(raw_name: str) -> tuple[str, str] | None:
     """
     Searches the catalog for a technique matching raw_name (case-insensitive).
@@ -197,13 +196,15 @@ def normalize_tactic(raw_tactic: str) -> str:
     """
     if not raw_tactic:
         return "Unknown"
-    
+
     # Strip spaces, hyphens, and convert to lowercase for comparison
     clean = re.sub(r"[\s_-]", "", raw_tactic).lower()
     return TACTIC_MAPPING.get(clean, raw_tactic.strip().title())
 
 
-def validate_and_enrich_techniques(suggested_techniques: list[dict], incident_tactics: list[str]) -> tuple[list[dict], list[str]]:
+def validate_and_enrich_techniques(
+    suggested_techniques: list[dict], incident_tactics: list[str]
+) -> tuple[list[dict], list[str]]:
     """
     Validates, normalizes, and enriches suggested MITRE techniques.
 
@@ -222,21 +223,21 @@ def validate_and_enrich_techniques(suggested_techniques: list[dict], incident_ta
     verified = []
     warnings = []
     seen_ids = set()
-    
+
     # Normalize incident tactics for comparison
     normalized_incident_tactics = {normalize_tactic(t) for t in incident_tactics if t}
 
     for item in suggested_techniques:
         if not isinstance(item, dict):
             continue
-            
+
         raw_id = str(item.get("technique_id", "")).strip().upper()
         raw_name = str(item.get("name", "")).strip()
         confidence = item.get("confidence", 50)
-        
+
         # Clean up technique ID formatting (e.g. T1078.001 instead of T1078_001)
         raw_id = raw_id.replace("_", ".")
-        
+
         # Validate ID pattern
         if not TECHNIQUE_ID_PATTERN.match(raw_id):
             resolved = _resolve_id_by_name(raw_name)
@@ -252,45 +253,63 @@ def validate_and_enrich_techniques(suggested_techniques: list[dict], incident_ta
         # Deduplicate
         if raw_id in seen_ids:
             continue
-            
+
         # Perform catalog lookup
         if raw_id in INVERSE_LOOKUP:
             official_name, official_tactic = INVERSE_LOOKUP[raw_id]
-            
+
             # Check for name correction
             if raw_name.lower() != official_name.lower():
-                logger.info("Auto-corrected technique %s name from '%s' to '%s'", raw_id, raw_name, official_name)
-            
+                logger.info(
+                    "Auto-corrected technique %s name from '%s' to '%s'",
+                    raw_id,
+                    raw_name,
+                    official_name,
+                )
+
             # Group under the official tactic
             tactic = official_tactic
-            
+
             # If the resolved tactic is not in the incident tactics list, note a weak correlation
-            if normalized_incident_tactics and tactic not in normalized_incident_tactics:
-                logger.debug("Technique %s (%s) tactic '%s' is not in incident tactics %s", raw_id, official_name, tactic, normalized_incident_tactics)
-                
-            verified.append({
-                "technique_id": raw_id,
-                "name": official_name,
-                "tactic": tactic,
-                "confidence": confidence,
-            })
+            if (
+                normalized_incident_tactics
+                and tactic not in normalized_incident_tactics
+            ):
+                logger.debug(
+                    "Technique %s (%s) tactic '%s' is not in incident tactics %s",
+                    raw_id,
+                    official_name,
+                    tactic,
+                    normalized_incident_tactics,
+                )
+
+            verified.append(
+                {
+                    "technique_id": raw_id,
+                    "name": official_name,
+                    "tactic": tactic,
+                    "confidence": confidence,
+                }
+            )
             seen_ids.add(raw_id)
         else:
             # Technique ID looks valid but is not in our local static catalog
             # We preserve it to support custom/niche techniques, but flag it
             msg = f"MITRE Info: Technique ID '{raw_id}' ({raw_name}) is valid but not in the local verification catalog."
             logger.info(msg)
-            
+
             # Infer a basic tactic based on raw input or inverse lookup or default
             suggested_tactic = normalize_tactic(item.get("tactic", "Unknown"))
-            
-            verified.append({
-                "technique_id": raw_id,
-                "name": raw_name,
-                "tactic": suggested_tactic,
-                "confidence": confidence,
-                "unverified": True
-            })
+
+            verified.append(
+                {
+                    "technique_id": raw_id,
+                    "name": raw_name,
+                    "tactic": suggested_tactic,
+                    "confidence": confidence,
+                    "unverified": True,
+                }
+            )
             seen_ids.add(raw_id)
 
     return verified, warnings

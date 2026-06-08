@@ -22,9 +22,9 @@ Example row:
 
 import argparse
 import csv
+import hashlib
 import logging
 import sys
-import hashlib
 from pathlib import Path
 from typing import Any, cast
 
@@ -67,7 +67,10 @@ def load_csv(path: Path) -> list[dict]:
                     VALID_CLASSIFICATIONS,
                 )
                 continue
-            if not row["condensed_summary"].strip() or not row["triage_summary"].strip():
+            if (
+                not row["condensed_summary"].strip()
+                or not row["triage_summary"].strip()
+            ):
                 logger.warning("Row %d skipped — empty summary field.", i)
                 continue
             entry = {
@@ -76,7 +79,9 @@ def load_csv(path: Path) -> list[dict]:
                 "human_classification": classification,
             }
             if has_reason:
-                entry["human_classification_reason"] = row.get("human_classification_reason", "").strip()
+                entry["human_classification_reason"] = row.get(
+                    "human_classification_reason", ""
+                ).strip()
             rows.append(entry)
     return rows
 
@@ -91,7 +96,7 @@ def build_document(payload: dict) -> str:
     Returns:
         A formatted string used as the vector embedding document.
     """
-    reason = payload.get('human_classification_reason', '')
+    reason = payload.get("human_classification_reason", "")
     return (
         f"Incident Context: {payload['condensed_summary']}\n"
         f"Incorrect LLM Reasoning: {payload['triage_summary']}\n"
@@ -120,9 +125,16 @@ def seed(csv_path: Path, batch_size: int, dry_run: bool) -> None:
     logger.info("Loaded %d valid rows from '%s'.", len(rows), csv_path)
 
     if dry_run:
-        logger.info("[DRY RUN] Would insert %d documents. Skipping ChromaDB write.", len(rows))
+        logger.info(
+            "[DRY RUN] Would insert %d documents. Skipping ChromaDB write.", len(rows)
+        )
         for i, row in enumerate(rows[:5], 1):
-            logger.info("  Sample %d: classification=%s | summary=%s...", i, row["human_classification"], row["condensed_summary"][:80])
+            logger.info(
+                "  Sample %d: classification=%s | summary=%s...",
+                i,
+                row["human_classification"],
+                row["condensed_summary"][:80],
+            )
         return
 
     # Lazy imports — only needed when actually writing
@@ -131,6 +143,7 @@ def seed(csv_path: Path, batch_size: int, dry_run: bool) -> None:
 
     logger.info("Connecting to ChromaDB...")
     import os
+
     host = os.environ.get("CHROMA_HOST", "localhost")
     port = int(os.environ.get("CHROMA_PORT", "8000"))
     client = chromadb.HttpClient(host=host, port=port)
@@ -163,7 +176,10 @@ def seed(csv_path: Path, batch_size: int, dry_run: bool) -> None:
         total += len(batch)
         logger.info("  ✓ Stored %d / %d documents so far.", total, len(rows))
 
-    logger.info("Seed complete. %d documents written to ChromaDB collection 'triage_corrections'.", total)
+    logger.info(
+        "Seed complete. %d documents written to ChromaDB collection 'triage_corrections'.",
+        total,
+    )
     count = collection.count()
     logger.info("Collection now contains %d total documents.", count)
 
@@ -178,8 +194,12 @@ def main():
     parser = argparse.ArgumentParser(
         description="Seed ChromaDB with historical analyst-classified incidents."
     )
-    parser.add_argument("--csv", required=True, type=Path, help="Path to the input CSV file.")
-    parser.add_argument("--batch-size", type=int, default=32, help="Embedding batch size (default: 32).")
+    parser.add_argument(
+        "--csv", required=True, type=Path, help="Path to the input CSV file."
+    )
+    parser.add_argument(
+        "--batch-size", type=int, default=32, help="Embedding batch size (default: 32)."
+    )
     parser.add_argument(
         "--dry-run",
         action="store_true",

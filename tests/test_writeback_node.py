@@ -15,22 +15,28 @@ Concurrency Invariants:
 - Comment posting uses UUID to guarantee idempotency under retry conditions.
 """
 
-import pytest
 from unittest.mock import patch
-from nodes.writeback_node import writeback_node, close_review_node, _format_comment
 
+import pytest
+
+from nodes.writeback_node import (_format_comment, close_review_node,
+                                  writeback_node)
 
 # ── Existing tests ────────────────────────────────────────────────────────────
+
 
 def test_writeback_node_success(empty_triage_state):
     """Asserts comment is successfully posted."""
     state = empty_triage_state.copy()
 
-    with patch("nodes.writeback_node.fetch_incident_comments", return_value=[]), \
-         patch("nodes.writeback_node.post_incident_comment") as mock_post:
+    with (
+        patch("nodes.writeback_node.fetch_incident_comments", return_value=[]),
+        patch("nodes.writeback_node.post_incident_comment") as mock_post,
+    ):
         result = writeback_node(state)
         assert result["comment_posted"] is True
         mock_post.assert_called_once()
+
 
 def test_close_review_node_approved(empty_triage_state):
     """Asserts incident is closed only if approved."""
@@ -41,6 +47,7 @@ def test_close_review_node_approved(empty_triage_state):
         result = close_review_node(state)
         assert result["incident_closed"] is True
         mock_update.assert_called_once()
+
 
 def test_close_review_node_rejected(empty_triage_state):
     """Asserts incident remains open if review is rejected."""
@@ -55,6 +62,7 @@ def test_close_review_node_rejected(empty_triage_state):
 
 # ── _format_comment: entity lines ────────────────────────────────────────────
 
+
 def test_format_comment_full_state(empty_triage_state):
     """Asserts _format_comment renders entity lines, CTI lines, MITRE table, and review tag."""
     state = empty_triage_state.copy()
@@ -68,12 +76,23 @@ def test_format_comment_full_state(empty_triage_state):
         "usernames": ["admin@corp.local"],
     }
     state["cti_results"] = {
-        "ip_reports": [{"ioc": "8.8.8.8", "abuse_score": 85, "usage_type": "Hosting", "country": "US"}],
+        "ip_reports": [
+            {
+                "ioc": "8.8.8.8",
+                "abuse_score": 85,
+                "usage_type": "Hosting",
+                "country": "US",
+            }
+        ],
         "url_reports": [{"ioc": "http://evil.com/payload", "malicious": 5}],
     }
     state["mitre_techniques"] = [
-        {"technique_id": "T1059", "name": "Command and Scripting Interpreter",
-         "tactic": "Execution", "confidence": 90},
+        {
+            "technique_id": "T1059",
+            "name": "Command and Scripting Interpreter",
+            "tactic": "Execution",
+            "confidence": 90,
+        },
     ]
     state["kql_queries"] = ["SigninLogs | limit 10"]
 
@@ -113,8 +132,13 @@ def test_format_comment_unverified_mitre_technique(empty_triage_state):
     state["entities"] = {}
     state["cti_results"] = {}
     state["mitre_techniques"] = [
-        {"technique_id": "T9999", "name": "Custom Tech",
-         "tactic": "Execution", "confidence": 60, "unverified": True},
+        {
+            "technique_id": "T9999",
+            "name": "Custom Tech",
+            "tactic": "Execution",
+            "confidence": 60,
+            "unverified": True,
+        },
     ]
 
     comment = _format_comment(state)
@@ -123,12 +147,15 @@ def test_format_comment_unverified_mitre_technique(empty_triage_state):
 
 # ── _format_comment: CTI score thresholds ────────────────────────────────────
 
+
 def test_format_comment_high_abuse_score(empty_triage_state):
     """Asserts abuse_score > 50 renders 🔴 flag."""
     state = empty_triage_state.copy()
     state["entities"] = {}
     state["cti_results"] = {
-        "ip_reports": [{"ioc": "1.2.3.4", "abuse_score": 80, "usage_type": "ISP", "country": "DE"}],
+        "ip_reports": [
+            {"ioc": "1.2.3.4", "abuse_score": 80, "usage_type": "ISP", "country": "DE"}
+        ],
     }
     state["mitre_techniques"] = []
 
@@ -141,7 +168,9 @@ def test_format_comment_medium_abuse_score(empty_triage_state):
     state = empty_triage_state.copy()
     state["entities"] = {}
     state["cti_results"] = {
-        "ip_reports": [{"ioc": "1.2.3.4", "abuse_score": 25, "usage_type": "ISP", "country": "DE"}],
+        "ip_reports": [
+            {"ioc": "1.2.3.4", "abuse_score": 25, "usage_type": "ISP", "country": "DE"}
+        ],
     }
     state["mitre_techniques"] = []
 
@@ -154,7 +183,9 @@ def test_format_comment_low_abuse_score(empty_triage_state):
     state = empty_triage_state.copy()
     state["entities"] = {}
     state["cti_results"] = {
-        "ip_reports": [{"ioc": "1.2.3.4", "abuse_score": 5, "usage_type": "ISP", "country": "DE"}],
+        "ip_reports": [
+            {"ioc": "1.2.3.4", "abuse_score": 5, "usage_type": "ISP", "country": "DE"}
+        ],
     }
     state["mitre_techniques"] = []
 
@@ -218,11 +249,14 @@ def test_format_comment_cti_error_results_excluded(empty_triage_state):
 
 # ── writeback_node: failure branch ───────────────────────────────────────────
 
+
 def test_writeback_node_comment_failure(empty_triage_state):
     """Asserts comment post failure is captured as error, comment_posted is False."""
     state = empty_triage_state.copy()
 
-    with patch("nodes.writeback_node.post_incident_comment", side_effect=Exception("API down")):
+    with patch(
+        "nodes.writeback_node.post_incident_comment", side_effect=Exception("API down")
+    ):
         result = writeback_node(state)
         assert result["comment_posted"] is False
         found_comment_error = False
@@ -235,12 +269,15 @@ def test_writeback_node_comment_failure(empty_triage_state):
 
 # ── close_review_node: failure branch ────────────────────────────────────────
 
+
 def test_close_review_node_api_failure(empty_triage_state):
     """Asserts update_incident_status failure is captured as error, incident_closed is False."""
     state = empty_triage_state.copy()
     state["close_approved"] = True
 
-    with patch("nodes.writeback_node.update_incident_status", side_effect=Exception("Timeout")):
+    with patch(
+        "nodes.writeback_node.update_incident_status", side_effect=Exception("Timeout")
+    ):
         result = close_review_node(state)
         assert result["incident_closed"] is False
         found_close_error = False

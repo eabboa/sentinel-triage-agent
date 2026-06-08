@@ -13,17 +13,18 @@ to writeback.
 from typing import Literal
 
 from langgraph.checkpoint.memory import MemorySaver
-from langgraph.graph import StateGraph, START, END
-from state import TriageState
-from nodes.fetch_node import fetch_node
-from nodes.summarize_node import summarize_node
-from nodes.extract_node import extract_node
-from nodes.enrich_node import enrich_node
+from langgraph.graph import END, START, StateGraph
+
 from nodes.analyst_node import analyst_node
-from nodes.kql_node import kql_node
-from nodes.writeback_node import close_review_node, writeback_node
-from nodes.learning_node import learning_node
 from nodes.containment_node import containment_node
+from nodes.enrich_node import enrich_node
+from nodes.extract_node import extract_node
+from nodes.fetch_node import fetch_node
+from nodes.kql_node import kql_node
+from nodes.learning_node import learning_node
+from nodes.summarize_node import summarize_node
+from nodes.writeback_node import close_review_node, writeback_node
+from state import TriageState
 
 
 def _next_after_extract(state: TriageState) -> Literal["analyst", "enrich"]:
@@ -42,7 +43,9 @@ def _next_after_extract(state: TriageState) -> Literal["analyst", "enrich"]:
     return "analyst"
 
 
-def _next_after_analyst(state: TriageState) -> Literal["escalation", "writeback", "kql"]:
+def _next_after_analyst(
+    state: TriageState,
+) -> Literal["escalation", "writeback", "kql"]:
     """
     Chooses the next node based on analyst classification and confidence.
 
@@ -65,7 +68,7 @@ def _next_after_analyst(state: TriageState) -> Literal["escalation", "writeback"
 def _next_after_writeback(state: TriageState) -> Literal["containment", "close_review"]:
     """
     Routes based on approval status.
-    
+
     No autonomous closure occurs regardless of classification or confidence score.
     If containment is approved, run containment before close_review.
 
@@ -78,7 +81,7 @@ def _next_after_writeback(state: TriageState) -> Literal["containment", "close_r
     # If containment is approved, run containment before close_review
     if state.get("containment_approved", False):
         return "containment"
-    
+
     return "close_review"
 
 
@@ -134,7 +137,9 @@ def build_graph():
     builder.add_edge("close_review", "learning")
     builder.add_edge("learning", END)
 
-    checkpointer = MemorySaver() # TODO: In Production use AsyncSqliteSaver or PostgresSaver
+    checkpointer = (
+        MemorySaver()
+    )  # TODO: In Production use AsyncSqliteSaver or PostgresSaver
     """
     MemorySaver is only for the development stage.
     It fails when the Python process crashes. The memory is completely wiped.   

@@ -18,36 +18,32 @@ Concurrency Invariants:
 - `update_incident_status` handles ETag conflicts by refetching and applying changes, ensuring changes aren't silently dropped or overwritten.
 """
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
 import responses
-from unittest.mock import patch, AsyncMock
 from requests.exceptions import HTTPError
-from sentinel_api import (
-    list_incidents,
-    get_incident,
-    list_incident_alerts,
-    update_incident_status,
-    post_incident_comment,
-    resolve_mde_machine_id,
-    isolate_mde_device,
-    revoke_entra_sessions,
-    ConcurrencyConflictError,
-    TransientHTTPError,
-    _get_base,
-    API_VERSION,
-)
+
+from sentinel_api import (API_VERSION, ConcurrencyConflictError,
+                          TransientHTTPError, _get_base, get_incident,
+                          isolate_mde_device, list_incident_alerts,
+                          list_incidents, post_incident_comment,
+                          resolve_mde_machine_id, revoke_entra_sessions,
+                          update_incident_status)
 
 
 @pytest.fixture(autouse=True)
 def _reset_base_cache():
     """Reset the lazy _BASE cache between tests so env var changes take effect."""
     import sentinel_api
+
     sentinel_api._BASE = None
     yield
     sentinel_api._BASE = None
 
 
 # ── Existing tests ────────────────────────────────────────────────────────────
+
 
 @responses.activate
 def test_list_incidents_success():
@@ -59,7 +55,9 @@ def test_list_incidents_success():
         json={"value": [{"name": "inc1"}]},
         status=200,
     )
-    with patch("sentinel_api.get_auth_headers", return_value={"Authorization": "Bearer mock"}):
+    with patch(
+        "sentinel_api.get_auth_headers", return_value={"Authorization": "Bearer mock"}
+    ):
         result = list_incidents()
     assert isinstance(result, list)
     assert len(result) == 1
@@ -89,7 +87,9 @@ def test_update_incident_status_success():
         status=200,
     )
 
-    with patch("sentinel_api.get_auth_headers", return_value={"Authorization": "Bearer mock"}):
+    with patch(
+        "sentinel_api.get_auth_headers", return_value={"Authorization": "Bearer mock"}
+    ):
         result = update_incident_status("123", "Closed", "TruePositive")
     assert result["properties"]["status"] == "Closed"
     assert result["properties"]["classification"] == "TruePositive"
@@ -128,7 +128,9 @@ def test_update_incident_status_etag_conflict_retry():
         status=200,
     )
 
-    with patch("sentinel_api.get_auth_headers", return_value={"Authorization": "Bearer mock"}):
+    with patch(
+        "sentinel_api.get_auth_headers", return_value={"Authorization": "Bearer mock"}
+    ):
         result = update_incident_status("123", "Closed")
     assert result["properties"]["status"] == "Closed"
 
@@ -145,7 +147,9 @@ def test_transient_http_error_retry():
         status=200,
     )
 
-    with patch("sentinel_api.get_auth_headers", return_value={"Authorization": "Bearer mock"}):
+    with patch(
+        "sentinel_api.get_auth_headers", return_value={"Authorization": "Bearer mock"}
+    ):
         result = get_incident("123")
     assert result["properties"]["status"] == "New"
     assert len(responses.calls) == 2
@@ -158,16 +162,20 @@ def test_get_base_missing_env_vars(monkeypatch):
     not silently proceeding with None values in the URL.
     """
     import sentinel_api
+
     sentinel_api._BASE = None
     monkeypatch.delenv("SUBSCRIPTION_ID", raising=False)
     monkeypatch.delenv("RESOURCE_GROUP", raising=False)
     monkeypatch.delenv("WORKSPACE_NAME", raising=False)
 
-    with pytest.raises(EnvironmentError, match="Missing required environment variables"):
+    with pytest.raises(
+        EnvironmentError, match="Missing required environment variables"
+    ):
         sentinel_api._get_base()
 
 
 # ── update_incident_status: no etag branch ───────────────────────────────────
+
 
 @responses.activate
 def test_update_incident_status_no_etag():
@@ -186,7 +194,9 @@ def test_update_incident_status_no_etag():
         status=200,
     )
 
-    with patch("sentinel_api.get_auth_headers", return_value={"Authorization": "Bearer mock"}):
+    with patch(
+        "sentinel_api.get_auth_headers", return_value={"Authorization": "Bearer mock"}
+    ):
         result = update_incident_status("123", "Active")
     assert result["properties"]["status"] == "Active"
     # Verify If-Match was NOT set in the PUT request
@@ -195,6 +205,7 @@ def test_update_incident_status_no_etag():
 
 
 # ── update_incident_status: classification reason mapping ────────────────────
+
 
 @responses.activate
 def test_update_incident_status_classification_reasons():
@@ -207,6 +218,7 @@ def test_update_incident_status_classification_reasons():
     ]:
         responses.reset()
         import sentinel_api
+
         sentinel_api._BASE = None
 
         responses.add(
@@ -222,10 +234,14 @@ def test_update_incident_status_classification_reasons():
             status=200,
         )
 
-        with patch("sentinel_api.get_auth_headers", return_value={"Authorization": "Bearer mock"}):
+        with patch(
+            "sentinel_api.get_auth_headers",
+            return_value={"Authorization": "Bearer mock"},
+        ):
             result = update_incident_status("123", "Closed", classification)
         # Verify the PUT body contained the correct classificationReason
         import json
+
         body = responses.calls[-1].request.body
         assert body is not None
         put_body = json.loads(body)
@@ -233,6 +249,7 @@ def test_update_incident_status_classification_reasons():
 
 
 # ── list_incident_alerts ─────────────────────────────────────────────────────
+
 
 @responses.activate
 def test_list_incident_alerts_success():
@@ -245,7 +262,9 @@ def test_list_incident_alerts_success():
         status=200,
     )
 
-    with patch("sentinel_api.get_auth_headers", return_value={"Authorization": "Bearer mock"}):
+    with patch(
+        "sentinel_api.get_auth_headers", return_value={"Authorization": "Bearer mock"}
+    ):
         result = list_incident_alerts("123")
     assert len(result) == 2
     assert result[0]["id"] == "alert-1"
@@ -253,12 +272,14 @@ def test_list_incident_alerts_success():
 
 # ── post_incident_comment ────────────────────────────────────────────────────
 
+
 @responses.activate
 def test_post_incident_comment_success():
     """Asserts comment is posted with UUID-based URL."""
     base = _get_base()
     # Match any comment URL (UUID is generated)
     import re
+
     responses.add(
         responses.PUT,
         re.compile(rf"{re.escape(base)}/incidents/123/comments/.*"),
@@ -266,12 +287,15 @@ def test_post_incident_comment_success():
         status=200,
     )
 
-    with patch("sentinel_api.get_auth_headers", return_value={"Authorization": "Bearer mock"}):
+    with patch(
+        "sentinel_api.get_auth_headers", return_value={"Authorization": "Bearer mock"}
+    ):
         result = post_incident_comment("123", "Test comment")
     assert result["id"] == "comment-123"
 
 
 # ── resolve_mde_machine_id ───────────────────────────────────────────────────
+
 
 @responses.activate
 @pytest.mark.asyncio
@@ -306,6 +330,7 @@ async def test_resolve_mde_machine_id_not_found():
 
 
 # ── isolate_mde_device ───────────────────────────────────────────────────────
+
 
 @responses.activate
 @pytest.mark.asyncio
@@ -349,6 +374,7 @@ async def test_isolate_mde_device_invalid_id():
 
 
 # ── revoke_entra_sessions ───────────────────────────────────────────────────
+
 
 @responses.activate
 @pytest.mark.asyncio

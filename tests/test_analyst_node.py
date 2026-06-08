@@ -21,10 +21,12 @@ Concurrency Invariants:
 - N/A.
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
+
+from models.validation import AnalystVerdict, MitreTechnique
 from nodes.analyst_node import analyst_node
-from models.validation import MitreTechnique, AnalystVerdict
 
 
 def _mock_structured_llm_response(verdict):
@@ -51,8 +53,10 @@ async def test_analyst_node_success(empty_triage_state, valid_analyst_verdict):
         return_value=_mock_structured_llm_response(valid_analyst_verdict)
     )
 
-    with patch("nodes.analyst_node.retrieve_similar_mismatches", mock_rag), \
-         patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLMClass:
+    with (
+        patch("nodes.analyst_node.retrieve_similar_mismatches", mock_rag),
+        patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLMClass,
+    ):
 
         # Make the constructor return a mock, and .with_structured_output() return our mock chain
         mock_instance = MagicMock()
@@ -86,8 +90,10 @@ async def test_analyst_node_validation_failure_fallback(empty_triage_state):
         side_effect=Exception("Pydantic ValidationError: field required")
     )
 
-    with patch("nodes.analyst_node.retrieve_similar_mismatches", mock_rag), \
-         patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLMClass:
+    with (
+        patch("nodes.analyst_node.retrieve_similar_mismatches", mock_rag),
+        patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLMClass,
+    ):
 
         mock_instance = MagicMock()
         mock_instance.with_structured_output.return_value = mock_structured_llm
@@ -102,7 +108,9 @@ async def test_analyst_node_validation_failure_fallback(empty_triage_state):
 
 
 @pytest.mark.asyncio
-async def test_analyst_node_chromadb_unavailable_degrades_gracefully(empty_triage_state):
+async def test_analyst_node_chromadb_unavailable_degrades_gracefully(
+    empty_triage_state,
+):
     """Asserts ChromaDB connection failure degrades to Undetermined instead of crashing.
 
     Previously (DEFECT-001), retrieve_similar_mismatches() was called outside the
@@ -150,8 +158,10 @@ async def test_analyst_node_dict_verdict_path(empty_triage_state):
         return_value=_mock_structured_llm_response(raw_dict)
     )
 
-    with patch("nodes.analyst_node.retrieve_similar_mismatches", mock_rag), \
-         patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLMClass:
+    with (
+        patch("nodes.analyst_node.retrieve_similar_mismatches", mock_rag),
+        patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLMClass,
+    ):
 
         mock_instance = MagicMock()
         mock_instance.with_structured_output.return_value = mock_structured_llm
@@ -179,8 +189,10 @@ async def test_analyst_node_unrecognizable_output(empty_triage_state):
         return_value=_mock_structured_llm_response("just a string")
     )
 
-    with patch("nodes.analyst_node.retrieve_similar_mismatches", mock_rag), \
-         patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLMClass:
+    with (
+        patch("nodes.analyst_node.retrieve_similar_mismatches", mock_rag),
+        patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLMClass,
+    ):
 
         mock_instance = MagicMock()
         mock_instance.with_structured_output.return_value = mock_structured_llm
@@ -208,8 +220,10 @@ async def test_analyst_node_invalid_dict_verdict(empty_triage_state):
         return_value=_mock_structured_llm_response({"classification": "TruePositive"})
     )
 
-    with patch("nodes.analyst_node.retrieve_similar_mismatches", mock_rag), \
-         patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLMClass:
+    with (
+        patch("nodes.analyst_node.retrieve_similar_mismatches", mock_rag),
+        patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLMClass,
+    ):
 
         mock_instance = MagicMock()
         mock_instance.with_structured_output.return_value = mock_structured_llm
@@ -220,7 +234,9 @@ async def test_analyst_node_invalid_dict_verdict(empty_triage_state):
 
 
 @pytest.mark.asyncio
-async def test_analyst_node_with_few_shot_examples(empty_triage_state, valid_analyst_verdict):
+async def test_analyst_node_with_few_shot_examples(
+    empty_triage_state, valid_analyst_verdict
+):
     """Asserts few-shot examples from ChromaDB are formatted into the prompt."""
     state = empty_triage_state.copy()
     state["condensed_summary"] = "Test summary"
@@ -228,17 +244,21 @@ async def test_analyst_node_with_few_shot_examples(empty_triage_state, valid_ana
     state["incident_tactics"] = ["Execution"]
 
     # Return actual documents to exercise the few-shot formatting branch
-    mock_rag = AsyncMock(return_value={
-        "documents": [["Example 1: wrong classification", "Example 2: corrected"]],
-    })
+    mock_rag = AsyncMock(
+        return_value={
+            "documents": [["Example 1: wrong classification", "Example 2: corrected"]],
+        }
+    )
 
     mock_structured_llm = AsyncMock()
     mock_structured_llm.ainvoke = AsyncMock(
         return_value=_mock_structured_llm_response(valid_analyst_verdict)
     )
 
-    with patch("nodes.analyst_node.retrieve_similar_mismatches", mock_rag), \
-         patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLMClass:
+    with (
+        patch("nodes.analyst_node.retrieve_similar_mismatches", mock_rag),
+        patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLMClass,
+    ):
 
         mock_instance = MagicMock()
         mock_instance.with_structured_output.return_value = mock_structured_llm
@@ -275,8 +295,10 @@ async def test_analyst_node_mitre_warnings(empty_triage_state):
         return_value=_mock_structured_llm_response(verdict)
     )
 
-    with patch("nodes.analyst_node.retrieve_similar_mismatches", mock_rag), \
-         patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLMClass:
+    with (
+        patch("nodes.analyst_node.retrieve_similar_mismatches", mock_rag),
+        patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLMClass,
+    ):
 
         mock_instance = MagicMock()
         mock_instance.with_structured_output.return_value = mock_structured_llm

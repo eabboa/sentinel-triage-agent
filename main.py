@@ -8,20 +8,22 @@ Rate limit strategy:
 - Run this script manually or via Windows Task Scheduler / cron for polling
 """
 
-import sys
-import random
 import asyncio
+import random
+import sys
 import time
-from dotenv import load_dotenv
 import uuid
-import structlog
 from typing import Any
-from metrics import TRIAGE_DURATION, TRIAGE_TOTAL, TRIAGE_FP_TOTAL
-from sentinel_api import list_incidents
+
+import structlog
+from dotenv import load_dotenv
+
 from graph import build_graph
-from nodes.learning_node import flush_and_shutdown
-from nodes.enrich_node import close_session as close_enrich_session
 from logging_config import setup_logging
+from metrics import TRIAGE_DURATION, TRIAGE_FP_TOTAL, TRIAGE_TOTAL
+from nodes.enrich_node import close_session as close_enrich_session
+from nodes.learning_node import flush_and_shutdown
+from sentinel_api import list_incidents
 
 setup_logging()
 logger = structlog.get_logger(__name__)
@@ -63,32 +65,32 @@ async def _collect_human_decisions(
             cont_approval = await asyncio.to_thread(
                 input, "  Approve containment of hostnames? [y/N]: "
             )
-            if cont_approval.strip().lower() == 'y':
+            if cont_approval.strip().lower() == "y":
                 updates["containment_approved"] = True
 
-        approval = await asyncio.to_thread(
-            input, "  Approve closure? [y/N]: "
-        )
-        if approval.strip().lower() == 'y':
+        approval = await asyncio.to_thread(input, "  Approve closure? [y/N]: ")
+        if approval.strip().lower() == "y":
             updates["close_approved"] = True
         else:
             print("  Skipping closure.")
 
         # ── Human reclassification for RAG learning ───────────────────
-        llm_classification = state_vals.get('classification', '')
+        llm_classification = state_vals.get("classification", "")
         VALID_CLASSIFICATIONS = {"TruePositive", "FalsePositive", "BenignPositive"}
         while True:
             reclassify = await asyncio.to_thread(
                 input,
                 f"  Reclassify? LLM said '{llm_classification}'. "
                 f"Enter correct label [TruePositive/FalsePositive/BenignPositive] "
-                f"or press Enter to agree: "
+                f"or press Enter to agree: ",
             )
             reclassify = reclassify.strip()
             if not reclassify:
                 break  # Analyst agrees with LLM
             if reclassify not in VALID_CLASSIFICATIONS:
-                print(f"  ⚠ Invalid label '{reclassify}' — must be one of {VALID_CLASSIFICATIONS}. Try again.")
+                print(
+                    f"  ⚠ Invalid label '{reclassify}' — must be one of {VALID_CLASSIFICATIONS}. Try again."
+                )
                 continue
             if reclassify == llm_classification:
                 break  # Explicitly typed the same label — treat as agreement
@@ -100,7 +102,9 @@ async def _collect_human_decisions(
             if reclassify_reason:
                 updates["human_classification_reason"] = reclassify_reason
             else:
-                updates["human_classification_reason"] = "No reason provided by analyst."
+                updates["human_classification_reason"] = (
+                    "No reason provided by analyst."
+                )
             print(f"  ✓ Reclassification '{reclassify}' recorded for learning.")
             break
         # ─────────────────────────────────────────────────────────────
@@ -133,7 +137,7 @@ async def process_incident(incident, graph, semaphore, console_lock):
     structlog.contextvars.clear_contextvars()
     structlog.contextvars.bind_contextvars(incident_id=incident_id)
     incident_title = incident["properties"]["title"]
-    
+
     logger.info(f"Processing: {incident_title} (ID: {incident_id})")
 
     # Initialize state with only the incident_id | the fetch node gets the rest
@@ -171,7 +175,7 @@ async def process_incident(incident, graph, semaphore, console_lock):
     config = {"configurable": {"thread_id": thread_id}}
 
     triage_start = time.monotonic()
-    async with semaphore: # Limit concurrent processing to respect API rate limits
+    async with semaphore:  # Limit concurrent processing to respect API rate limits
 
         # ── Phase 1: Graph engine pre-HITL execution ──────────────────────
         try:
@@ -182,14 +186,16 @@ async def process_incident(incident, graph, semaphore, console_lock):
         except Exception as e:
             logger.critical(
                 "Graph engine failed for %s during pre-HITL execution: %s",
-                incident_id, e, exc_info=True,
+                incident_id,
+                e,
+                exc_info=True,
             )
             return  # Nothing to resume — no state was committed
 
         if not snapshot.next:
             """
-            Graph always will hit the HITL normally, however, this code block is necessary 
-            if the incident has already finished (resuming a completed checkpoint) or 
+            Graph always will hit the HITL normally, however, this code block is necessary
+            if the incident has already finished (resuming a completed checkpoint) or
             if the interrupt_after configuration is changed or disabled.
             """
             final_state = state
@@ -197,7 +203,10 @@ async def process_incident(incident, graph, semaphore, console_lock):
             # ── Phase 2: Human-in-the-loop console interaction ────────────
             try:
                 human_decisions = await _collect_human_decisions(
-                    snapshot.values, incident_title, incident_id, console_lock,
+                    snapshot.values,
+                    incident_title,
+                    incident_id,
+                    console_lock,
                 )
             except (EOFError, KeyboardInterrupt):
                 logger.warning(
@@ -210,7 +219,8 @@ async def process_incident(incident, graph, semaphore, console_lock):
                 logger.error(
                     "Console I/O failure for %s: %s. "
                     "Incident is paused at HITL checkpoint.",
-                    incident_id, e,
+                    incident_id,
+                    e,
                 )
                 return
 
@@ -222,13 +232,17 @@ async def process_incident(incident, graph, semaphore, console_lock):
                 logger.critical(
                     "State mutation failed for %s after analyst approved actions %s: %s. "
                     "MANUAL INTERVENTION REQUIRED — checkpoint may be inconsistent.",
-                    incident_id, list(human_decisions.keys()), e,
+                    incident_id,
+                    list(human_decisions.keys()),
+                    e,
                     exc_info=True,
                 )
                 return  # Do NOT resume the graph with potentially partial state
 
             # ── Phase 3b: Resume the graph post-HITL ─────────────────────
-            containment_was_approved = human_decisions.get("containment_approved", False)
+            containment_was_approved = human_decisions.get(
+                "containment_approved", False
+            )
             try:
                 state = await graph.ainvoke(None, config=config)
             except Exception as e:
@@ -237,13 +251,17 @@ async def process_incident(incident, graph, semaphore, console_lock):
                         "Graph resumption failed for %s: %s. "
                         "containment_approved=True — "
                         "CONTAINMENT MAY NOT HAVE EXECUTED — verify manually.",
-                        incident_id, e, exc_info=True,
+                        incident_id,
+                        e,
+                        exc_info=True,
                     )
                 else:
                     logger.error(
                         "Graph resumption failed for %s: %s. "
                         "Incident remains at post-HITL checkpoint.",
-                        incident_id, e, exc_info=True,
+                        incident_id,
+                        e,
+                        exc_info=True,
                     )
                 return
 
@@ -278,11 +296,16 @@ async def main():
             break
         except Exception as e:
             if attempt < max_attempts:
-                delay = (2 ** attempt) + random.uniform(0, 1)
-                logger.warning(f"Failed to fetch incidents (attempt {attempt}/{max_attempts}): {e}. Retrying in {delay:.2f} seconds...")
+                delay = (2**attempt) + random.uniform(0, 1)
+                logger.warning(
+                    f"Failed to fetch incidents (attempt {attempt}/{max_attempts}): {e}. Retrying in {delay:.2f} seconds..."
+                )
                 await asyncio.sleep(delay)
             else:
-                logger.error(f"Failed to fetch incidents after {max_attempts} attempts: {e}", exc_info=True)
+                logger.error(
+                    f"Failed to fetch incidents after {max_attempts} attempts: {e}",
+                    exc_info=True,
+                )
                 sys.exit(1)
 
     if not incidents:
@@ -295,7 +318,10 @@ async def main():
     console_lock = asyncio.Lock()
 
     try:
-        tasks = [process_incident(incident, graph, semaphore, console_lock) for incident in incidents]
+        tasks = [
+            process_incident(incident, graph, semaphore, console_lock)
+            for incident in incidents
+        ]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         for incident, result in zip(incidents, results):
             if isinstance(result, Exception):
@@ -308,8 +334,9 @@ async def main():
         logger.info("\nBatch complete.")
     finally:
         logger.info("Flushing learning queue before exit...")
-        await flush_and_shutdown() # flush_and_shutdown() drains all pending ChromaDB writes and shuts down the process pool executor cleanly.
+        await flush_and_shutdown()  # flush_and_shutdown() drains all pending ChromaDB writes and shuts down the process pool executor cleanly.
         await close_enrich_session()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

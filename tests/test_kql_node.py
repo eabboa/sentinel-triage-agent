@@ -15,18 +15,22 @@ Concurrency Invariants:
 - N/A.
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
+
 from nodes.kql_node import kql_node
+
 
 @pytest.mark.asyncio
 async def test_kql_node_skip_false_positive(empty_triage_state):
     """Asserts KQL generation is skipped for false positives."""
     state = empty_triage_state.copy()
     state["classification"] = "FalsePositive"
-    
+
     result = await kql_node(state)
     assert "No hunting queries generated" in result["kql_queries"][0]
+
 
 @pytest.mark.asyncio
 async def test_kql_node_success(empty_triage_state):
@@ -34,9 +38,9 @@ async def test_kql_node_success(empty_triage_state):
     state = empty_triage_state.copy()
     state["classification"] = "TruePositive"
     state["incident_tactics"] = ["InitialAccess"]
-    
+
     mock_llm_response = MagicMock()
-    mock_llm_response.content = '''
+    mock_llm_response.content = """
     ```json
     {
       "queries": [
@@ -49,8 +53,8 @@ async def test_kql_node_success(empty_triage_state):
       ]
     }
     ```
-    '''
-    
+    """
+
     with patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLMClass:
         mock_instance = MagicMock()
         mock_instance.ainvoke = AsyncMock(return_value=mock_llm_response)
@@ -60,6 +64,7 @@ async def test_kql_node_success(empty_triage_state):
         assert len(result["kql_queries"]) == 1
         assert "SigninLogs | limit 10" in result["kql_queries"][0]
 
+
 @pytest.mark.asyncio
 async def test_kql_node_escaping(empty_triage_state):
     """Asserts injected entity values do not break KQL string generation."""
@@ -67,10 +72,10 @@ async def test_kql_node_escaping(empty_triage_state):
     # safely returns queries even if the LLM output contains escaped quotes.
     state = empty_triage_state.copy()
     state["classification"] = "TruePositive"
-    
+
     mock_llm_response = MagicMock()
-    mock_llm_response.content = '''{"queries": [{"title": "T", "table": "T", "purpose": "P", "kql": "Table | where ip == \\"8.8.8.8\\""}]}'''
-    
+    mock_llm_response.content = """{"queries": [{"title": "T", "table": "T", "purpose": "P", "kql": "Table | where ip == \\"8.8.8.8\\""}]}"""
+
     with patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLMClass:
         mock_instance = MagicMock()
         mock_instance.ainvoke = AsyncMock(return_value=mock_llm_response)

@@ -29,8 +29,9 @@ for key, value in _TEST_ENV_VARS.items():
 
 # ── Now safe to import application modules ──────────────────────────────────────
 import pytest
-from state import TriageState
+
 from models.validation import AnalystVerdict, MitreTechnique
+from state import TriageState
 
 
 @pytest.fixture
@@ -63,6 +64,7 @@ def empty_triage_state() -> TriageState:
         "human_classification": None,
         "human_classification_reason": None,
         "errors": [],
+        "degraded_sources": [],
     }
 
 

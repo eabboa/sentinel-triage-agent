@@ -4,12 +4,10 @@ Behavioral Contract for models/exceptions.py
 Asserts all custom exception classes store raw_data on the instance.
 """
 
-from models.exceptions import (
-    SentinelAlertValidationError,
-    VirusTotalResponseValidationError,
-    AbuseIPDBResponseValidationError,
-    LLMOutputValidationError,
-)
+from models.exceptions import (AbuseIPDBResponseValidationError,
+                               LLMOutputValidationError,
+                               SentinelAlertValidationError,
+                               VirusTotalResponseValidationError)
 
 
 def test_custom_exceptions_store_raw_data():

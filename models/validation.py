@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Literal, Optional
-from pydantic import BaseModel, Field, ConfigDict
+
+from pydantic import BaseModel, ConfigDict, Field
 
 """
 ---EXAMPLE SENTINEL DATA---
@@ -37,9 +38,11 @@ from pydantic import BaseModel, Field, ConfigDict
 
 """
 
+
 class SentinelEntity(BaseModel):
-  type: str
-  model_config = ConfigDict(extra="allow")
+    type: str
+    model_config = ConfigDict(extra="allow")
+
 
 class AlertProperties(BaseModel):
     alertDisplayName: str
@@ -48,8 +51,10 @@ class AlertProperties(BaseModel):
     endTimeUtc: datetime
     entities: list[SentinelEntity] = Field(default_factory=list)
 
+
 class SentinelAlert(BaseModel):
     properties: AlertProperties
+
 
 """
 --- EXAMPLE VIRUSTOTAL DATA ---
@@ -75,18 +80,22 @@ class SentinelAlert(BaseModel):
 
 """
 
-class VTAnalysisStats(BaseModel): ## starting from the innermost
+
+class VTAnalysisStats(BaseModel):  ## starting from the innermost
     malicious: int
     suspicious: int
     model_config = ConfigDict(extra="ignore")
+
 
 class VTAttributes(BaseModel):
     last_analysis_stats: VTAnalysisStats
     model_config = ConfigDict(extra="ignore")
 
+
 class VTData(BaseModel):
     attributes: VTAttributes
     model_config = ConfigDict(extra="ignore")
+
 
 class VirusTotalResponse(BaseModel):
     data: VTData
@@ -117,6 +126,7 @@ class VirusTotalResponse(BaseModel):
 
 """
 
+
 class AbuseIPDBData(BaseModel):
     totalReports: int
     abuseConfidenceScore: int
@@ -125,6 +135,7 @@ class AbuseIPDBData(BaseModel):
     usageType: str | None = None
 
     model_config = ConfigDict(extra="ignore")
+
 
 class AbuseIPDBResponse(BaseModel):
     data: AbuseIPDBData
@@ -159,6 +170,7 @@ class AbuseIPDBResponse(BaseModel):
 }
 
 """
+
 
 class MitreTechnique(BaseModel):
     technique_id: str

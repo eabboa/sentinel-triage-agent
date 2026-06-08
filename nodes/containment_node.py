@@ -9,8 +9,10 @@ All API failures are captured as non-fatal errors in the errors list.
 """
 
 import asyncio
-import structlog
 import re
+
+import structlog
+
 from sentinel_api import isolate_mde_device, resolve_mde_machine_id
 from state import TriageState
 
@@ -73,15 +75,15 @@ async def containment_node(state: TriageState) -> dict:
     """
     logger.info("node_entry", node="containment")
     errors: list[str] = []
-    
+
     # Guard clause: only execute if containment is approved
     if not state.get("containment_approved", False):
         logger.debug("Containment not approved; skipping containment_node")
         logger.info("node_exit", node="containment")
         return {"errors": errors}
-    
+
     logger.info("Containment approved; proceeding with device isolation")
-    
+
     # Extract isolation targets: named hostnames + internal IPs (lateral movement candidates)
     entities = state.get("entities", {}) or {}
     hostnames = entities.get("hostnames", []) or []
@@ -99,12 +101,16 @@ async def containment_node(state: TriageState) -> dict:
             errors.append(msg)
 
     if not isolation_targets:
-        logger.info("No valid hostnames or internal IPs found in entities; skipping MDE isolation")
+        logger.info(
+            "No valid hostnames or internal IPs found in entities; skipping MDE isolation"
+        )
         logger.info("node_exit", node="containment")
         return {"errors": errors}
 
-    logger.info(f"Attempting to isolate {len(isolation_targets)} targets: {isolation_targets}")
-    
+    logger.info(
+        f"Attempting to isolate {len(isolation_targets)} targets: {isolation_targets}"
+    )
+
     # Resolve hostnames/IPs to MDE machine IDs and isolate
     for target in isolation_targets:
         try:
@@ -115,6 +121,6 @@ async def containment_node(state: TriageState) -> dict:
             error_msg = f"MDE isolation failed for {target}: {str(exc)}"
             logger.error("node_error", node="containment", exc_info=True)
             errors.append(error_msg)
-    
+
     logger.info("node_exit", node="containment")
     return {"errors": errors}

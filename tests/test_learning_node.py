@@ -17,9 +17,12 @@ Concurrency Invariants:
 - Uses ProcessPoolExecutor to offload SentenceTransformer embedding encoding so it does not block the async event loop.
 """
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from unittest.mock import patch, AsyncMock
-from nodes.learning_node import learning_node, embed_and_store, learning_queue
+
+from nodes.learning_node import embed_and_store, learning_node, learning_queue
+
 
 @pytest.mark.asyncio
 async def test_learning_node_mismatch_queues_payload(empty_triage_state):
@@ -29,11 +32,14 @@ async def test_learning_node_mismatch_queues_payload(empty_triage_state):
     state["human_classification"] = "TruePositive"
     state["condensed_summary"] = "Test"
     state["triage_summary"] = "LLM was wrong"
-    
-    with patch("nodes.learning_node.embed_and_store", new_callable=AsyncMock) as mock_embed:
+
+    with patch(
+        "nodes.learning_node.embed_and_store", new_callable=AsyncMock
+    ) as mock_embed:
         result = await learning_node(state)
         assert result == {}
         mock_embed.assert_called_once()
+
 
 @pytest.mark.asyncio
 async def test_learning_node_match_does_nothing(empty_triage_state):
@@ -41,8 +47,10 @@ async def test_learning_node_match_does_nothing(empty_triage_state):
     state = empty_triage_state.copy()
     state["classification"] = "TruePositive"
     state["human_classification"] = "TruePositive"
-    
-    with patch("nodes.learning_node.embed_and_store", new_callable=AsyncMock) as mock_embed:
+
+    with patch(
+        "nodes.learning_node.embed_and_store", new_callable=AsyncMock
+    ) as mock_embed:
         result = await learning_node(state)
         assert result == {}
         mock_embed.assert_not_called()
@@ -56,7 +64,9 @@ async def test_learning_node_no_human_classification(empty_triage_state):
     # human_classification defaults to llm_classification when absent
     state.pop("human_classification", None)
 
-    with patch("nodes.learning_node.embed_and_store", new_callable=AsyncMock) as mock_embed:
+    with patch(
+        "nodes.learning_node.embed_and_store", new_callable=AsyncMock
+    ) as mock_embed:
         result = await learning_node(state)
         assert result == {}
         mock_embed.assert_not_called()
@@ -69,7 +79,9 @@ async def test_learning_node_empty_human_classification(empty_triage_state):
     state["classification"] = "TruePositive"
     state["human_classification"] = ""
 
-    with patch("nodes.learning_node.embed_and_store", new_callable=AsyncMock) as mock_embed:
+    with patch(
+        "nodes.learning_node.embed_and_store", new_callable=AsyncMock
+    ) as mock_embed:
         result = await learning_node(state)
         assert result == {}
         mock_embed.assert_not_called()
@@ -79,6 +91,7 @@ async def test_learning_node_empty_human_classification(empty_triage_state):
 async def test_embed_and_store_queue_full():
     """Asserts queue-full condition drops payload without crash."""
     import asyncio
+
     from nodes.learning_node import embed_and_store, learning_queue
 
     # Fill the queue to max
@@ -93,12 +106,14 @@ async def test_embed_and_store_queue_full():
 
     # Fill to capacity
     for i in range(learning_queue.maxsize):
-        learning_queue.put_nowait({
-            "condensed_summary": f"fill-{i}",
-            "triage_summary": "fill",
-            "human_classification": "fill",
-            "human_classification_reason": "",
-        })
+        learning_queue.put_nowait(
+            {
+                "condensed_summary": f"fill-{i}",
+                "triage_summary": "fill",
+                "human_classification": "fill",
+                "human_classification_reason": "",
+            }
+        )
 
     # This should NOT raise - it should log and drop
     await embed_and_store("overflow", "overflow", "overflow", "")
@@ -110,4 +125,3 @@ async def test_embed_and_store_queue_full():
             learning_queue.task_done()
         except asyncio.QueueEmpty:
             break
-

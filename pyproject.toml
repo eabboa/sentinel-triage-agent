@@ -14,7 +14,7 @@ dependencies = [
     "prometheus-client>=0.21.0",
     "python-dotenv>=1.2.2",
     "requests>=2.34.2",
-    "sentence-transformers>=2.2.0",
+    "sentence-transformers>=5.5.1",
     "structlog>=26.1.0",
 ]
 

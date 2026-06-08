@@ -21,12 +21,7 @@ def setup_logging():
         cache_logger_on_first_use=True,
     )
 
-    console_formatter = structlog.stdlib.ProcessorFormatter(
-        foreign_pre_chain=shared_processors,
-        processors=[
-            structlog.dev.ConsoleRenderer(colors=True)
-        ],
-    )
+
 
     file_formatter = structlog.stdlib.ProcessorFormatter(
         foreign_pre_chain=shared_processors,
@@ -38,10 +33,6 @@ def setup_logging():
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
     root_logger.handlers.clear()
-
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(console_formatter)
-    root_logger.addHandler(console_handler)
 
     file_handler = logging.FileHandler("triage_timeline.log", mode="a", encoding="utf-8")
     file_handler.setFormatter(file_formatter)

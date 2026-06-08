@@ -30,6 +30,9 @@ constraint-dependencies = [
 [tool.pytest.ini_options]
 pythonpath = ["."]
 asyncio_mode = "auto"
+filterwarnings = [
+    "ignore:This AsyncLimiter instance is being re-used across loops:RuntimeWarning",
+]
 
 [tool.coverage.run]
 branch = true

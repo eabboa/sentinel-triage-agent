@@ -9,6 +9,19 @@ pytest fixture has a chance to run.
 """
 
 import os
+from unittest.mock import Mock
+
+import aiohttp
+
+if hasattr(aiohttp.ClientResponse, "__init__"):
+    _original_init = aiohttp.ClientResponse.__init__
+
+    def _patched_init(self, *args, **kwargs):
+        if "stream_writer" not in kwargs:
+            kwargs["stream_writer"] = Mock()
+        _original_init(self, *args, **kwargs)
+
+    aiohttp.ClientResponse.__init__ = _patched_init  # type: ignore[method-assign]
 
 # ── Module-level env var injection ──────────────────────────────────────────────
 # These must be set BEFORE any sentinel_api import occurs during test collection.

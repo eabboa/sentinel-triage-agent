@@ -4,9 +4,11 @@ Closure is deferred until human review and approval.
 """
 
 import hashlib
+
 import structlog
 
-from sentinel_api import fetch_incident_comments, post_incident_comment, update_incident_status
+from sentinel_api import (fetch_incident_comments, post_incident_comment,
+                          update_incident_status)
 from state import TriageState
 
 logger = structlog.get_logger(__name__)
@@ -59,9 +61,7 @@ def _format_cti_lines(cti: dict) -> list[str]:
         if "error" not in url_report:
             mal = url_report.get("malicious", 0)
             flag = "🔴" if mal > 3 else ("🟡" if mal > 0 else "🟢")
-            lines.append(
-                f"{flag} URL {url_report['ioc'][:60]}: {mal} VT detections"
-            )
+            lines.append(f"{flag} URL {url_report['ioc'][:60]}: {mal} VT detections")
     return lines
 
 
@@ -197,7 +197,7 @@ def writeback_node(state: TriageState) -> dict:
     errors = []
 
     # ── Post the triage comment ────────────────────────────────────────────────
-    try:    
+    try:
         comment_text = _format_comment(state)
         digest = _comment_hash(comment_text)
         fingerprint = _HASH_TAG.format(digest)

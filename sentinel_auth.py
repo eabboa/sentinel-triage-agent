@@ -15,6 +15,7 @@ get_access_token(scope)  ←── _cached_tokens dict (check the cache first, a
 import threading
 import time
 from typing import Any
+
 from azure.identity import DefaultAzureCredential
 
 # The scope for Azure Resource Manager API (management.azure.com)
@@ -66,13 +67,15 @@ def get_access_token(scope: str = MANAGEMENT_SCOPE) -> str:
         ClientAuthenticationError: If token acquisition fails.
     """
     with _token_lock:
-        cached = _cached_tokens.get(scope) # Check cache for token 
-        if (cached is None or
-            cached["expires_on"] is None or
-            time.time() + 300 >= cached["expires_on"]): # Refresh if missing or within 5 minutes of expiration
+        cached = _cached_tokens.get(scope)  # Check cache for token
+        if (
+            cached is None
+            or cached["expires_on"] is None
+            or time.time() + 300 >= cached["expires_on"]
+        ):  # Refresh if missing or within 5 minutes of expiration
             token = _get_credential().get_token(scope)
             _cached_tokens[scope] = {
-                "token": token.token, # JWT access token string
+                "token": token.token,  # JWT access token string
                 "expires_on": token.expires_on,
             }
 
@@ -84,6 +87,7 @@ Facade wrappers hides URI complexity from the callers.
 Instead of writing the URLs every time, we define functions to do this.
 """
 
+
 def get_graph_token() -> str:
     """
     Get a token scoped to Microsoft Graph.
@@ -93,6 +97,7 @@ def get_graph_token() -> str:
     """
     return get_access_token("https://graph.microsoft.com/.default")
 
+
 def get_mde_token() -> str:
     """
     Get a token scoped to Microsoft Defender for Endpoint.
@@ -101,6 +106,7 @@ def get_mde_token() -> str:
         The JWT access token string.
     """
     return get_access_token("https://api.securitycenter.microsoft.com/.default")
+
 
 def get_auth_headers() -> dict:
     """

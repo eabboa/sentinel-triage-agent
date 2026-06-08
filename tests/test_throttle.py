@@ -6,7 +6,9 @@ Asserts the APIRateLimiter correctly throttles when max_calls is reached.
 
 import asyncio
 import time
+
 import pytest
+
 from throttle import APIRateLimiter
 
 

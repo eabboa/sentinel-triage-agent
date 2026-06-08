@@ -7,8 +7,10 @@ WARNING: It is only intended for development testing. Production should use the 
 import asyncio
 import time
 
+
 class APIRateLimiter:
     """Asynchronous rate limiter using a sliding window."""
+
     def __init__(self, max_calls: int, period: float):
         self.max_calls = max_calls
         self.period = period
@@ -54,6 +56,7 @@ class APIRateLimiter:
             # Sleep OUTSIDE the lock so other coroutines can proceed
             if sleep_time > 0:
                 await asyncio.sleep(sleep_time)
+
 
 # Limit to 14 requests per 60 seconds to be slightly under the 15 RPM Free Tier limit
 gemini_rate_limiter = APIRateLimiter(max_calls=14, period=60.0)

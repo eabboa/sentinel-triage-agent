@@ -1,15 +1,19 @@
 """
 Fetches a Sentinel incident and its associated alerts.
 """
+
+from typing import Any
+
 import structlog
 from pydantic import ValidationError
-from models.validation import SentinelAlert
+
 from models.exceptions import SentinelAlertValidationError
-from typing import Any
+from models.validation import SentinelAlert
 from sentinel_api import get_incident, list_incident_alerts
 from state import TriageState
 
 logger = structlog.get_logger(__name__)
+
 
 def fetch_node(state: TriageState) -> dict:
     """
@@ -57,19 +61,20 @@ def fetch_node(state: TriageState) -> dict:
 
     try:
         # 1. Fetch the raw list of dictionaries from the API
-        raw_alerts_list = list_incident_alerts(incident_id)      
+        raw_alerts_list = list_incident_alerts(incident_id)
         valid_alerts = []
-        
+
         for raw_alert in raw_alerts_list:
             try:
                 valid_alert = SentinelAlert.model_validate(raw_alert)
                 valid_alerts.append(valid_alert.model_dump())
-                
+
             except ValidationError as exc:
-                logger.error("Sentinel alert validation failed. Raw input: %s", raw_alert)
+                logger.error(
+                    "Sentinel alert validation failed. Raw input: %s", raw_alert
+                )
                 raise SentinelAlertValidationError(
-                    message=f"Alert schema mismatch: {str(exc)}",
-                    raw_data=raw_alert
+                    message=f"Alert schema mismatch: {str(exc)}", raw_data=raw_alert
                 ) from exc
         result["raw_alerts"] = valid_alerts
 
@@ -79,6 +84,6 @@ def fetch_node(state: TriageState) -> dict:
     except Exception as e:
         logger.error("node_error", node="fetch", exc_info=True)
         errors.append(f"Alert fetch failed: {str(e)}")
-    
+
     logger.info("node_exit", node="fetch")
     return result

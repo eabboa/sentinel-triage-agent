@@ -4,13 +4,14 @@ Extracts IOCs (Indicators of Compromise) from the condensed incident summary.
 This node uses BOTH regex and LLM extraction in a hybrid approach.
 """
 
-import re
 import json
-import structlog
 import os
+import re
 
-from state import TriageState
+import structlog
+
 from models.exceptions import LLMExtractionError, LLMOutputValidationError
+from state import TriageState
 
 logger = structlog.get_logger(__name__)
 
@@ -195,8 +196,8 @@ TEXT:
 {text}
 """
 
-    from throttle import gemini_rate_limiter
     from llm_utils import llm_retry
+    from throttle import gemini_rate_limiter
 
     @llm_retry
     async def _invoke_llm():
@@ -209,13 +210,21 @@ TEXT:
         metadata = getattr(response, "response_metadata", None)
         if isinstance(metadata, dict):
             usage_dict = metadata.get("usage_metadata", {})
-            output_tokens = usage_dict.get("candidates_token_count") or usage_dict.get("completion_tokens", 0)
+            output_tokens = usage_dict.get("candidates_token_count") or usage_dict.get(
+                "completion_tokens", 0
+            )
         else:
             output_tokens = 0
         logger.info("llm_call_end", node="extract", output_tokens=output_tokens)
-        
+
         # Strip markdown fences if the model adds them despite instructions
-        clean = response.content.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        clean = (
+            response.content.strip()
+            .removeprefix("```json")
+            .removeprefix("```")
+            .removesuffix("```")
+            .strip()
+        )
         try:
             llm_entities = json.loads(clean)
         except json.JSONDecodeError as exc:
@@ -223,19 +232,24 @@ TEXT:
                 f"LLM returned unparsable output: {clean[:200]}", raw_data=clean
             ) from exc
     except (LLMExtractionError, LLMOutputValidationError):
-        logger.warning("LLM extraction failed, falling back to regex-only", exc_info=True)
+        logger.warning(
+            "LLM extraction failed, falling back to regex-only", exc_info=True
+        )
         llm_entities = {"usernames": [], "hostnames": [], "domains": []}
     except Exception as exc:
         logger.warning(
             "LLM extraction failed (unexpected: %s), falling back to regex-only",
-            type(exc).__name__, exc_info=True,
+            type(exc).__name__,
+            exc_info=True,
         )
         llm_entities = {"usernames": [], "hostnames": [], "domains": []}
 
     # ── Merge: raw_alerts (complete) + summary regex (fallback) + LLM contextual
     entities = {
         "ips": list(set(raw_alerts_iocs["ips"]) | set(summary_iocs["ips"])),
-        "internal_ips": list(set(raw_alerts_iocs["internal_ips"]) | set(summary_iocs["internal_ips"])),
+        "internal_ips": list(
+            set(raw_alerts_iocs["internal_ips"]) | set(summary_iocs["internal_ips"])
+        ),
         "hashes": list(set(raw_alerts_iocs["hashes"]) | set(summary_iocs["hashes"])),
         "urls": list(set(raw_alerts_iocs["urls"]) | set(summary_iocs["urls"])),
         "usernames": llm_entities.get("usernames", []),

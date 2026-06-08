@@ -5,23 +5,28 @@ Compares LLM classification with human classification and stores mismatches for 
 
 import asyncio
 import concurrent.futures
-import structlog
 import os
 import threading
 import time
 import uuid
 
+import structlog
+
 from state import TriageState
 
 logger = structlog.get_logger(__name__)
 
+
 class _WorkerState:
     """Module-level state for the embedding process pool."""
+
     def __init__(self):
         self.embedding_model = None
         self.executor: concurrent.futures.ProcessPoolExecutor | None = None
 
-    def ensure_executor(self, max_workers: int = 1) -> concurrent.futures.ProcessPoolExecutor:
+    def ensure_executor(
+        self, max_workers: int = 1
+    ) -> concurrent.futures.ProcessPoolExecutor:
         """
         Creates or reuses a process executor for encoding batches.
 
@@ -51,7 +56,7 @@ def _init_worker():
     """
     from sentence_transformers import SentenceTransformer
 
-    _worker_state.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+    _worker_state.embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 
 learning_queue: asyncio.Queue[dict[str, str]] = asyncio.Queue(maxsize=1000)
@@ -67,24 +72,28 @@ class ChromaSingleton:
     _failure_count: int = 0
 
     def __init__(self):
-        host = os.environ.get('CHROMA_HOST', 'localhost')
-        port = int(os.environ.get('CHROMA_PORT', '8000'))
+        host = os.environ.get("CHROMA_HOST", "localhost")
+        port = int(os.environ.get("CHROMA_PORT", "8000"))
         try:
             import chromadb
             from sentence_transformers import SentenceTransformer
 
             self.client = chromadb.HttpClient(host=host, port=port)
-            self.collection = self.client.get_or_create_collection(name="triage_corrections")
-            self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+            self.collection = self.client.get_or_create_collection(
+                name="triage_corrections"
+            )
+            self.embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
         except Exception as exc:
-            logger.exception("Failed to initialize ChromaDB singleton for learning node")
+            logger.exception(
+                "Failed to initialize ChromaDB singleton for learning node"
+            )
             self.__class__._init_error = exc
             raise
 
     @classmethod
     def get_instance(cls):
         if time.time() < cls._circuit_open_until:
-            raise RuntimeError('ChromaDB Circuit Open')
+            raise RuntimeError("ChromaDB Circuit Open")
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
@@ -96,7 +105,9 @@ class ChromaSingleton:
                         cls._failure_count += 1
                         if cls._failure_count > 3:
                             cls._circuit_open_until = time.time() + 60
-                            logger.critical("ChromaDB Circuit Breaker opened due to repeated initialization failures")
+                            logger.critical(
+                                "ChromaDB Circuit Breaker opened due to repeated initialization failures"
+                            )
                         raise
         if cls._instance is None:
             raise RuntimeError("ChromaDB singleton failed to initialize")
@@ -113,8 +124,8 @@ def _build_document(payload: dict[str, str]) -> str:
     Returns:
         The formatted string representing the document.
     """
-    reason = payload.get('human_classification_reason', '')
-    reason = payload.get('human_classification_reason', '')
+    reason = payload.get("human_classification_reason", "")
+    reason = payload.get("human_classification_reason", "")
     return (
         f"Incident Context: {payload['condensed_summary']}\n"
         f"Incorrect LLM Reasoning: {payload['triage_summary']}\n"
@@ -168,9 +179,14 @@ async def embed_and_store(
     }
     try:
         learning_queue.put_nowait(payload)
-        logger.debug("Queued learning payload for human_classification=%s", human_classification)
+        logger.debug(
+            "Queued learning payload for human_classification=%s", human_classification
+        )
     except asyncio.QueueFull:
-        logger.error("Learning queue saturated; dropping payload to prevent blocking. Data loss occurred for human_classification=%s", human_classification)
+        logger.error(
+            "Learning queue saturated; dropping payload to prevent blocking. Data loss occurred for human_classification=%s",
+            human_classification,
+        )
 
 
 async def _embed_and_write_batch(
@@ -192,7 +208,9 @@ async def _embed_and_write_batch(
         True on success, False on failure.
     """
     documents = [_build_document(item) for item in batch]
-    metadatas = [{"human_classification": item["human_classification"]} for item in batch]
+    metadatas = [
+        {"human_classification": item["human_classification"]} for item in batch
+    ]
     ids = [f"mismatch_{uuid.uuid4()}" for _ in batch]
 
     try:
@@ -232,7 +250,9 @@ async def consume_learning_queue(batch_size: int = 32, flush_interval: float = 5
     try:
         instance = ChromaSingleton.get_instance()
     except Exception:
-        logger.exception("Unable to obtain ChromaDB singleton instance for learning_node")
+        logger.exception(
+            "Unable to obtain ChromaDB singleton instance for learning_node"
+        )
         return
 
     if not instance.embedding_model or not instance.collection:
@@ -268,7 +288,9 @@ async def consume_learning_queue(batch_size: int = 32, flush_interval: float = 5
             continue
 
         if await _embed_and_write_batch(instance, executor, loop, batch):
-            logger.debug("Successfully stored %d learning mismatch documents", len(batch))
+            logger.debug(
+                "Successfully stored %d learning mismatch documents", len(batch)
+            )
 
 
 async def flush_and_shutdown(batch_size: int = 32):
@@ -317,7 +339,9 @@ async def flush_and_shutdown(batch_size: int = 32):
     try:
         await learning_queue.join()
     except Exception:
-        logger.exception("Error waiting for learning_queue task completion during shutdown")
+        logger.exception(
+            "Error waiting for learning_queue task completion during shutdown"
+        )
 
     try:
         executor.shutdown(wait=True)
@@ -327,6 +351,7 @@ async def flush_and_shutdown(batch_size: int = 32):
         _worker_state.executor = None
 
     logger.info("Learning node flush and shutdown complete")
+
 
 async def learning_node(state: TriageState) -> dict:
     """
@@ -348,7 +373,7 @@ async def learning_node(state: TriageState) -> dict:
         condensed = state.get("condensed_summary", "")
         triage = state.get("triage_summary", "")
         reason = state.get("human_classification_reason") or ""
-        
+
         # Non-blocking queue insertion
         await embed_and_store(condensed, triage, human_classification, reason)
 

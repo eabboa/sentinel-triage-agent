@@ -14,15 +14,12 @@ Failure Modes:
 - Technique not in catalog: Preserved with 'unverified' flag.
 """
 
-from nodes.mitre_utils import (
-    normalize_tactic,
-    validate_and_enrich_techniques,
-    _resolve_id_by_name,
-    TECHNIQUE_ID_PATTERN,
-)
-
+from nodes.mitre_utils import (TECHNIQUE_ID_PATTERN, _resolve_id_by_name,
+                               normalize_tactic,
+                               validate_and_enrich_techniques)
 
 # ── normalize_tactic ──────────────────────────────────────────────────────────
+
 
 def test_normalize_tactic_empty():
     """Empty string returns 'Unknown'."""
@@ -48,6 +45,7 @@ def test_normalize_tactic_unknown_falls_through():
 
 # ── _resolve_id_by_name ──────────────────────────────────────────────────────
 
+
 def test_resolve_id_by_name_found():
     """Known technique name resolves to (id, official_name)."""
     result = _resolve_id_by_name("Brute Force")
@@ -69,6 +67,7 @@ def test_resolve_id_by_name_not_found():
 
 
 # ── validate_and_enrich_techniques ────────────────────────────────────────────
+
 
 def test_validate_known_technique():
     """Valid catalog technique is verified with official name and tactic."""
@@ -116,7 +115,14 @@ def test_validate_duplicate_techniques():
 
 def test_validate_unknown_catalog_technique():
     """Valid ID format but not in catalog is preserved with unverified flag."""
-    techs = [{"technique_id": "T9999", "name": "Custom Tech", "confidence": 60, "tactic": "Execution"}]
+    techs = [
+        {
+            "technique_id": "T9999",
+            "name": "Custom Tech",
+            "confidence": 60,
+            "tactic": "Execution",
+        }
+    ]
     verified, warnings = validate_and_enrich_techniques(techs, [])
 
     assert len(verified) == 1
@@ -135,7 +141,9 @@ def test_validate_non_dict_item():
 
 def test_validate_name_autocorrect():
     """Known ID with incorrect name auto-corrects to official name."""
-    techs = [{"technique_id": "T1078", "name": "Valids Accountz (typo)", "confidence": 90}]
+    techs = [
+        {"technique_id": "T1078", "name": "Valids Accountz (typo)", "confidence": 90}
+    ]
     verified, warnings = validate_and_enrich_techniques(techs, [])
 
     assert len(verified) == 1
@@ -154,7 +162,9 @@ def test_validate_tactic_not_in_incident():
 
 def test_validate_underscore_id_formatting():
     """Technique IDs with underscores are normalized to dots."""
-    techs = [{"technique_id": "T1078_001", "name": "Default Accounts", "confidence": 70}]
+    techs = [
+        {"technique_id": "T1078_001", "name": "Default Accounts", "confidence": 70}
+    ]
     verified, warnings = validate_and_enrich_techniques(techs, [])
 
     assert len(verified) == 1

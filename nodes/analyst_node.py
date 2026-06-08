@@ -6,13 +6,15 @@ We use strictly, JSON output to prevent LLM from prose and babbling.
 import asyncio
 import json
 import os
+
 import structlog
 from pydantic import ValidationError
-from models.validation import AnalystVerdict
-from models.exceptions import LLMOutputValidationError
-from state import TriageState
-from nodes.mitre_utils import MITRE_CATALOG
+
 from metrics import LLM_RESPONSE_TOKENS
+from models.exceptions import LLMOutputValidationError
+from models.validation import AnalystVerdict
+from nodes.mitre_utils import MITRE_CATALOG
+from state import TriageState
 
 logger = structlog.get_logger(__name__)
 
@@ -21,6 +23,7 @@ mitre_catalog_str = json.dumps(MITRE_CATALOG, indent=2)
 
 class _AnalystChroma:
     """Lazy-initialized ChromaDB client for analyst RAG retrieval."""
+
     def __init__(self):
         self.client = None
         self.collection = None
@@ -40,8 +43,10 @@ class _AnalystChroma:
             host = os.environ.get("CHROMA_HOST", "localhost")
             port = int(os.environ.get("CHROMA_PORT", "8000"))
             self.client = chromadb.HttpClient(host=host, port=port)
-            self.collection = self.client.get_or_create_collection(name="triage_corrections")
-            self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+            self.collection = self.client.get_or_create_collection(
+                name="triage_corrections"
+            )
+            self.embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
     async def retrieve_similar_mismatches(self, condensed_summary: str, top_k: int = 3):
         """
@@ -93,7 +98,8 @@ async def retrieve_similar_mismatches(condensed_summary: str, top_k: int = 3):
     return await _analyst_chroma.retrieve_similar_mismatches(condensed_summary, top_k)
 
 
-ANALYST_SYSTEM_PROMPT = """
+ANALYST_SYSTEM_PROMPT = (
+    """
 You are a Tier 2 SOC analyst performing incident triage in Microsoft Sentinel.
 
 Your goal is to evaluate the provided incident summary and CTI enrichment results to determine if an alert is a True Positive, False Positive, or Benign Positive.
@@ -134,7 +140,9 @@ You must choose from the provided reference catalog below to prevent hallucinati
 Ensure the techniques correspond logically to the observed incident behavior. Do not invent fake technique IDs or guess name pairings, as your output will be verified programmatically against the official MITRE framework catalog.
 
 REFERENCE CATALOG:
-""" + mitre_catalog_str + """
+"""
+    + mitre_catalog_str
+    + """
 
 CLASSIFICATION RULES:
 - TruePositive: Confirmed malicious activity. At least one IOC verdict is "malicious"
@@ -176,6 +184,7 @@ Return ONLY valid JSON with this exact schema. No preamble, no markdown, no expl
   "recommended_action": "Brief next step for the Tier 2 analyst. 5 sentence explanation."
 }
 """
+)
 
 USER_DATA_TEMPLATE = """
 UNTRUSTED INCIDENT DATA FOR ANALYSIS:
@@ -229,23 +238,31 @@ def _build_messages(state: TriageState, few_shot_context: str) -> list:
     Returns:
         A list of BaseMessage objects for the LLM.
     """
-    from langchain_core.messages import SystemMessage, HumanMessage
+    from langchain_core.messages import HumanMessage, SystemMessage
 
     degraded = state.get("degraded_sources", [])
-    degraded_str = ", ".join(degraded) if degraded else "None (all configured sources available)"
+    degraded_str = (
+        ", ".join(degraded) if degraded else "None (all configured sources available)"
+    )
 
     return [
         SystemMessage(content=ANALYST_SYSTEM_PROMPT),
-        HumanMessage(content=USER_DATA_TEMPLATE.format(
-            condensed_summary=state.get("condensed_summary", "No summary available."),
-            cti_results=json.dumps(state.get("cti_results", {}), indent=2),
-            degraded_sources=degraded_str,
-            internal_ips=json.dumps(
-                state.get("entities", {}).get("internal_ips", []), indent=2
-            ) or "None detected",
-            tactics=", ".join(state.get("incident_tactics", [])) or "None detected by Sentinel",
-            few_shot_examples=few_shot_context,
-        ))
+        HumanMessage(
+            content=USER_DATA_TEMPLATE.format(
+                condensed_summary=state.get(
+                    "condensed_summary", "No summary available."
+                ),
+                cti_results=json.dumps(state.get("cti_results", {}), indent=2),
+                degraded_sources=degraded_str,
+                internal_ips=json.dumps(
+                    state.get("entities", {}).get("internal_ips", []), indent=2
+                )
+                or "None detected",
+                tactics=", ".join(state.get("incident_tactics", []))
+                or "None detected by Sentinel",
+                few_shot_examples=few_shot_context,
+            )
+        ),
     ]
 
 
@@ -316,8 +333,8 @@ async def analyst_node(state: TriageState) -> dict:
         max_retries=0,
     ).with_structured_output(AnalystVerdict, include_raw=True)
 
-    from throttle import gemini_rate_limiter
     from llm_utils import llm_retry
+    from throttle import gemini_rate_limiter
 
     try:
         # ChromaDB outages degrade to empty few-shot context instead of crashing.
@@ -335,29 +352,42 @@ async def analyst_node(state: TriageState) -> dict:
         structured_response = await _invoke_llm()
 
         # with_structured_output(include_raw=True) returns dict with 'raw', 'parsed', and 'parsing_error'
-        raw_msg = structured_response.get("raw", structured_response) if isinstance(structured_response, dict) else structured_response
+        raw_msg = (
+            structured_response.get("raw", structured_response)
+            if isinstance(structured_response, dict)
+            else structured_response
+        )
 
         # ── Prometheus: track LLM token usage ─────────────────────────
         metadata = getattr(raw_msg, "response_metadata", None)
         if isinstance(metadata, dict):
             usage = metadata.get("usage_metadata", {})
-            output_tokens = usage.get("candidates_token_count") or usage.get("completion_tokens", 0)
+            output_tokens = usage.get("candidates_token_count") or usage.get(
+                "completion_tokens", 0
+            )
         else:
             output_tokens = 0
-            
+
         if output_tokens:
             LLM_RESPONSE_TOKENS.inc(output_tokens)
         logger.info("llm_call_end", node="analyst", output_tokens=output_tokens)
         # ──────────────────────────────────────────────────────────────
 
-        if isinstance(structured_response, dict) and structured_response.get("parsing_error"):
+        if isinstance(structured_response, dict) and structured_response.get(
+            "parsing_error"
+        ):
             raise structured_response["parsing_error"]
 
-        parsed_obj = structured_response.get("parsed") if isinstance(structured_response, dict) and "parsed" in structured_response else structured_response
+        parsed_obj = (
+            structured_response.get("parsed")
+            if isinstance(structured_response, dict) and "parsed" in structured_response
+            else structured_response
+        )
         verdict_dict = _parse_llm_response(parsed_obj)
 
         # Programmatically validate and enrich MITRE techniques
         from nodes.mitre_utils import validate_and_enrich_techniques
+
         verified_techs, warnings = validate_and_enrich_techniques(
             verdict_dict.get("mitre_techniques", []),
             state.get("incident_tactics", []),
@@ -378,5 +408,5 @@ async def analyst_node(state: TriageState) -> dict:
             "mitre_analysis": "N/A",
             "confidence": 0,
             "recommended_action": "N/A",
-            "errors": [f"Analyst node failed: {str(e)}"]
+            "errors": [f"Analyst node failed: {str(e)}"],
         }

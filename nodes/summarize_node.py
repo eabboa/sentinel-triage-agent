@@ -2,8 +2,9 @@
 Condenses the raw incident data before passing it to the LLM.
 """
 
-from state import TriageState
 import structlog
+
+from state import TriageState
 
 logger = structlog.get_logger(__name__)
 

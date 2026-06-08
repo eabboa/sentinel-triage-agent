@@ -36,20 +36,22 @@ Graceful degradation:
 """
 
 import asyncio
-import time
-import structlog
 import os
+import time
+
 import aiohttp
+import structlog
 # pyrefly: ignore [missing-import]
 from aiolimiter import AsyncLimiter
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
-from state import TriageState
-from metrics import ENRICHMENT_LATENCY
 from pydantic import ValidationError
-from models.validation import AbuseIPDBResponse
-from models.exceptions import AbuseIPDBResponseValidationError
-from models.exceptions import VirusTotalResponseValidationError
-from models.validation import VirusTotalResponse
+from tenacity import (retry, retry_if_exception_type, stop_after_attempt,
+                      wait_exponential)
+
+from metrics import ENRICHMENT_LATENCY
+from models.exceptions import (AbuseIPDBResponseValidationError,
+                               VirusTotalResponseValidationError)
+from models.validation import AbuseIPDBResponse, VirusTotalResponse
+from state import TriageState
 
 logger = structlog.get_logger(__name__)
 DEFAULT_HTTP_TIMEOUT = 10
@@ -60,12 +62,16 @@ ABUSEIPDB_API_KEY = os.getenv("ABUSEIPDB_API_KEY", "")
 
 # Configurable thresholds - override via environment variables in production.
 # See module docstring for threshold semantics and rationale.
-VT_MALICIOUS_THRESHOLD: int = int(os.getenv("VT_MALICIOUS_THRESHOLD", "5")) # default 5
-ABUSEIPDB_MALICIOUS_THRESHOLD: int = int(os.getenv("ABUSEIPDB_MALICIOUS_THRESHOLD", "75")) # default 75
+VT_MALICIOUS_THRESHOLD: int = int(os.getenv("VT_MALICIOUS_THRESHOLD", "5"))  # default 5
+ABUSEIPDB_MALICIOUS_THRESHOLD: int = int(
+    os.getenv("ABUSEIPDB_MALICIOUS_THRESHOLD", "75")
+)  # default 75
 ABUSEIPDB_SUSPICIOUS_THRESHOLD: int = 25  # Fixed lower bound for "suspicious" band
+
 
 class _SessionManager:
     """Manages a shared aiohttp.ClientSession with lazy initialization."""
+
     def __init__(self):
         self._session: aiohttp.ClientSession | None = None
 
@@ -122,7 +128,9 @@ class TransientHTTPError(Exception):
 
 
 @retry(
-    retry=retry_if_exception_type((aiohttp.ClientError, asyncio.TimeoutError, TransientHTTPError)),
+    retry=retry_if_exception_type(
+        (aiohttp.ClientError, asyncio.TimeoutError, TransientHTTPError)
+    ),
     wait=wait_exponential(multiplier=1, min=1, max=10),
     stop=stop_after_attempt(RETRY_ATTEMPTS),
     reraise=True,
@@ -147,10 +155,11 @@ def _vt_verdict(raw_data: dict, ioc: str, ioc_type: str) -> dict:
         malicious_count: int = validated.data.attributes.last_analysis_stats.malicious
         suspicious_count: int = validated.data.attributes.last_analysis_stats.suspicious
     except ValidationError as exc:
-        logger.error("VirusTotal response failed schema validation. Raw response: %s", raw_data)
+        logger.error(
+            "VirusTotal response failed schema validation. Raw response: %s", raw_data
+        )
         raise VirusTotalResponseValidationError(
-            message=f"VT {ioc_type} schema mismatch: {str(exc)}",
-            raw_data=raw_data
+            message=f"VT {ioc_type} schema mismatch: {str(exc)}", raw_data=raw_data
         ) from exc
 
     if malicious_count >= VT_MALICIOUS_THRESHOLD:
@@ -161,14 +170,19 @@ def _vt_verdict(raw_data: dict, ioc: str, ioc_type: str) -> dict:
         verdict = "clean"
 
     return {
-        "ioc": ioc, "type": ioc_type,
-        "malicious": malicious_count, "suspicious": suspicious_count,
-        "verdict": verdict, "threshold_used": VT_MALICIOUS_THRESHOLD,
+        "ioc": ioc,
+        "type": ioc_type,
+        "malicious": malicious_count,
+        "suspicious": suspicious_count,
+        "verdict": verdict,
+        "threshold_used": VT_MALICIOUS_THRESHOLD,
     }
 
 
 @retry(
-    retry=retry_if_exception_type((aiohttp.ClientError, asyncio.TimeoutError, TransientHTTPError)),
+    retry=retry_if_exception_type(
+        (aiohttp.ClientError, asyncio.TimeoutError, TransientHTTPError)
+    ),
     wait=wait_exponential(multiplier=1, min=1, max=10),
     stop=stop_after_attempt(RETRY_ATTEMPTS),
     reraise=True,
@@ -188,6 +202,7 @@ async def _check_vt_url(session: aiohttp.ClientSession, url: str) -> dict:
         TransientHTTPError: If a retryable HTTP status is returned.
     """
     import base64
+
     encoded = base64.urlsafe_b64encode(url.encode()).rstrip(b"=").decode()
     endpoint = f"https://www.virustotal.com/api/v3/urls/{encoded}"
 
@@ -197,14 +212,18 @@ async def _check_vt_url(session: aiohttp.ClientSession, url: str) -> dict:
             (time.monotonic() - t0) * 1000
         )
         if resp.status in (429, 503, 504):
-            raise TransientHTTPError(f"VirusTotal URL lookup transient HTTP {resp.status} for {url}")
+            raise TransientHTTPError(
+                f"VirusTotal URL lookup transient HTTP {resp.status} for {url}"
+            )
         if resp.status == 200:
             return _vt_verdict(await resp.json(), url, "url")
         return {"ioc": url, "type": "url", "error": f"HTTP {resp.status}"}
 
 
 @retry(
-    retry=retry_if_exception_type((aiohttp.ClientError, asyncio.TimeoutError, TransientHTTPError)),
+    retry=retry_if_exception_type(
+        (aiohttp.ClientError, asyncio.TimeoutError, TransientHTTPError)
+    ),
     wait=wait_exponential(multiplier=1, min=1, max=10),
     stop=stop_after_attempt(RETRY_ATTEMPTS),
     reraise=True,
@@ -231,7 +250,9 @@ async def _check_vt_hash(session: aiohttp.ClientSession, file_hash: str) -> dict
             (time.monotonic() - t0) * 1000
         )
         if resp.status in (429, 503, 504):
-            raise TransientHTTPError(f"VirusTotal hash lookup transient HTTP {resp.status} for {file_hash}")
+            raise TransientHTTPError(
+                f"VirusTotal hash lookup transient HTTP {resp.status} for {file_hash}"
+            )
         if resp.status == 200:
             return _vt_verdict(await resp.json(), file_hash, "hash")
         if resp.status == 404:
@@ -242,7 +263,9 @@ async def _check_vt_hash(session: aiohttp.ClientSession, file_hash: str) -> dict
 
 
 @retry(
-    retry=retry_if_exception_type((aiohttp.ClientError, asyncio.TimeoutError, TransientHTTPError)),
+    retry=retry_if_exception_type(
+        (aiohttp.ClientError, asyncio.TimeoutError, TransientHTTPError)
+    ),
     wait=wait_exponential(multiplier=1, min=1, max=10),
     stop=stop_after_attempt(RETRY_ATTEMPTS),
     reraise=True,
@@ -266,10 +289,11 @@ def _abuseipdb_verdict(raw_data: dict, ip: str) -> dict:
         d_obj = parsed.data
         score = d_obj.abuseConfidenceScore
     except ValidationError as exc:
-        logger.error("AbuseIPDB response failed schema validation. Raw response: %s", raw_data)
+        logger.error(
+            "AbuseIPDB response failed schema validation. Raw response: %s", raw_data
+        )
         raise AbuseIPDBResponseValidationError(
-            message=f"AbuseIPDB schema mismatch: {str(exc)}",
-            raw_data=raw_data
+            message=f"AbuseIPDB schema mismatch: {str(exc)}", raw_data=raw_data
         ) from exc
 
     if score >= ABUSEIPDB_MALICIOUS_THRESHOLD:
@@ -280,8 +304,10 @@ def _abuseipdb_verdict(raw_data: dict, ip: str) -> dict:
         verdict = "clean"
 
     return {
-        "ioc": ip, "type": "ip",
-        "abuse_score": score, "verdict": verdict,
+        "ioc": ip,
+        "type": "ip",
+        "abuse_score": score,
+        "verdict": verdict,
         "threshold_used": ABUSEIPDB_MALICIOUS_THRESHOLD,
         "total_reports": d_obj.totalReports,
         "country": d_obj.countryCode,
@@ -291,7 +317,9 @@ def _abuseipdb_verdict(raw_data: dict, ip: str) -> dict:
 
 
 @retry(
-    retry=retry_if_exception_type((aiohttp.ClientError, asyncio.TimeoutError, TransientHTTPError)),
+    retry=retry_if_exception_type(
+        (aiohttp.ClientError, asyncio.TimeoutError, TransientHTTPError)
+    ),
     wait=wait_exponential(multiplier=1, min=1, max=10),
     stop=stop_after_attempt(RETRY_ATTEMPTS),
     reraise=True,
@@ -320,7 +348,9 @@ async def _check_abuseipdb(session: aiohttp.ClientSession, ip: str) -> dict:
             (time.monotonic() - t0) * 1000
         )
         if resp.status in (429, 503, 504):
-            raise TransientHTTPError(f"AbuseIPDB lookup transient HTTP {resp.status} for {ip}")
+            raise TransientHTTPError(
+                f"AbuseIPDB lookup transient HTTP {resp.status} for {ip}"
+            )
         if resp.status == 200:
             return _abuseipdb_verdict(await resp.json(), ip)
         return {"ioc": ip, "type": "ip", "error": f"HTTP {resp.status}"}
@@ -393,7 +423,8 @@ def _build_internal_reports(entities: dict) -> list[dict]:
     """
     return [
         {
-            "ioc": ip, "type": "internal_ip",
+            "ioc": ip,
+            "type": "internal_ip",
             "verdict": "lateral_movement_candidate",
             "note": "RFC 1918 address - not submitted to external CTI. Investigate for host-to-host pivoting.",
         }
@@ -438,7 +469,9 @@ async def _run_enrichment(entities: dict) -> tuple[dict, list[str], list[str]]:
     url_list = entities.get("urls", [])
     hash_list = entities.get("hashes", [])
 
-    ip_reports, url_reports, hash_reports = [], [], []
+    ip_reports: list[dict] = []
+    url_reports: list[dict] = []
+    hash_reports: list[dict] = []
     enrichment_errors: list[str] = []
     degraded: list[str] = []
 
@@ -461,8 +494,12 @@ async def _run_enrichment(entities: dict) -> tuple[dict, list[str], list[str]]:
         if url_list or hash_list:
             if not VT_API_KEY:
                 raise ValueError("VT_API_KEY not configured")
-            vt_url_tasks = [_rate_limited_vt(session, _check_vt_url, u, "url") for u in url_list]
-            vt_hash_tasks = [_rate_limited_vt(session, _check_vt_hash, h, "hash") for h in hash_list]
+            vt_url_tasks = [
+                _rate_limited_vt(session, _check_vt_url, u, "url") for u in url_list
+            ]
+            vt_hash_tasks = [
+                _rate_limited_vt(session, _check_vt_hash, h, "hash") for h in hash_list
+            ]
     except Exception as exc:
         degraded.append("virustotal")
         enrichment_errors.append(f"enrich_node: VirusTotal unavailable: {exc}")
@@ -480,29 +517,39 @@ async def _run_enrichment(entities: dict) -> tuple[dict, list[str], list[str]]:
         # ── Process AbuseIPDB results ─────────────────────────────────
         try:
             ip_reports, ip_errs = _partition_results(
-                results[:ab_len], ip_list, "AbuseIPDB",
+                results[:ab_len],
+                ip_list,
+                "AbuseIPDB",
             )
             enrichment_errors.extend(ip_errs)
         except Exception as exc:
             if "abuseipdb" not in degraded:
                 degraded.append("abuseipdb")
-            enrichment_errors.append(f"enrich_node: AbuseIPDB result processing failed: {exc}")
+            enrichment_errors.append(
+                f"enrich_node: AbuseIPDB result processing failed: {exc}"
+            )
             logger.error("AbuseIPDB result processing failed: %s", exc)
 
         # ── Process VirusTotal results ────────────────────────────────
         try:
             vt_results = results[ab_len:]
             url_reports, url_errs = _partition_results(
-                vt_results[:vt_url_len], url_list, "VirusTotal URL",
+                vt_results[:vt_url_len],
+                url_list,
+                "VirusTotal URL",
             )
             hash_reports, hash_errs = _partition_results(
-                vt_results[vt_url_len:], hash_list, "VirusTotal hash",
+                vt_results[vt_url_len:],
+                hash_list,
+                "VirusTotal hash",
             )
             enrichment_errors.extend(url_errs + hash_errs)
         except Exception as exc:
             if "virustotal" not in degraded:
                 degraded.append("virustotal")
-            enrichment_errors.append(f"enrich_node: VirusTotal result processing failed: {exc}")
+            enrichment_errors.append(
+                f"enrich_node: VirusTotal result processing failed: {exc}"
+            )
             logger.error("VirusTotal result processing failed: %s", exc)
 
     return (
@@ -530,9 +577,23 @@ async def enrich_node(state: TriageState) -> dict:
     logger.info("node_entry", node="enrich")
     entities = state.get("entities", {}) or {}
 
-    if not any([entities.get("ips"), entities.get("urls"), entities.get("hashes"), entities.get("internal_ips")]):
+    if not any(
+        [
+            entities.get("ips"),
+            entities.get("urls"),
+            entities.get("hashes"),
+            entities.get("internal_ips"),
+        ]
+    ):
         logger.info("node_exit", node="enrich")
-        return {"cti_results": {"ip_reports": [], "url_reports": [], "hash_reports": [], "internal_ip_reports": []}}
+        return {
+            "cti_results": {
+                "ip_reports": [],
+                "url_reports": [],
+                "hash_reports": [],
+                "internal_ip_reports": [],
+            }
+        }
 
     cti_results, enrichment_errors, degraded = await _run_enrichment(entities)
 

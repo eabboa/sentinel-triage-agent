@@ -2,53 +2,67 @@
 Defines the LangGraph state using TypedDict.
 """
 
-from typing import TypedDict, Annotated
 import operator
+from typing import Annotated, TypedDict
 
 
 class TriageState(TypedDict):
     # ── Input (fetch_node.py) ───────────────────────────────────────────────────
     incident_id: str
     incident_title: str
-    incident_severity: str       # "High", "Medium", "Low", "Informational"
+    incident_severity: str  # "High", "Medium", "Low", "Informational"
     incident_description: str
     incident_status: str
-    incident_tactics: list[str]  # MITRE ATT&CK tactics from Sentinel (e.g., ["InitialAccess"])
-    raw_alerts: list[dict]       # Raw alert objects from list_incident_alerts()
+    incident_tactics: list[
+        str
+    ]  # MITRE ATT&CK tactics from Sentinel (e.g., ["InitialAccess"])
+    raw_alerts: list[dict]  # Raw alert objects from list_incident_alerts()
 
     # ── Extraction (summarize_node.py + extract_node.py) ────────────────────────
-    condensed_summary: str       # Pre-processed, token-efficient summary for the LLM
-    entities: dict               # {"ips": [...], "internal_ips": [...], "urls": [...], "hashes": [...],
-                                 #  "usernames": [...], "hostnames": [...], "domains": [...]}
+    condensed_summary: str  # Pre-processed, token-efficient summary for the LLM
+    entities: (
+        dict  # {"ips": [...], "internal_ips": [...], "urls": [...], "hashes": [...],
+    )
+    #  "usernames": [...], "hostnames": [...], "domains": [...]}
 
     # ── Enrichment (enrich_node.py) ────────────────────────────────────────────
-    cti_results: dict            # {"ip_reports": [...], "url_reports": [...], "hash_reports": [...]}
-    degraded_sources: Annotated[list[str], operator.add]  # CTI sources that failed entirely (e.g., ["virustotal"])
+    cti_results: (
+        dict  # {"ip_reports": [...], "url_reports": [...], "hash_reports": [...]}
+    )
+    degraded_sources: Annotated[
+        list[str], operator.add
+    ]  # CTI sources that failed entirely (e.g., ["virustotal"])
 
     # ── Analysis (analyst_node.py) ─────────────────────────────────────────────
     is_true_positive: bool
-    classification: str          # "TruePositive", "FalsePositive", "BenignPositive"
-    confidence: int              # 0-100 confidence score from the analyst LLM
-    triage_summary: str          # Human-readable, explaining the verdict
-    mitre_analysis: str          # MITRE ATT&CK tactic/technique analysis
-    mitre_techniques: list[dict] # Detailed techniques, e.g., [{"technique_id": "T1098", "name": "Account Manipulation", "confidence": 90}]
+    classification: str  # "TruePositive", "FalsePositive", "BenignPositive"
+    confidence: int  # 0-100 confidence score from the analyst LLM
+    triage_summary: str  # Human-readable, explaining the verdict
+    mitre_analysis: str  # MITRE ATT&CK tactic/technique analysis
+    mitre_techniques: list[
+        dict
+    ]  # Detailed techniques, e.g., [{"technique_id": "T1098", "name": "Account Manipulation", "confidence": 90}]
 
     # ── Hunting (kql_node.py) ──────────────────────────────────────────────────
-    kql_queries: list[str]       # Syntactically valid KQL hunting queries
+    kql_queries: list[str]  # Syntactically valid KQL hunting queries
 
     # ── Write-back (writeback_node.py) ──────────────────────────────────────────
     comment_posted: bool
     incident_closed: bool
     close_approved: bool
-    containment_approved: bool       # Set to True to trigger MDE device isolation
-    
+    containment_approved: bool  # Set to True to trigger MDE device isolation
+
     # ── Escalation (graph.py) ──────────────────────────────────────────────────
     escalation_triggered: bool
     escalation_summary: str
 
     # ── Human review ───────────────────────────────────────────────────────────
     human_classification: str | None  # Human-provided classification after review
-    human_classification_reason: str | None  # Why the analyst reclassified (out-of-band context)
-    
+    human_classification_reason: (
+        str | None
+    )  # Why the analyst reclassified (out-of-band context)
+
     # ── Error tracking ─────────────────────────────────────────────────────────
-    errors: Annotated[list[str], operator.add]   # Non-fatal errors encountered during processing
+    errors: Annotated[
+        list[str], operator.add
+    ]  # Non-fatal errors encountered during processing

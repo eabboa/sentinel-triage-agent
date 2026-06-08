@@ -11,6 +11,7 @@ This does not solve hallucination completely. But it tunes out.
 
 import json
 import os
+
 import structlog
 
 from state import TriageState
@@ -19,46 +20,86 @@ logger = structlog.get_logger(__name__)
 
 
 # ── Schema Map: The KQL Reliability Layer ─────────────────────────────────────
-# Columns listed are the most commonly queried. 
-# NOTE: This schema MUST be updated 
+# Columns listed are the most commonly queried.
+# NOTE: This schema MUST be updated
 # according to the specific tables and columns available in the connected data connectors.
 
 SENTINEL_TABLE_SCHEMA = {
     "SecurityAlert": {
         "description": "Microsoft Sentinel-generated security alerts",
-        "key_columns": ["AlertName", "Severity", "Entities", "ExtendedProperties",
-                        "ProviderName", "TimeGenerated", "SystemAlertId"],
+        "key_columns": [
+            "AlertName",
+            "Severity",
+            "Entities",
+            "ExtendedProperties",
+            "ProviderName",
+            "TimeGenerated",
+            "SystemAlertId",
+        ],
         "use_for_tactics": ["*"],  # Available for all tactic types
     },
     "SecurityIncident": {
         "description": "Microsoft Sentinel incidents",
-        "key_columns": ["IncidentNumber", "Title", "Severity", "Status",
-                        "Owner", "Labels", "TimeGenerated"],
+        "key_columns": [
+            "IncidentNumber",
+            "Title",
+            "Severity",
+            "Status",
+            "Owner",
+            "Labels",
+            "TimeGenerated",
+        ],
         "use_for_tactics": ["*"],
     },
     "SigninLogs": {
         "description": "Azure AD interactive sign-in events",
-        "key_columns": ["UserPrincipalName", "IPAddress", "Location",
-                        "ResultType", "ResultDescription", "AppDisplayName",
-                        "DeviceDetail", "TimeGenerated"],
+        "key_columns": [
+            "UserPrincipalName",
+            "IPAddress",
+            "Location",
+            "ResultType",
+            "ResultDescription",
+            "AppDisplayName",
+            "DeviceDetail",
+            "TimeGenerated",
+        ],
         "use_for_tactics": ["InitialAccess", "CredentialAccess", "Persistence"],
     },
     "AuditLogs": {
         "description": "Azure AD audit events (user/group changes, app registrations)",
-        "key_columns": ["OperationName", "InitiatedBy", "TargetResources",
-                        "Result", "TimeGenerated"],
+        "key_columns": [
+            "OperationName",
+            "InitiatedBy",
+            "TargetResources",
+            "Result",
+            "TimeGenerated",
+        ],
         "use_for_tactics": ["Persistence", "PrivilegeEscalation", "DefenseEvasion"],
     },
     "SecurityEvent": {
         "description": "Windows Security Event Log (requires Azure Monitor Agent)",
-        "key_columns": ["EventID", "Account", "Computer", "SubjectUserName",
-                        "TargetUserName", "LogonType", "IpAddress", "TimeGenerated"],
+        "key_columns": [
+            "EventID",
+            "Account",
+            "Computer",
+            "SubjectUserName",
+            "TargetUserName",
+            "LogonType",
+            "IpAddress",
+            "TimeGenerated",
+        ],
         "use_for_tactics": ["LateralMovement", "CredentialAccess", "Execution"],
     },
     "OfficeActivity": {
         "description": "Microsoft 365 activity (SharePoint, OneDrive, Exchange, Teams)",
-        "key_columns": ["Operation", "UserId", "ClientIP", "ObjectId",
-                        "OfficeWorkload", "TimeGenerated"],
+        "key_columns": [
+            "Operation",
+            "UserId",
+            "ClientIP",
+            "ObjectId",
+            "OfficeWorkload",
+            "TimeGenerated",
+        ],
         "use_for_tactics": ["Collection", "Exfiltration", "InitialAccess"],
     },
 }
@@ -142,7 +183,11 @@ async def kql_node(state: TriageState) -> dict:
     # Skip KQL generation for false positives
     if state.get("classification") == "FalsePositive":
         logger.info("node_exit", node="kql")
-        return {"kql_queries": ["# No hunting queries generated - classified as FalsePositive"]}
+        return {
+            "kql_queries": [
+                "# No hunting queries generated - classified as FalsePositive"
+            ]
+        }
 
     if not os.getenv("GOOGLE_API_KEY"):
         raise ValueError("NO API KEY: GOOGLE_API_KEY")
@@ -167,8 +212,8 @@ async def kql_node(state: TriageState) -> dict:
         table_schema=json.dumps(relevant_tables, indent=2),
     )
 
-    from throttle import gemini_rate_limiter
     from llm_utils import llm_retry
+    from throttle import gemini_rate_limiter
 
     @llm_retry
     async def _invoke_llm():
@@ -181,19 +226,27 @@ async def kql_node(state: TriageState) -> dict:
         metadata = getattr(response, "response_metadata", None)
         if isinstance(metadata, dict):
             usage_dict = metadata.get("usage_metadata", {})
-            output_tokens = usage_dict.get("candidates_token_count") or usage_dict.get("completion_tokens", 0)
+            output_tokens = usage_dict.get("candidates_token_count") or usage_dict.get(
+                "completion_tokens", 0
+            )
         else:
             output_tokens = 0
         logger.info("llm_call_end", node="kql", output_tokens=output_tokens)
-        
-        clean = response.content.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+
+        clean = (
+            response.content.strip()
+            .removeprefix("```json")
+            .removeprefix("```")
+            .removesuffix("```")
+            .strip()
+        )
         result = json.loads(clean)
-        
+
         queries = [
             f"// {q['title']}\n// Purpose: {q['purpose']}\n{q['kql']}"
             for q in result.get("queries", [])
         ]
-        
+
         logger.info("node_exit", node="kql")
         return {"kql_queries": queries}
 

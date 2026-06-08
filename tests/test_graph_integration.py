@@ -22,10 +22,11 @@ Concurrency Invariants:
   contamination between concurrent invocations sharing the same MemorySaver.
 """
 
-import pytest
 import uuid
 from typing import cast
-from unittest.mock import patch, AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 from langgraph.checkpoint.memory import MemorySaver
 
 
@@ -38,19 +39,44 @@ async def test_graph_hitl_interrupt_and_resume():
     decisions into the checkpoint before resumption.
     """
     # Mock ALL node functions BEFORE building the graph so the graph captures mock references.
-    with patch("nodes.fetch_node.get_incident", return_value={"properties": {"title": "Test", "severity": "High", "description": "desc", "status": "New", "additionalData": {"tactics": []}}}), \
-         patch("nodes.fetch_node.list_incident_alerts", return_value=[]), \
-         patch("nodes.summarize_node.summarize_node", return_value={"condensed_summary": "Test summary"}), \
-         patch("nodes.extract_node.extract_node", new_callable=AsyncMock, return_value={"entities": {}}), \
-         patch("nodes.analyst_node.retrieve_similar_mismatches", new_callable=AsyncMock, return_value={"documents": []}), \
-         patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLM, \
-         patch("nodes.writeback_node.fetch_incident_comments", return_value=[]), \
-         patch("nodes.writeback_node.post_incident_comment", return_value={}), \
-         patch("nodes.writeback_node.update_incident_status", return_value={}), \
-         patch("nodes.learning_node.embed_and_store", new_callable=AsyncMock):
+    with (
+        patch(
+            "nodes.fetch_node.get_incident",
+            return_value={
+                "properties": {
+                    "title": "Test",
+                    "severity": "High",
+                    "description": "desc",
+                    "status": "New",
+                    "additionalData": {"tactics": []},
+                }
+            },
+        ),
+        patch("nodes.fetch_node.list_incident_alerts", return_value=[]),
+        patch(
+            "nodes.summarize_node.summarize_node",
+            return_value={"condensed_summary": "Test summary"},
+        ),
+        patch(
+            "nodes.extract_node.extract_node",
+            new_callable=AsyncMock,
+            return_value={"entities": {}},
+        ),
+        patch(
+            "nodes.analyst_node.retrieve_similar_mismatches",
+            new_callable=AsyncMock,
+            return_value={"documents": []},
+        ),
+        patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLM,
+        patch("nodes.writeback_node.fetch_incident_comments", return_value=[]),
+        patch("nodes.writeback_node.post_incident_comment", return_value={}),
+        patch("nodes.writeback_node.update_incident_status", return_value={}),
+        patch("nodes.learning_node.embed_and_store", new_callable=AsyncMock),
+    ):
 
         # Configure the mocked LLM chain to return a valid AnalystVerdict
         from models.validation import AnalystVerdict, MitreTechnique
+
         mock_verdict = AnalystVerdict(
             classification="FalsePositive",
             is_true_positive=False,
@@ -64,7 +90,11 @@ async def test_graph_hitl_interrupt_and_resume():
         # with_structured_output(include_raw=True) returns dict with raw/parsed/parsing_error
         raw_msg = MagicMock()
         raw_msg.response_metadata = {}
-        structured_response = {"raw": raw_msg, "parsed": mock_verdict, "parsing_error": None}
+        structured_response = {
+            "raw": raw_msg,
+            "parsed": mock_verdict,
+            "parsing_error": None,
+        }
 
         mock_structured_llm = AsyncMock()
         mock_structured_llm.ainvoke = AsyncMock(return_value=structured_response)
@@ -74,6 +104,7 @@ async def test_graph_hitl_interrupt_and_resume():
 
         # Build graph INSIDE the patch context
         from graph import build_graph
+
         graph, checkpointer = build_graph()
 
         thread_id = str(uuid.uuid4())
@@ -134,16 +165,40 @@ async def test_graph_hitl_rejection_no_closure():
     human approval. If close_approved remains False, close_review_node must not
     call update_incident_status.
     """
-    with patch("nodes.fetch_node.get_incident", return_value={"properties": {"title": "Test", "severity": "High", "description": "desc", "status": "New", "additionalData": {"tactics": []}}}), \
-         patch("nodes.fetch_node.list_incident_alerts", return_value=[]), \
-         patch("nodes.summarize_node.summarize_node", return_value={"condensed_summary": "Test summary"}), \
-         patch("nodes.extract_node.extract_node", new_callable=AsyncMock, return_value={"entities": {}}), \
-         patch("nodes.analyst_node.retrieve_similar_mismatches", new_callable=AsyncMock, return_value={"documents": []}), \
-         patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLM, \
-         patch("nodes.writeback_node.fetch_incident_comments", return_value=[]), \
-         patch("nodes.writeback_node.post_incident_comment", return_value={}), \
-         patch("nodes.writeback_node.update_incident_status") as mock_update_status, \
-         patch("nodes.learning_node.embed_and_store", new_callable=AsyncMock):
+    with (
+        patch(
+            "nodes.fetch_node.get_incident",
+            return_value={
+                "properties": {
+                    "title": "Test",
+                    "severity": "High",
+                    "description": "desc",
+                    "status": "New",
+                    "additionalData": {"tactics": []},
+                }
+            },
+        ),
+        patch("nodes.fetch_node.list_incident_alerts", return_value=[]),
+        patch(
+            "nodes.summarize_node.summarize_node",
+            return_value={"condensed_summary": "Test summary"},
+        ),
+        patch(
+            "nodes.extract_node.extract_node",
+            new_callable=AsyncMock,
+            return_value={"entities": {}},
+        ),
+        patch(
+            "nodes.analyst_node.retrieve_similar_mismatches",
+            new_callable=AsyncMock,
+            return_value={"documents": []},
+        ),
+        patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLM,
+        patch("nodes.writeback_node.fetch_incident_comments", return_value=[]),
+        patch("nodes.writeback_node.post_incident_comment", return_value={}),
+        patch("nodes.writeback_node.update_incident_status") as mock_update_status,
+        patch("nodes.learning_node.embed_and_store", new_callable=AsyncMock),
+    ):
 
         from nodes.analyst_node import AnalystVerdict
 
@@ -160,7 +215,11 @@ async def test_graph_hitl_rejection_no_closure():
         # with_structured_output(include_raw=True) return shape
         raw_msg = MagicMock()
         raw_msg.response_metadata = {}
-        structured_response = {"raw": raw_msg, "parsed": mock_verdict, "parsing_error": None}
+        structured_response = {
+            "raw": raw_msg,
+            "parsed": mock_verdict,
+            "parsing_error": None,
+        }
 
         mock_structured_llm = AsyncMock()
         mock_structured_llm.ainvoke = AsyncMock(return_value=structured_response)
@@ -169,6 +228,7 @@ async def test_graph_hitl_rejection_no_closure():
         MockLLM.return_value = mock_instance
 
         from graph import build_graph
+
         graph, _ = build_graph()
 
         thread_id = str(uuid.uuid4())
@@ -219,25 +279,33 @@ async def test_graph_hitl_rejection_no_closure():
 
 # ── Routing function unit tests ───────────────────────────────────────────────
 
-from graph import _next_after_extract, _next_after_analyst, _next_after_writeback, escalation_node
+from graph import (_next_after_analyst, _next_after_extract,
+                   _next_after_writeback, escalation_node)
 from state import TriageState
 
 
 def test_next_after_extract_with_entities():
     """Entities with IPs routes to 'enrich'."""
-    state = cast(TriageState, {"entities": {"ips": ["8.8.8.8"], "hashes": [], "urls": []}})
+    state = cast(
+        TriageState, {"entities": {"ips": ["8.8.8.8"], "hashes": [], "urls": []}}
+    )
     assert _next_after_extract(state) == "enrich"
 
 
 def test_next_after_extract_with_hashes():
     """Entities with hashes routes to 'enrich'."""
-    state = cast(TriageState, {"entities": {"ips": [], "hashes": ["abc123"], "urls": []}})
+    state = cast(
+        TriageState, {"entities": {"ips": [], "hashes": ["abc123"], "urls": []}}
+    )
     assert _next_after_extract(state) == "enrich"
 
 
 def test_next_after_extract_with_urls():
     """Entities with URLs routes to 'enrich'."""
-    state = cast(TriageState, {"entities": {"ips": [], "hashes": [], "urls": ["http://evil.com"]}})
+    state = cast(
+        TriageState,
+        {"entities": {"ips": [], "hashes": [], "urls": ["http://evil.com"]}},
+    )
     assert _next_after_extract(state) == "enrich"
 
 
@@ -282,4 +350,3 @@ def test_escalation_node():
     result = escalation_node(cast(TriageState, {}))
     assert result["escalation_triggered"] is True
     assert "escalation" in result["escalation_summary"].lower()
-

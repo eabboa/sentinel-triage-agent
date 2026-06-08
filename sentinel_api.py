@@ -1,15 +1,19 @@
 # this script fetches and lists incidents filtered by "New", lists incident alerts granularly for IoC extraction, then agent writes comments + updates incident status.
 
 import asyncio
-import structlog
 import os
 import re
 import uuid
 from typing import Any
+
 import requests
-from requests.exceptions import ConnectionError, HTTPError, RequestException, Timeout
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential_jitter
+import structlog
 from dotenv import load_dotenv
+from requests.exceptions import (ConnectionError, HTTPError, RequestException,
+                                 Timeout)
+from tenacity import (retry, retry_if_exception_type, stop_after_attempt,
+                      wait_exponential_jitter)
+
 from sentinel_auth import get_auth_headers, get_graph_token, get_mde_token
 
 load_dotenv()
@@ -18,11 +22,14 @@ logger = structlog.get_logger(__name__)
 DEFAULT_HTTP_TIMEOUT = 10
 RETRY_ATTEMPTS = 3
 
+
 class ConcurrencyConflictError(Exception):
     """Raised when an optimistic concurrency update fails due to an ETag mismatch."""
 
+
 class TransientHTTPError(RequestException):
     """Raised for transient HTTP errors (429, 503, 504) to trigger tenacity retries."""
+
 
 @retry(
     retry=retry_if_exception_type((TransientHTTPError, ConnectionError, Timeout)),
@@ -30,7 +37,9 @@ class TransientHTTPError(RequestException):
     stop=stop_after_attempt(RETRY_ATTEMPTS),
     reraise=True,
 )
-def _http_request(method: str, url: str, *, headers=None, params=None, json=None) -> requests.Response:
+def _http_request(
+    method: str, url: str, *, headers=None, params=None, json=None
+) -> requests.Response:
     """
     Executes an HTTP request with automatic retries on transient failures.
 
@@ -58,9 +67,13 @@ def _http_request(method: str, url: str, *, headers=None, params=None, json=None
             json=json,
             timeout=DEFAULT_HTTP_TIMEOUT,
         )
-        logger.info("api_call_end", method=method, url=url, status_code=response.status_code)
+        logger.info(
+            "api_call_end", method=method, url=url, status_code=response.status_code
+        )
         if response.status_code in (429, 503, 504):
-            logger.warning("Transient HTTP %s for %s; retrying", response.status_code, url)
+            logger.warning(
+                "Transient HTTP %s for %s; retrying", response.status_code, url
+            )
             raise TransientHTTPError(
                 f"Transient HTTP {response.status_code} for {url}",
                 response=response,
@@ -72,7 +85,9 @@ def _http_request(method: str, url: str, *, headers=None, params=None, json=None
         raise
 
 
-def _request(method: str, url: str, *, headers=None, params=None, json=None) -> requests.Response:
+def _request(
+    method: str, url: str, *, headers=None, params=None, json=None
+) -> requests.Response:
     """
     Wrapper around _http_request that provides centralized error logging after retry exhaustion.
 
@@ -97,7 +112,8 @@ def _request(method: str, url: str, *, headers=None, params=None, json=None) -> 
         logger.error("HTTP request to %s failed after retries: %s", url, exc)
         raise
 
-API_VERSION = "2023-02-01" ## stable version. do not change this.
+
+API_VERSION = "2023-02-01"  ## stable version. do not change this.
 
 # Lazy-initialized module state — deferred from import time so that test
 # fixtures can inject env vars before the first real API call.
@@ -126,7 +142,7 @@ def _get_base() -> str:
         "SUBSCRIPTION_ID": subscription_id,
         "RESOURCE_GROUP": resource_group,
         "WORKSPACE_NAME": workspace_name,
-    }   
+    }
     _missing = []
     for env_var, value in _required.items():
         if not value:
@@ -145,7 +161,6 @@ def _get_base() -> str:
         f"/providers/Microsoft.SecurityInsights"
     )
     return _BASE
-
 
 
 VALID_INCIDENT_STATUSES = {"New", "Active", "Closed"}
@@ -204,7 +219,7 @@ def get_incident(incident_id: str) -> dict:
     """
     url = f"{_get_base()}/incidents/{incident_id}"
     params = {"api-version": API_VERSION}
-    
+
     response = _request("GET", url, headers=get_auth_headers(), params=params)
     incident = response.json()
     incident_etag = incident.get("etag")
@@ -228,7 +243,7 @@ def list_incident_alerts(incident_id: str) -> list[dict]:
     """
     url = f"{_get_base()}/incidents/{incident_id}/alerts"
     params = {"api-version": API_VERSION}
-    
+
     response = _request("POST", url, headers=get_auth_headers(), params=params)
     # Note: This is a POST, not GET. The Sentinel API uses POST for listing the alerts of an incident.
     data = response.json()
@@ -260,8 +275,10 @@ def post_incident_comment(incident_id: str, comment_text: str) -> dict:
             "message": comment_text,
         }
     }
-    
-    response = _request("PUT", url, headers=get_auth_headers(), params=params, json=body)
+
+    response = _request(
+        "PUT", url, headers=get_auth_headers(), params=params, json=body
+    )
     return response.json()
 
 
@@ -291,7 +308,9 @@ def fetch_incident_comments(incident_id: str) -> list[dict]:
     stop=stop_after_attempt(3),
     reraise=True,
 )
-def update_incident_status(incident_id: str, new_status: str, classification: str | None = None) -> dict:
+def update_incident_status(
+    incident_id: str, new_status: str, classification: str | None = None
+) -> dict:
     """
     Updates a Sentinel incident's status with optimistic concurrency control.
 
@@ -316,29 +335,31 @@ def update_incident_status(incident_id: str, new_status: str, classification: st
     headers = get_auth_headers()
     if etag:
         headers["If-Match"] = etag
-    
+
     # Modify only the fields you need to change
     existing["properties"]["status"] = new_status
-    
+
     if new_status == "Closed" and classification:
         existing["properties"]["classification"] = classification
-        
+
         reason_map = {
             "TruePositive": "SuspiciousActivity",
             "FalsePositive": "IncorrectAlertLogic",
             "BenignPositive": "SuspiciousButExpected",
-            "Undetermined": "InaccurateData"
+            "Undetermined": "InaccurateData",
         }
-        existing["properties"]["classificationReason"] = reason_map.get(classification, "SuspiciousActivity")
-        
-        # classificationComment is optional but useful for audit trails
-        existing["properties"]["classificationComment"] = (
-            "Closed by Sentinel Triage Agent after analyst review and approval."
+        existing["properties"]["classificationReason"] = reason_map.get(
+            classification, "SuspiciousActivity"
         )
-    
+
+        # classificationComment is optional but useful for audit trails
+        existing["properties"][
+            "classificationComment"
+        ] = "Closed by Sentinel Triage Agent after analyst review and approval."
+
     url = f"{_get_base()}/incidents/{incident_id}"
     params = {"api-version": API_VERSION}
-    
+
     try:
         response = _request("PUT", url, headers=headers, params=params, json=existing)
         return response.json()
@@ -389,13 +410,13 @@ async def resolve_mde_machine_id(hostname_or_ip: str) -> str | None:
 async def isolate_mde_device(device_id: str) -> dict:
     """
     Isolates a device using the Microsoft Defender for Endpoint machine isolation API.
-    
+
     Args:
         device_id: The Defender for Endpoint machine ID (40-character hex string).
-    
+
     Returns:
         Response JSON from the Defender for Endpoint isolate endpoint.
-        
+
     Raises:
         ValueError: If device_id is not a valid MDE machine ID format.
         RequestException: If the isolation request fails (caller should handle)
@@ -407,19 +428,19 @@ async def isolate_mde_device(device_id: str) -> dict:
         )
 
     url = f"https://api.securitycenter.microsoft.com/api/machines/{device_id}/isolate"
-    
+
     headers = {
         "Authorization": f"Bearer {get_mde_token()}",
         "Content-Type": "application/json",
     }
-    
+
     body = {
         "Comment": "Automated isolation by Sentinel Triage Agent",
         "IsolationType": "Full",
     }
-    
+
     response = _request("POST", url, headers=headers, json=body)
-    
+
     # Check if the server returned any text response
     if response.text:
         # Convert the raw text response into a Python dictionary
@@ -445,16 +466,16 @@ async def revoke_entra_sessions(user_id: str) -> dict:
         RequestException: If the revocation request fails (caller should handle).
     """
     url = f"https://graph.microsoft.com/v1.0/users/{user_id}/revokeSignInSessions"
-    
+
     headers = {
         "Authorization": f"Bearer {get_graph_token()}",
         "Content-Type": "application/json",
     }
-    
+
     body: dict[str, Any] = {}  # Graph API revokeSignInSessions expects empty body
-    
+
     response = _request("POST", url, headers=headers, json=body)
-    
+
     if response.text:
         return response.json()
     else:

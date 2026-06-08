@@ -13,7 +13,7 @@ Failure Modes:
 - N/A (pure formatting logic, no external calls).
 """
 
-from nodes.summarize_node import summarize_node, MAX_DESCRIPTION_CHARS
+from nodes.summarize_node import MAX_DESCRIPTION_CHARS, summarize_node
 
 
 def test_summarize_node_basic(empty_triage_state):
@@ -69,8 +69,15 @@ def test_summarize_node_alert_capping(empty_triage_state):
     state["incident_tactics"] = []
     state["incident_description"] = "Test"
     state["raw_alerts"] = [
-        {"properties": {"alertDisplayName": f"Alert {i}", "severity": "High",
-                         "description": f"Desc {i}", "tactics": [], "entities": []}}
+        {
+            "properties": {
+                "alertDisplayName": f"Alert {i}",
+                "severity": "High",
+                "description": f"Desc {i}",
+                "tactics": [],
+                "entities": [],
+            }
+        }
         for i in range(7)
     ]
 

@@ -42,6 +42,9 @@ class TriageState(TypedDict):
     mitre_techniques: list[
         dict
     ]  # Detailed techniques, e.g., [{"technique_id": "T1098", "name": "Account Manipulation", "confidence": 90}]
+    mitre_enrichment: list[
+        dict
+    ]  # MITRE STIX enrichment data, e.g., [{"technique_id": "T1098", "tactic": "Persistence", "name": "...", "description": "...", "data_sources": ["..."]}]
 
     # ── Hunting (kql_node.py) ──────────────────────────────────────────────────
     kql_queries: list[str]  # Syntactically valid KQL hunting queries

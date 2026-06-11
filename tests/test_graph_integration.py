@@ -127,6 +127,7 @@ async def test_graph_hitl_interrupt_and_resume():
             "triage_summary": "",
             "mitre_analysis": "",
             "mitre_techniques": [],
+            "mitre_enrichment": [],
             "kql_queries": [],
             "comment_posted": False,
             "incident_closed": False,
@@ -251,6 +252,7 @@ async def test_graph_hitl_rejection_no_closure():
             "triage_summary": "",
             "mitre_analysis": "",
             "mitre_techniques": [],
+            "mitre_enrichment": [],
             "kql_queries": [],
             "comment_posted": False,
             "incident_closed": False,
@@ -279,8 +281,12 @@ async def test_graph_hitl_rejection_no_closure():
 
 # ── Routing function unit tests ───────────────────────────────────────────────
 
-from graph import (_next_after_analyst, _next_after_extract,
-                   _next_after_writeback, escalation_node)
+from graph import (
+    _next_after_analyst,
+    _next_after_extract,
+    _next_after_writeback,
+    escalation_node,
+)
 from state import TriageState
 
 

@@ -1,13 +1,22 @@
 """
 Assembles all nodes into the LangGraph StateGraph.
 
-Node execution order:
-  fetch → summarize → extract → enrich → analyst → kql → writeback → containment → close_review → learning
+Node execution order (── = unconditional edge, ┄ = conditional):
 
-Future branching opportunity: after analyst_node, branch on severity.
-High-severity incidents could trigger an additional "escalation" node that
-pages the on-call analyst via Teams webhook, while Medium/Low go directly
-to writeback.
+  fetch → summarize → extract ┄→ enrich → analyst → mitre_enrich ┄→ escalation → writeback
+                              └→ analyst (no IOCs)               ├→ kql ──────→ writeback
+                                                                 └→ writeback (FP, high conf)
+
+  writeback ══ INTERRUPT (human review) ══ ┄→ containment → close_review → learning → END
+                                           └→ close_review → learning → END
+
+Routing:
+- `_next_after_extract`: skip `enrich` when no IPs/hashes/URLs were extracted.
+- `_next_after_analyst` (wired after `mitre_enrich`): TruePositive >90% → `escalation`;
+  FalsePositive >95% → straight to `writeback`; otherwise `kql`. It reads
+  `classification`/`confidence` (set by `analyst`, untouched by `mitre_enrich`).
+- `mitre_enrich` enriches the analyst's techniques from the STIX bundle; the
+  result is rendered into the Sentinel comment by `writeback_node`.
 """
 
 from typing import Literal
@@ -22,6 +31,7 @@ from nodes.extract_node import extract_node
 from nodes.fetch_node import fetch_node
 from nodes.kql_node import kql_node
 from nodes.learning_node import learning_node
+from nodes.mitre_enrich_node import mitre_enrich_node
 from nodes.summarize_node import summarize_node
 from nodes.writeback_node import close_review_node, writeback_node
 from state import TriageState
@@ -116,6 +126,7 @@ def build_graph():
     builder.add_node("extract", extract_node)
     builder.add_node("enrich", enrich_node)
     builder.add_node("analyst", analyst_node)
+    builder.add_node("mitre_enrich", mitre_enrich_node)
     builder.add_node("kql", kql_node)
     builder.add_node("escalation", escalation_node)
     builder.add_node("writeback", writeback_node)
@@ -129,7 +140,8 @@ def build_graph():
     builder.add_edge("summarize", "extract")
     builder.add_conditional_edges("extract", _next_after_extract)
     builder.add_edge("enrich", "analyst")
-    builder.add_conditional_edges("analyst", _next_after_analyst)
+    builder.add_edge("analyst", "mitre_enrich")
+    builder.add_conditional_edges("mitre_enrich", _next_after_analyst)
     builder.add_edge("kql", "writeback")
     builder.add_edge("escalation", "writeback")
     builder.add_conditional_edges("writeback", _next_after_writeback)

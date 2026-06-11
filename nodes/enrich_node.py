@@ -41,15 +41,22 @@ import time
 
 import aiohttp
 import structlog
+
 # pyrefly: ignore [missing-import]
 from aiolimiter import AsyncLimiter
 from pydantic import ValidationError
-from tenacity import (retry, retry_if_exception_type, stop_after_attempt,
-                      wait_exponential)
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from metrics import ENRICHMENT_LATENCY
-from models.exceptions import (AbuseIPDBResponseValidationError,
-                               VirusTotalResponseValidationError)
+from models.exceptions import (
+    AbuseIPDBResponseValidationError,
+    VirusTotalResponseValidationError,
+)
 from models.validation import AbuseIPDBResponse, VirusTotalResponse
 from state import TriageState
 

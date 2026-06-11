@@ -67,6 +67,7 @@ def empty_triage_state() -> TriageState:
         "triage_summary": "",
         "mitre_analysis": "",
         "mitre_techniques": [],
+        "mitre_enrichment": [],
         "kql_queries": [],
         "comment_posted": False,
         "incident_closed": False,

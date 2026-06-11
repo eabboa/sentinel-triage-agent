@@ -49,6 +49,7 @@ class AlertProperties(BaseModel):
     severity: Literal["High", "Medium", "Low", "Informational"]
     startTimeUtc: datetime
     endTimeUtc: datetime
+    description: str = ""
     entities: list[SentinelEntity] = Field(default_factory=list)
 
 

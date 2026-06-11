@@ -24,12 +24,20 @@ import pytest
 import responses
 from requests.exceptions import HTTPError
 
-from sentinel_api import (API_VERSION, ConcurrencyConflictError,
-                          TransientHTTPError, _get_base, get_incident,
-                          isolate_mde_device, list_incident_alerts,
-                          list_incidents, post_incident_comment,
-                          resolve_mde_machine_id, revoke_entra_sessions,
-                          update_incident_status)
+from sentinel_api import (
+    API_VERSION,
+    ConcurrencyConflictError,
+    TransientHTTPError,
+    _get_base,
+    get_incident,
+    isolate_mde_device,
+    list_incident_alerts,
+    list_incidents,
+    post_incident_comment,
+    resolve_mde_machine_id,
+    revoke_entra_sessions,
+    update_incident_status,
+)
 
 
 @pytest.fixture(autouse=True)

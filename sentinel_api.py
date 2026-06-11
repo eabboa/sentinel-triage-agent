@@ -9,10 +9,13 @@ from typing import Any
 import requests
 import structlog
 from dotenv import load_dotenv
-from requests.exceptions import (ConnectionError, HTTPError, RequestException,
-                                 Timeout)
-from tenacity import (retry, retry_if_exception_type, stop_after_attempt,
-                      wait_exponential_jitter)
+from requests.exceptions import ConnectionError, HTTPError, RequestException, Timeout
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential_jitter,
+)
 
 from sentinel_auth import get_auth_headers, get_graph_token, get_mde_token
 

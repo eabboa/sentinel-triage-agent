@@ -7,8 +7,11 @@ import hashlib
 
 import structlog
 
-from sentinel_api import (fetch_incident_comments, post_incident_comment,
-                          update_incident_status)
+from sentinel_api import (
+    fetch_incident_comments,
+    post_incident_comment,
+    update_incident_status,
+)
 from state import TriageState
 
 logger = structlog.get_logger(__name__)
@@ -91,6 +94,32 @@ def _format_mitre_table(mitre_techniques: list) -> list[str]:
     return lines
 
 
+def _format_mitre_enrichment(enrichment: list) -> list[str]:
+    """
+    Builds markdown lines describing STIX-sourced ATT&CK context for each
+    enriched technique (authoritative name, tactic, and telemetry data sources
+    that suggest where to hunt).
+
+    Args:
+        enrichment: The list produced by mitre_enrich_node (state["mitre_enrichment"]).
+
+    Returns:
+        A list of markdown strings, or an empty list when there is nothing to show.
+    """
+    if not enrichment:
+        return []
+
+    lines = []
+    for item in enrichment:
+        tech_id = item.get("technique_id", "?")
+        name = item.get("name", "")
+        tactic = item.get("tactic", "Unknown")
+        data_sources = item.get("data_sources") or []
+        sources = ", ".join(data_sources) if data_sources else "—"
+        lines.append(f"- **`{tech_id}` {name}** ({tactic}) · _Data sources:_ {sources}")
+    return lines
+
+
 def _format_comment(state: TriageState) -> str:
     """
     Formats the triage results into a structured, readable Sentinel comment.
@@ -104,6 +133,13 @@ def _format_comment(state: TriageState) -> str:
     entity_lines = _format_entity_lines(state.get("entities", {}))
     cti_lines = _format_cti_lines(state.get("cti_results", {}))
     mitre_tech_lines = _format_mitre_table(state.get("mitre_techniques", []))
+    mitre_enrich_lines = _format_mitre_enrichment(state.get("mitre_enrichment", []))
+
+    enrichment_section = ""
+    if mitre_enrich_lines:
+        enrichment_section = "\n\n#### ATT&CK Context (MITRE STIX)\n" + chr(10).join(
+            mitre_enrich_lines
+        )
 
     review_tag = ""
     if state.get("classification") == "BenignPositive":
@@ -123,7 +159,7 @@ def _format_comment(state: TriageState) -> str:
 {state.get('mitre_analysis', 'No MITRE analysis available.')}
 
 #### Mapped MITRE ATT&CK Techniques
-{chr(10).join(mitre_tech_lines)}
+{chr(10).join(mitre_tech_lines)}{enrichment_section}
 
 ---
 

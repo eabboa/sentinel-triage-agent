@@ -23,8 +23,7 @@ from unittest.mock import AsyncMock, patch
 import aioresponses
 import pytest
 
-from nodes.enrich_node import (_is_error_result, close_session, enrich_node,
-                               get_session)
+from nodes.enrich_node import _is_error_result, close_session, enrich_node, get_session
 
 
 @pytest.fixture

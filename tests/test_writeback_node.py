@@ -19,8 +19,7 @@ from unittest.mock import patch
 
 import pytest
 
-from nodes.writeback_node import (_format_comment, close_review_node,
-                                  writeback_node)
+from nodes.writeback_node import _format_comment, close_review_node, writeback_node
 
 # ── Existing tests ────────────────────────────────────────────────────────────
 

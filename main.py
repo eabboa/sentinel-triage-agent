@@ -157,6 +157,8 @@ async def process_incident(incident, graph, semaphore, console_lock):
         "classification": "",
         "triage_summary": "",
         "mitre_analysis": "",
+        "mitre_techniques": [],
+        "mitre_enrichment": [],
         "kql_queries": [],
         "confidence": 0,
         "containment_approved": False,

@@ -14,9 +14,12 @@ Failure Modes:
 - Technique not in catalog: Preserved with 'unverified' flag.
 """
 
-from nodes.mitre_utils import (TECHNIQUE_ID_PATTERN, _resolve_id_by_name,
-                               normalize_tactic,
-                               validate_and_enrich_techniques)
+from nodes.mitre_utils import (
+    TECHNIQUE_ID_PATTERN,
+    _resolve_id_by_name,
+    normalize_tactic,
+    validate_and_enrich_techniques,
+)
 
 # ── normalize_tactic ──────────────────────────────────────────────────────────
 

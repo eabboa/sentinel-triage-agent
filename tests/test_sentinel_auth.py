@@ -16,8 +16,12 @@ import time
 
 import pytest
 
-from sentinel_auth import (_cached_tokens, _get_credential, get_access_token,
-                           get_auth_headers)
+from sentinel_auth import (
+    _cached_tokens,
+    _get_credential,
+    get_access_token,
+    get_auth_headers,
+)
 
 
 def test_get_auth_headers_format(monkeypatch):

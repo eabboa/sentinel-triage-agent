@@ -3,8 +3,13 @@ Utility module for shared LLM functions, deduplication of code.
 """
 
 from google.genai.errors import APIError, ServerError
-from tenacity import (retry, retry_if_exception, stop_after_attempt,
-                      wait_exponential, wait_random)
+from tenacity import (
+    retry,
+    retry_if_exception,
+    stop_after_attempt,
+    wait_exponential,
+    wait_random,
+)
 
 
 def _is_retryable_error(e: BaseException) -> bool:

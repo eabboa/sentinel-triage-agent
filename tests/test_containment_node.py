@@ -25,7 +25,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from nodes.containment_node import containment_node
+from nodes.containment_node import containment_node, preview_containment_targets
 
 
 @pytest.mark.asyncio
@@ -259,3 +259,124 @@ async def test_containment_node_unapproved_skips_revocation(empty_triage_state):
         result = await containment_node(state)
         assert len(result.get("errors", [])) == 0
         mock_revoke.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_containment_node_rejects_percent_encoded_upn(empty_triage_state):
+    """Security regression: percent-encoded path separators must NOT be revoked.
+
+    `victim%2f..%2fattacker@corp.com` would otherwise smuggle '/' into the Graph
+    URL path, and `a%23@corp.com` would truncate the action suffix as a fragment.
+    """
+    state = empty_triage_state.copy()
+    state["containment_approved"] = True
+    state["entities"] = {
+        "usernames": ["victim%2f..%2fattacker@corp.com", "a%23@corp.com"]
+    }
+
+    with patch(
+        "nodes.containment_node.revoke_entra_sessions", new_callable=AsyncMock
+    ) as mock_revoke:
+        result = await containment_node(state)
+        mock_revoke.assert_not_called()
+        assert len(result["errors"]) == 2
+        assert all("non-revocable user identity" in e for e in result["errors"])
+
+
+@pytest.mark.asyncio
+async def test_containment_node_rejects_trailing_newline_identity(empty_triage_state):
+    """Asserts a trailing newline does not slip past validation (\\A...\\Z anchors)."""
+    state = empty_triage_state.copy()
+    state["containment_approved"] = True
+    state["entities"] = {
+        "usernames": [
+            "alice@corp.com\n",
+            "11111111-2222-3333-4444-555555555555\n",
+        ]
+    }
+
+    with patch(
+        "nodes.containment_node.revoke_entra_sessions", new_callable=AsyncMock
+    ) as mock_revoke:
+        result = await containment_node(state)
+        mock_revoke.assert_not_called()
+        assert len(result["errors"]) == 2
+
+
+@pytest.mark.asyncio
+async def test_containment_node_dedupes_usernames(empty_triage_state):
+    """Asserts a username repeated across alerts is revoked exactly once."""
+    state = empty_triage_state.copy()
+    state["containment_approved"] = True
+    state["entities"] = {"usernames": ["alice@corp.com", "alice@corp.com"]}
+
+    with patch(
+        "nodes.containment_node.revoke_entra_sessions", new_callable=AsyncMock
+    ) as mock_revoke:
+        mock_revoke.return_value = {"value": True}
+        result = await containment_node(state)
+        assert len(result.get("errors", [])) == 0
+        assert mock_revoke.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_containment_node_accepts_uppercase_guid(empty_triage_state):
+    """Asserts object-ID GUIDs are accepted case-insensitively (hex a-fA-F)."""
+    state = empty_triage_state.copy()
+    state["containment_approved"] = True
+    state["entities"] = {"usernames": ["AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE"]}
+
+    with patch(
+        "nodes.containment_node.revoke_entra_sessions", new_callable=AsyncMock
+    ) as mock_revoke:
+        mock_revoke.return_value = {"value": True}
+        result = await containment_node(state)
+        assert len(result.get("errors", [])) == 0
+        mock_revoke.assert_awaited_once_with("AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE")
+
+
+@pytest.mark.asyncio
+async def test_containment_node_aggregates_errors_from_both_loops(empty_triage_state):
+    """Asserts failures from BOTH isolation and revocation land in one error list.
+
+    Both loops must run to completion and append into the single append-only list.
+    """
+    state = empty_triage_state.copy()
+    state["containment_approved"] = True
+    state["entities"] = {
+        "hostnames": ["valid-host"],
+        "usernames": ["alice@corp.com"],
+    }
+
+    with (
+        patch(
+            "nodes.containment_node.resolve_mde_machine_id", new_callable=AsyncMock
+        ) as mock_resolve,
+        patch(
+            "nodes.containment_node.isolate_mde_device", new_callable=AsyncMock
+        ) as mock_isolate,
+        patch(
+            "nodes.containment_node.revoke_entra_sessions", new_callable=AsyncMock
+        ) as mock_revoke,
+    ):
+        mock_resolve.return_value = "machine-id-123"
+        mock_isolate.side_effect = Exception("MDE API timeout")
+        mock_revoke.side_effect = Exception("Graph API timeout")
+
+        result = await containment_node(state)
+        assert mock_isolate.await_count == 1
+        assert mock_revoke.await_count == 1
+        assert any("MDE isolation failed" in e for e in result["errors"])
+        assert any("Entra session revocation failed" in e for e in result["errors"])
+
+
+def test_preview_containment_targets_returns_only_validated():
+    """preview_containment_targets surfaces exactly what the node will act on."""
+    entities = {
+        "hostnames": ["valid-host", "../../etc/passwd"],
+        "internal_ips": ["10.0.0.1"],
+        "usernames": ["alice@corp.com", "CORP\\bob", "victim%2f..%2fx@corp.com"],
+    }
+    isolation, revocation = preview_containment_targets(entities)
+    assert isolation == ["valid-host", "10.0.0.1"]
+    assert revocation == ["alice@corp.com"]

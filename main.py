@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 from graph import build_graph
 from logging_config import setup_logging
 from metrics import TRIAGE_DURATION, TRIAGE_FP_TOTAL, TRIAGE_TOTAL
-from nodes.containment_node import _validate_entra_user
+from nodes.containment_node import preview_containment_targets
 from nodes.enrich_node import close_session as close_enrich_session
 from nodes.learning_node import flush_and_shutdown
 from sentinel_api import list_incidents
@@ -60,12 +60,9 @@ async def _collect_human_decisions(
         print(f"  ✓ Triage Summary: {state_vals.get('triage_summary')}")
 
         entities = state_vals.get("entities", {})
-        hostnames = entities.get("hostnames", [])
-        internal_ips = entities.get("internal_ips", [])
-        usernames = entities.get("usernames", [])
-        # Only surface users Graph can actually revoke (UPN or object-ID GUID).
-        revocable_users = [u for u in usernames if _validate_entra_user(u)]
-        isolation_targets = list(dict.fromkeys(hostnames + internal_ips))
+        # Show the analyst exactly what containment_node will act on: validated
+        # isolation devices and validated revocable users (UPNs / object-ID GUIDs).
+        isolation_targets, revocable_users = preview_containment_targets(entities)
 
         if isolation_targets or revocable_users:
             if isolation_targets:

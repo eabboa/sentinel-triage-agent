@@ -5,6 +5,7 @@ import os
 import re
 import uuid
 from typing import Any
+from urllib.parse import quote
 
 import requests
 import structlog
@@ -548,7 +549,12 @@ async def revoke_entra_sessions(user_id: str) -> dict:
     Raises:
         RequestException: If the revocation request fails (caller should handle).
     """
-    url = f"https://graph.microsoft.com/v1.0/users/{user_id}/revokeSignInSessions"
+    # Percent-encode the identifier into the path so a crafted value cannot smuggle
+    # path separators or truncate the action suffix (defense in depth; callers also
+    # validate against _validate_entra_user). safe="" encodes '/', '%', etc.; a
+    # legitimate UPN's '@' becomes %40, which Graph accepts.
+    safe_user_id = quote(user_id, safe="")
+    url = f"https://graph.microsoft.com/v1.0/users/{safe_user_id}/revokeSignInSessions"
 
     headers = {
         "Authorization": f"Bearer {get_graph_token()}",

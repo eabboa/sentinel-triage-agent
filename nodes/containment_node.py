@@ -30,10 +30,15 @@ _SAFE_HOSTNAME_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9.\-]{0,253}[a-zA-Z0-
 # Entra ID's revokeSignInSessions accepts only a UPN (user@domain.tld) or an
 # object-ID GUID. The identifier is interpolated into a Graph API URL path, so
 # SAM names (DOMAIN\user), bare usernames, and anything carrying URL-unsafe
-# characters (slashes, whitespace) are rejected before any request is made.
-_UPN_PATTERN = re.compile(r"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$")
+# characters are rejected before any request is made. The local part excludes
+# '%' so percent-encoded path separators (e.g. victim%2f..%2fattacker@corp.com,
+# which `requests` would forward verbatim) cannot smuggle into the URL path, and
+# both patterns anchor with \A...\Z (not ^...$) so a trailing newline cannot slip
+# through. revoke_entra_sessions also URL-encodes the value as defense in depth.
+_UPN_PATTERN = re.compile(r"\A[A-Za-z0-9._+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\Z")
 _GUID_PATTERN = re.compile(
-    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-" r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    r"\A[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
+    r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\Z"
 )
 
 
@@ -91,60 +96,76 @@ async def _isolate_target(target: str) -> str | None:
     return None
 
 
-def _collect_isolation_targets(entities: dict, errors: list[str]) -> list[str]:
+def _collect_isolation_targets(entities: dict) -> tuple[list[str], list[str]]:
     """
     Builds the validated, deduplicated list of device isolation targets.
 
-    Merges hostnames and internal IPs (lateral-movement candidates); unsafe
-    targets are dropped and recorded in errors.
+    Merges hostnames and internal IPs (lateral-movement candidates).
 
     Args:
         entities: The extracted entities dict.
-        errors: The mutable error list to append rejections to.
 
     Returns:
-        The validated isolation targets.
+        A (valid_targets, rejection_messages) tuple. Unsafe targets are dropped
+        from valid_targets and described in rejection_messages.
     """
     hostnames = entities.get("hostnames", []) or []
     internal_ips = entities.get("internal_ips", []) or []
 
-    targets = []
+    targets: list[str] = []
+    rejected: list[str] = []
     for target in dict.fromkeys(hostnames + internal_ips):
         if _validate_hostname(target):
             targets.append(target)
         else:
-            msg = f"Rejected unsafe isolation target: {target!r}"
-            logger.warning(msg)
-            errors.append(msg)
-    return targets
+            rejected.append(f"Rejected unsafe isolation target: {target!r}")
+    return targets, rejected
 
 
-def _collect_revocation_targets(entities: dict, errors: list[str]) -> list[str]:
+def _collect_revocation_targets(entities: dict) -> tuple[list[str], list[str]]:
     """
     Builds the validated, deduplicated list of Entra session-revocation targets.
 
     Only UPNs and object-ID GUIDs are revocable; non-revocable identities (bare
-    usernames, SAM names) are dropped and recorded in errors so the analyst can
-    see what was skipped.
+    usernames, SAM names) are dropped so the analyst can see what was skipped.
 
     Args:
         entities: The extracted entities dict.
-        errors: The mutable error list to append rejections to.
 
     Returns:
-        The validated revocation targets.
+        A (valid_targets, rejection_messages) tuple.
     """
     usernames = entities.get("usernames", []) or []
 
-    targets = []
+    targets: list[str] = []
+    rejected: list[str] = []
     for user in dict.fromkeys(usernames):
         if _validate_entra_user(user):
             targets.append(user)
         else:
-            msg = f"Skipped non-revocable user identity (not a UPN/GUID): {user!r}"
-            logger.warning(msg)
-            errors.append(msg)
-    return targets
+            rejected.append(
+                f"Skipped non-revocable user identity (not a UPN/GUID): {user!r}"
+            )
+    return targets, rejected
+
+
+def preview_containment_targets(entities: dict) -> tuple[list[str], list[str]]:
+    """
+    Returns the exact targets containment_node would act on, for HITL display.
+
+    Read-only: validates and deduplicates without recording rejections, so the
+    analyst is shown precisely the isolation devices and revocable users the node
+    will operate on (and never candidates it would silently drop).
+
+    Args:
+        entities: The extracted entities dict.
+
+    Returns:
+        An (isolation_targets, revocation_targets) tuple of validated values.
+    """
+    isolation_targets, _ = _collect_isolation_targets(entities)
+    revocation_targets, _ = _collect_revocation_targets(entities)
+    return isolation_targets, revocation_targets
 
 
 async def containment_node(state: TriageState) -> dict:
@@ -174,8 +195,12 @@ async def containment_node(state: TriageState) -> dict:
     logger.info("Containment approved; proceeding with active containment")
 
     entities = state.get("entities", {}) or {}
-    isolation_targets = _collect_isolation_targets(entities, errors)
-    revocation_targets = _collect_revocation_targets(entities, errors)
+    isolation_targets, isolation_rejected = _collect_isolation_targets(entities)
+    revocation_targets, revocation_rejected = _collect_revocation_targets(entities)
+    for msg in isolation_rejected + revocation_rejected:
+        logger.warning(msg)
+    errors.extend(isolation_rejected)
+    errors.extend(revocation_rejected)
 
     if not isolation_targets and not revocation_targets:
         logger.info(

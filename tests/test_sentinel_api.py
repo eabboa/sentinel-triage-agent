@@ -488,6 +488,30 @@ async def test_revoke_entra_sessions_empty_response():
         assert result == {}
 
 
+@pytest.mark.asyncio
+async def test_revoke_entra_sessions_url_encodes_user_id():
+    """Defense in depth: the user_id is percent-encoded into the Graph URL path so
+    a crafted value cannot smuggle path separators or truncate the action suffix."""
+    captured: dict[str, str] = {}
+
+    def fake_request(method, url, *, headers=None, params=None, json=None):
+        captured["url"] = url
+        return SimpleNamespace(text="", json=lambda: {})
+
+    with (
+        patch("sentinel_api._request", side_effect=fake_request),
+        patch("sentinel_api.get_graph_token", return_value="mock-token"),
+    ):
+        await revoke_entra_sessions("victim%2f..%2fattacker@corp.com")
+
+    # '%' is encoded to %25, so Graph sees a literal '%2f' in the username rather
+    # than a path separator, and '@' becomes %40 (which Graph accepts).
+    assert (
+        "/users/victim%252f..%252fattacker%40corp.com/revokeSignInSessions"
+        in captured["url"]
+    )
+
+
 # ── Concurrency model: blocking I/O is offloaded to a worker thread ───────────
 
 

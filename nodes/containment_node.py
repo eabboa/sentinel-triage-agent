@@ -2,10 +2,12 @@
 Containment node: Isolates compromised devices and revokes user sessions.
 
 Executes only if containment_approved is True.
-Uses the entities (hostnames + internal_ips) to trigger MDE device isolation concurrently.
-Internal IPs found during lateral movement detection are treated as additional isolation
+Uses the entities (hostnames + internal_ips) to trigger MDE device isolation and
+the entities (usernames) to revoke Entra ID (Azure AD) refresh tokens. Internal
+IPs found during lateral movement detection are treated as additional isolation
 targets, since MDE accepts both hostnames and IP addresses for device lookup.
-All API failures are captured as non-fatal errors in the errors list.
+Both actions run sequentially under the single human containment approval; all
+API failures are captured as non-fatal errors in the errors list.
 """
 
 import asyncio
@@ -13,13 +15,31 @@ import re
 
 import structlog
 
-from sentinel_api import isolate_mde_device, resolve_mde_machine_id
+from sentinel_api import (
+    isolate_mde_device,
+    resolve_mde_machine_id,
+    revoke_entra_sessions,
+)
 from state import TriageState
 
 logger = structlog.get_logger(__name__)
 
 # Allow only safe hostname characters (letters, digits, hyphens, dots)
 _SAFE_HOSTNAME_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9.\-]{0,253}[a-zA-Z0-9]$")
+
+# Entra ID's revokeSignInSessions accepts only a UPN (user@domain.tld) or an
+# object-ID GUID. The identifier is interpolated into a Graph API URL path, so
+# SAM names (DOMAIN\user), bare usernames, and anything carrying URL-unsafe
+# characters are rejected before any request is made. The local part excludes
+# '%' so percent-encoded path separators (e.g. victim%2f..%2fattacker@corp.com,
+# which `requests` would forward verbatim) cannot smuggle into the URL path, and
+# both patterns anchor with \A...\Z (not ^...$) so a trailing newline cannot slip
+# through. revoke_entra_sessions also URL-encodes the value as defense in depth.
+_UPN_PATTERN = re.compile(r"\A[A-Za-z0-9._+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\Z")
+_GUID_PATTERN = re.compile(
+    r"\A[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
+    r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\Z"
+)
 
 
 def _validate_hostname(hostname: str) -> bool:
@@ -33,6 +53,23 @@ def _validate_hostname(hostname: str) -> bool:
         True if the hostname is safe, False otherwise.
     """
     return bool(_SAFE_HOSTNAME_PATTERN.match(hostname)) and ".." not in hostname
+
+
+def _validate_entra_user(identifier: str) -> bool:
+    """
+    Accepts only Entra UPNs or object-ID GUIDs as session-revocation targets.
+
+    Bare usernames and SAM account names (DOMAIN\\user) are not valid Graph
+    identifiers and are rejected — this also blocks URL-path injection via the
+    revokeSignInSessions endpoint.
+
+    Args:
+        identifier: The candidate user identifier from extracted entities.
+
+    Returns:
+        True if the identifier is a safe UPN or GUID, False otherwise.
+    """
+    return bool(_UPN_PATTERN.match(identifier) or _GUID_PATTERN.match(identifier))
 
 
 async def _isolate_target(target: str) -> str | None:
@@ -59,12 +96,85 @@ async def _isolate_target(target: str) -> str | None:
     return None
 
 
+def _collect_isolation_targets(entities: dict) -> tuple[list[str], list[str]]:
+    """
+    Builds the validated, deduplicated list of device isolation targets.
+
+    Merges hostnames and internal IPs (lateral-movement candidates).
+
+    Args:
+        entities: The extracted entities dict.
+
+    Returns:
+        A (valid_targets, rejection_messages) tuple. Unsafe targets are dropped
+        from valid_targets and described in rejection_messages.
+    """
+    hostnames = entities.get("hostnames", []) or []
+    internal_ips = entities.get("internal_ips", []) or []
+
+    targets: list[str] = []
+    rejected: list[str] = []
+    for target in dict.fromkeys(hostnames + internal_ips):
+        if _validate_hostname(target):
+            targets.append(target)
+        else:
+            rejected.append(f"Rejected unsafe isolation target: {target!r}")
+    return targets, rejected
+
+
+def _collect_revocation_targets(entities: dict) -> tuple[list[str], list[str]]:
+    """
+    Builds the validated, deduplicated list of Entra session-revocation targets.
+
+    Only UPNs and object-ID GUIDs are revocable; non-revocable identities (bare
+    usernames, SAM names) are dropped so the analyst can see what was skipped.
+
+    Args:
+        entities: The extracted entities dict.
+
+    Returns:
+        A (valid_targets, rejection_messages) tuple.
+    """
+    usernames = entities.get("usernames", []) or []
+
+    targets: list[str] = []
+    rejected: list[str] = []
+    for user in dict.fromkeys(usernames):
+        if _validate_entra_user(user):
+            targets.append(user)
+        else:
+            rejected.append(
+                f"Skipped non-revocable user identity (not a UPN/GUID): {user!r}"
+            )
+    return targets, rejected
+
+
+def preview_containment_targets(entities: dict) -> tuple[list[str], list[str]]:
+    """
+    Returns the exact targets containment_node would act on, for HITL display.
+
+    Read-only: validates and deduplicates without recording rejections, so the
+    analyst is shown precisely the isolation devices and revocable users the node
+    will operate on (and never candidates it would silently drop).
+
+    Args:
+        entities: The extracted entities dict.
+
+    Returns:
+        An (isolation_targets, revocation_targets) tuple of validated values.
+    """
+    isolation_targets, _ = _collect_isolation_targets(entities)
+    revocation_targets, _ = _collect_revocation_targets(entities)
+    return isolation_targets, revocation_targets
+
+
 async def containment_node(state: TriageState) -> dict:
     """
     Orchestrates active containment: isolates MDE devices and revokes user sessions.
 
     Only executes if containment_approved is True.
-    Validates and resolves hostnames to MDE machine IDs before calling isolation.
+    Validates and resolves hostnames to MDE machine IDs before calling isolation,
+    and validates user identities to UPNs/GUIDs before revoking Entra sessions.
     All API failures are appended to errors list without crashing the pipeline.
 
     Args:
@@ -82,45 +192,61 @@ async def containment_node(state: TriageState) -> dict:
         logger.info("node_exit", node="containment")
         return {"errors": errors}
 
-    logger.info("Containment approved; proceeding with device isolation")
+    logger.info("Containment approved; proceeding with active containment")
 
-    # Extract isolation targets: named hostnames + internal IPs (lateral movement candidates)
     entities = state.get("entities", {}) or {}
-    hostnames = entities.get("hostnames", []) or []
-    internal_ips = entities.get("internal_ips", []) or []
+    isolation_targets, isolation_rejected = _collect_isolation_targets(entities)
+    revocation_targets, revocation_rejected = _collect_revocation_targets(entities)
+    for msg in isolation_rejected + revocation_rejected:
+        logger.warning(msg)
+    errors.extend(isolation_rejected)
+    errors.extend(revocation_rejected)
 
-    # Merge and deduplicate; validate each target
-    raw_targets = list(dict.fromkeys(hostnames + internal_ips))
-    isolation_targets = []
-    for target in raw_targets:
-        if _validate_hostname(target):
-            isolation_targets.append(target)
-        else:
-            msg = f"Rejected unsafe isolation target: {target!r}"
-            logger.warning(msg)
-            errors.append(msg)
-
-    if not isolation_targets:
+    if not isolation_targets and not revocation_targets:
         logger.info(
-            "No valid hostnames or internal IPs found in entities; skipping MDE isolation"
+            "No valid isolation or revocation targets found in entities; "
+            "nothing to contain"
         )
         logger.info("node_exit", node="containment")
         return {"errors": errors}
 
-    logger.info(
-        f"Attempting to isolate {len(isolation_targets)} targets: {isolation_targets}"
-    )
+    # ── Device isolation (MDE) ────────────────────────────────────────────────
+    if isolation_targets:
+        logger.info(
+            f"Attempting to isolate {len(isolation_targets)} targets: "
+            f"{isolation_targets}"
+        )
+        for target in isolation_targets:
+            try:
+                err = await _isolate_target(target)
+                if err:
+                    errors.append(err)
+            except Exception as exc:
+                error_msg = f"MDE isolation failed for {target}: {str(exc)}"
+                logger.error("node_error", node="containment", exc_info=True)
+                errors.append(error_msg)
 
-    # Resolve hostnames/IPs to MDE machine IDs and isolate
-    for target in isolation_targets:
-        try:
-            err = await _isolate_target(target)
-            if err:
-                errors.append(err)
-        except Exception as exc:
-            error_msg = f"MDE isolation failed for {target}: {str(exc)}"
-            logger.error("node_error", node="containment", exc_info=True)
-            errors.append(error_msg)
+    # ── Session revocation (Entra ID) ─────────────────────────────────────────
+    if revocation_targets:
+        logger.info(
+            f"Attempting to revoke sessions for {len(revocation_targets)} users: "
+            f"{revocation_targets}"
+        )
+        for user_id in revocation_targets:
+            try:
+                result = await revoke_entra_sessions(user_id)
+                if isinstance(result, dict):
+                    logger.info(
+                        f"Successfully revoked Entra sessions for user {user_id}"
+                    )
+                else:
+                    logger.warning(
+                        f"Unexpected result type for {user_id}: {type(result)}"
+                    )
+            except Exception as exc:
+                error_msg = f"Entra session revocation failed for {user_id}: {str(exc)}"
+                logger.error("node_error", node="containment", exc_info=True)
+                errors.append(error_msg)
 
     logger.info("node_exit", node="containment")
     return {"errors": errors}

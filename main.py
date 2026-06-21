@@ -21,6 +21,7 @@ from dotenv import load_dotenv
 from graph import build_graph
 from logging_config import setup_logging
 from metrics import TRIAGE_DURATION, TRIAGE_FP_TOTAL, TRIAGE_TOTAL
+from nodes.containment_node import preview_containment_targets
 from nodes.enrich_node import close_session as close_enrich_session
 from nodes.learning_node import flush_and_shutdown
 from sentinel_api import list_incidents
@@ -59,11 +60,18 @@ async def _collect_human_decisions(
         print(f"  ✓ Triage Summary: {state_vals.get('triage_summary')}")
 
         entities = state_vals.get("entities", {})
-        hostnames = entities.get("hostnames", [])
-        if hostnames:
-            print(f"  [!] Containment candidate hostnames: {hostnames}")
+        # Show the analyst exactly what containment_node will act on: validated
+        # isolation devices and validated revocable users (UPNs / object-ID GUIDs).
+        isolation_targets, revocable_users = preview_containment_targets(entities)
+
+        if isolation_targets or revocable_users:
+            if isolation_targets:
+                print(f"  [!] Containment candidate devices: {isolation_targets}")
+            if revocable_users:
+                print(f"  [!] Session-revocation candidate users: {revocable_users}")
             cont_approval = await asyncio.to_thread(
-                input, "  Approve containment of hostnames? [y/N]: "
+                input,
+                "  Approve containment (device isolation + session revocation)? [y/N]: ",
             )
             if cont_approval.strip().lower() == "y":
                 updates["containment_approved"] = True

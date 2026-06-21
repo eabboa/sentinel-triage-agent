@@ -495,7 +495,7 @@ bash safe_install.sh
 
 **Manual Dictionary Fallback Validation:** Added programmatic catch-and-validate mechanisms in `analyst_node.py` to prevent untyped dictionaries from bypassing Langchain's `with_structured_output` native object parsing.
 
-**Entra ID Session Revocation:** Expanded the `containment_node` capabilities. In addition to MDE device isolation, the pipeline now supports revoking Azure AD / Entra ID user refresh tokens dynamically via the Microsoft Graph API (`revoke_entra_sessions`). 
+**Entra ID Session Revocation:** Expanded the `containment_node` capabilities. In addition to MDE device isolation, the pipeline now revokes Azure AD / Entra ID user refresh tokens via the Microsoft Graph API (`revoke_entra_sessions`) for extracted user identities. Only valid UPNs and object-ID GUIDs are revoked (SAM names and bare usernames are rejected to prevent Graph URL-path injection), and revocation runs under the same single human containment approval as device isolation — never autonomously. 
 
 **Graph Reducers for Parallel Error Tracking:** Solidified the `TriageState` error handling by strictly defining `errors: Annotated[list[str], operator.add]`. This LangGraph state reducer prevents data-loss during concurrent CTI/Containment threads.
 

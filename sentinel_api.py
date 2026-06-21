@@ -116,6 +116,78 @@ def _request(
         raise
 
 
+# Safety cap on pagination loops. Azure pages are typically 100-1000 items, so
+# 1000 pages covers any realistic Sentinel result set while guarding against a
+# malformed/looping nextLink spinning forever.
+_MAX_PAGES = 1000
+
+
+def _paginate(
+    method: str,
+    url: str,
+    *,
+    headers=None,
+    params=None,
+    json=None,
+    value_key: str = "value",
+    next_link_key: str = "nextLink",
+) -> list[dict]:
+    """
+    Follows Azure REST `nextLink` pagination, accumulating every page's items.
+
+    Azure ARM/Sentinel return large result sets one page at a time. Each page
+    carries a `value` array plus an optional `nextLink` — a fully-formed absolute
+    URL (api-version and $skipToken already embedded) pointing at the next page.
+    The continuation request is always a plain GET of that URL with no params or
+    body; only the *first* request uses the caller's method/params/json (e.g. the
+    alerts endpoint requires POST). Iteration stops when no `nextLink` is present.
+
+    Args:
+        method: HTTP method for the first request (GET, POST, ...).
+        url: The initial request URL.
+        headers: Optional HTTP headers (reused for every page).
+        params: Optional query parameters for the first request only.
+        json: Optional JSON body for the first request only.
+        value_key: Response key holding the page's item array.
+        next_link_key: Response key holding the next-page URL.
+
+    Returns:
+        Flat list of all items across every page (may be empty).
+
+    Raises:
+        RequestException: If any page request fails after retries.
+    """
+    results: list[dict] = []
+    next_url: str | None = url
+    # First page uses the caller's method/params/body; continuations are plain GETs.
+    next_method = method
+    next_params = params
+    next_json = json
+
+    pages = 0
+    while next_url and pages < _MAX_PAGES:
+        response = _request(
+            next_method, next_url, headers=headers, params=next_params, json=next_json
+        )
+        data = response.json()
+        results.extend(data.get(value_key, []))
+
+        # nextLink is a complete URL with all query params baked in — follow it
+        # with a bare GET; never re-send the original params or body.
+        next_url = data.get(next_link_key)
+        next_method, next_params, next_json = "GET", None, None
+        pages += 1
+
+    if next_url:
+        logger.warning(
+            "Pagination hit the %s-page safety cap for %s; results truncated.",
+            _MAX_PAGES,
+            url,
+        )
+
+    return results
+
+
 API_VERSION = "2023-02-01"  ## stable version. do not change this.
 
 # Lazy-initialized module state — deferred from import time so that test
@@ -202,9 +274,10 @@ def list_incidents(status_filter: str = "New", max_results: int = 5) -> list[dic
         "$top": max_results,
     }
 
-    response = _request("GET", url, headers=get_auth_headers(), params=params)
-    data = response.json()
-    return data.get("value", [])
+    # Paginate in case Azure treats $top as a per-page hint rather than a hard
+    # total, then slice to honor the documented max_results contract.
+    incidents = _paginate("GET", url, headers=get_auth_headers(), params=params)
+    return incidents[:max_results]
 
 
 def get_incident(incident_id: str) -> dict:
@@ -247,10 +320,10 @@ def list_incident_alerts(incident_id: str) -> list[dict]:
     url = f"{_get_base()}/incidents/{incident_id}/alerts"
     params = {"api-version": API_VERSION}
 
-    response = _request("POST", url, headers=get_auth_headers(), params=params)
-    # Note: This is a POST, not GET. The Sentinel API uses POST for listing the alerts of an incident.
-    data = response.json()
-    return data.get("value", [])
+    # Note: the first request is a POST (the Sentinel alerts endpoint requires it);
+    # _paginate follows any nextLink continuations as plain GETs. Without this, a
+    # high-volume incident would silently yield only its first page of alerts.
+    return _paginate("POST", url, headers=get_auth_headers(), params=params)
 
 
 def post_incident_comment(incident_id: str, comment_text: str) -> dict:
@@ -301,8 +374,7 @@ def fetch_incident_comments(incident_id: str) -> list[dict]:
     url = f"{_get_base()}/incidents/{incident_id}/comments"
     params = {"api-version": API_VERSION}
 
-    response = _request("GET", url, headers=get_auth_headers(), params=params)
-    return response.json().get("value", [])
+    return _paginate("GET", url, headers=get_auth_headers(), params=params)
 
 
 @retry(
@@ -402,7 +474,12 @@ async def resolve_mde_machine_id(hostname_or_ip: str) -> str | None:
         "$filter": f"computerDnsName eq '{safe_value}' or lastIpAddress eq '{safe_value}'",
         "$top": "1",
     }
-    response = _request("GET", url, headers=headers, params=params)
+    # _request wraps blocking `requests` (10s timeout + tenacity backoff). Offload
+    # it to a worker thread so awaiting this coroutine genuinely yields the event
+    # loop instead of freezing co-running incident tasks (main.py gathers up to 3).
+    response = await asyncio.to_thread(
+        _request, "GET", url, headers=headers, params=params
+    )
     data = response.json()
     machines = data.get("value", [])
     if machines:
@@ -442,7 +519,10 @@ async def isolate_mde_device(device_id: str) -> dict:
         "IsolationType": "Full",
     }
 
-    response = _request("POST", url, headers=headers, json=body)
+    # Offload the blocking _request to a worker thread (see resolve_mde_machine_id).
+    response = await asyncio.to_thread(
+        _request, "POST", url, headers=headers, json=body
+    )
 
     # Check if the server returned any text response
     if response.text:
@@ -477,7 +557,10 @@ async def revoke_entra_sessions(user_id: str) -> dict:
 
     body: dict[str, Any] = {}  # Graph API revokeSignInSessions expects empty body
 
-    response = _request("POST", url, headers=headers, json=body)
+    # Offload the blocking _request to a worker thread (see resolve_mde_machine_id).
+    response = await asyncio.to_thread(
+        _request, "POST", url, headers=headers, json=body
+    )
 
     if response.text:
         return response.json()

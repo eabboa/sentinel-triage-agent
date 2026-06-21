@@ -18,6 +18,8 @@ Concurrency Invariants:
 - `update_incident_status` handles ETag conflicts by refetching and applying changes, ensuring changes aren't silently dropped or overwritten.
 """
 
+import threading
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -278,6 +280,74 @@ def test_list_incident_alerts_success():
     assert result[0]["id"] == "alert-1"
 
 
+# ── pagination (nextLink) ────────────────────────────────────────────────────
+
+
+@responses.activate
+def test_list_incident_alerts_follows_next_link():
+    """Asserts alerts spanning multiple pages are all accumulated via nextLink.
+
+    The first page (a POST) carries a nextLink; the continuation must be a plain
+    GET of that URL. Without pagination, a high-volume incident would silently
+    yield only its first page of alerts, starving IOC extraction.
+    """
+    base = _get_base()
+    next_url = "https://management.azure.com/next-page-of-alerts"
+    # Page 1: POST, returns a nextLink.
+    responses.add(
+        responses.POST,
+        f"{base}/incidents/123/alerts",
+        json={"value": [{"id": "alert-1"}], "nextLink": next_url},
+        status=200,
+    )
+    # Page 2: continuation must be a GET of the nextLink URL, no further nextLink.
+    responses.add(
+        responses.GET,
+        next_url,
+        json={"value": [{"id": "alert-2"}, {"id": "alert-3"}]},
+        status=200,
+    )
+
+    with patch(
+        "sentinel_api.get_auth_headers", return_value={"Authorization": "Bearer mock"}
+    ):
+        result = list_incident_alerts("123")
+
+    assert [a["id"] for a in result] == ["alert-1", "alert-2", "alert-3"]
+    # First call POST to the alerts endpoint, continuation GET to the nextLink.
+    assert responses.calls[0].request.method == "POST"
+    assert responses.calls[1].request.method == "GET"
+    assert responses.calls[1].request.url == next_url
+
+
+@responses.activate
+def test_list_incidents_respects_max_results_across_pages():
+    """Asserts max_results caps the total even when Azure paginates."""
+    base = _get_base()
+    next_url = "https://management.azure.com/next-page-of-incidents"
+    responses.add(
+        responses.GET,
+        f"{base}/incidents",
+        json={"value": [{"name": "inc1"}, {"name": "inc2"}], "nextLink": next_url},
+        status=200,
+    )
+    responses.add(
+        responses.GET,
+        next_url,
+        json={"value": [{"name": "inc3"}, {"name": "inc4"}]},
+        status=200,
+    )
+
+    with patch(
+        "sentinel_api.get_auth_headers", return_value={"Authorization": "Bearer mock"}
+    ):
+        result = list_incidents(max_results=3)
+
+    # All pages fetched, but the documented max_results contract is enforced.
+    assert len(result) == 3
+    assert [i["name"] for i in result] == ["inc1", "inc2", "inc3"]
+
+
 # ── post_incident_comment ────────────────────────────────────────────────────
 
 
@@ -416,3 +486,33 @@ async def test_revoke_entra_sessions_empty_response():
     with patch("sentinel_api.get_graph_token", return_value="mock-token"):
         result = await revoke_entra_sessions(user_id)
         assert result == {}
+
+
+# ── Concurrency model: blocking I/O is offloaded to a worker thread ───────────
+
+
+@pytest.mark.asyncio
+async def test_async_helpers_offload_blocking_request_to_worker_thread():
+    """The async containment/escalation helpers run their blocking `requests`
+    I/O via asyncio.to_thread, so awaiting them genuinely yields the event loop
+    instead of freezing it (main.py runs up to 3 incidents concurrently).
+
+    Verify the synchronous _request executes off the event-loop thread. This
+    fails if anyone reverts to a plain blocking `_request(...)` call.
+    """
+    loop_thread_id = threading.get_ident()
+    captured: dict[str, int] = {}
+
+    def fake_request(method, url, *, headers=None, params=None, json=None):
+        captured["thread_id"] = threading.get_ident()
+        return SimpleNamespace(json=lambda: {"value": [{"id": "machine-xyz"}]})
+
+    with (
+        patch("sentinel_api._request", side_effect=fake_request),
+        patch("sentinel_api.get_mde_token", return_value="mock-token"),
+    ):
+        result = await resolve_mde_machine_id("workstation-1")
+
+    assert result == "machine-xyz"
+    assert "thread_id" in captured  # _request actually ran
+    assert captured["thread_id"] != loop_thread_id  # ...on a worker thread

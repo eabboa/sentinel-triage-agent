@@ -126,15 +126,15 @@ wheels = [
 
 [[package]]
 name = "aioresponses"
-version = "0.7.8"
+version = "0.7.9"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
     { name = "packaging" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/de/03/532bbc645bdebcf3b6af3b25d46655259d66ce69abba7720b71ebfabbade/aioresponses-0.7.8.tar.gz", hash = "sha256:b861cdfe5dc58f3b8afac7b0a6973d5d7b2cb608dd0f6253d16b8ee8eaf6df11", size = 40253, upload-time = "2025-01-19T18:14:03.222Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/28/fb/e3f08af812b3e66fca511ea1babb9dfddeca5965dea2a4d13b6926e0b1c2/aioresponses-0.7.9.tar.gz", hash = "sha256:1dcfa28938fc006f046a98383a7c07ac180be7a492c1ed557f5cd7b0805357d3", size = 34072, upload-time = "2026-06-23T21:23:23.828Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/12/b7/584157e43c98aa89810bc2f7099e7e01c728ecf905a66cf705106009228f/aioresponses-0.7.8-py2.py3-none-any.whl", hash = "sha256:b73bd4400d978855e55004b23a3a84cb0f018183bcf066a85ad392800b5b9a94", size = 12518, upload-time = "2025-01-19T18:13:59.633Z" },
+    { url = "https://files.pythonhosted.org/packages/71/55/4c77cda7e69c1ac81a32e6895a361e0da9350eb7835a2ddb161a37ef1ce9/aioresponses-0.7.9-py2.py3-none-any.whl", hash = "sha256:94f9617f841c5bd7ee088ed783284f2cf4e6acc85d3933d92fc2fc7bd572a1b0", size = 12832, upload-time = "2026-06-23T21:23:22.426Z" },
 ]
 
 [[package]]
@@ -1232,7 +1232,7 @@ wheels = [
 
 [[package]]
 name = "langchain-google-genai"
-version = "4.2.5"
+version = "4.2.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "filetype" },
@@ -1240,9 +1240,9 @@ dependencies = [
     { name = "langchain-core" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5e/4b/a1acdba3a86f861d379cb654f234d334c04a4c93178c8c7b0182ddeb9966/langchain_google_genai-4.2.5.tar.gz", hash = "sha256:2abab4be22699a9cc29948b2bf012946f51a0bbf10ab3a4a9a129047234829f8", size = 271850, upload-time = "2026-06-10T01:48:57.06Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4c/08/68e4f90b273d1d8dc3a7a948e6535e60baac726adbb2a8341dcf17662f54/langchain_google_genai-4.2.6.tar.gz", hash = "sha256:653dc331e691ddd79784d9ff6a4082749e0f873394c6dc782c414eb4409850eb", size = 280074, upload-time = "2026-06-26T06:18:58.807Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6a/82/3d4d3dc181ea1756f323dad4d5936239c2f404ea0acb5102316224280634/langchain_google_genai-4.2.5-py3-none-any.whl", hash = "sha256:289699ddb8e1076a76144f83e25e0086e4ce629b196fc103251f2a629e0756e5", size = 69404, upload-time = "2026-06-10T01:48:56.09Z" },
+    { url = "https://files.pythonhosted.org/packages/85/3c/9a6b43bced0238f95640555e14423fe4a8268e3f4f536f67e26e79e633d4/langchain_google_genai-4.2.6-py3-none-any.whl", hash = "sha256:c40db0c2d033a5fb6db8e2cc3fb6d49c5678b89b337a64da095fb73ec9f72021", size = 70457, upload-time = "2026-06-26T06:18:57.781Z" },
 ]
 
 [[package]]
@@ -3015,7 +3015,7 @@ requires-dist = [
     { name = "aiolimiter", specifier = ">=1.2.1" },
     { name = "azure-identity", specifier = ">=1.15.0" },
     { name = "chromadb", specifier = ">=1.5.9" },
-    { name = "langchain-google-genai", specifier = ">=4.2.5" },
+    { name = "langchain-google-genai", specifier = ">=4.2.6" },
     { name = "langgraph", specifier = ">=1.2.6" },
     { name = "prometheus-client", specifier = ">=0.21.0" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
@@ -3026,7 +3026,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "aioresponses", specifier = ">=0.7.8" },
+    { name = "aioresponses", specifier = ">=0.7.9" },
     { name = "black", specifier = ">=26.5.1" },
     { name = "isort", specifier = ">=8.0.1" },
     { name = "mypy", specifier = ">=2.1.0" },

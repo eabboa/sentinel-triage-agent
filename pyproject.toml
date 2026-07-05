@@ -11,7 +11,7 @@ dependencies = [
     "azure-identity>=1.15.0",
     "chromadb>=1.5.9",
     "langchain-google-genai>=4.2.6",
-    "langgraph>=1.2.6",
+    "langgraph>=1.2.7",
     "prometheus-client>=0.21.0",
     "python-dotenv>=1.2.2",
     "requests>=2.34.2",
@@ -62,5 +62,5 @@ dev = [
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",
-    "responses>=0.26.1",
+    "responses>=0.26.2",
 ]

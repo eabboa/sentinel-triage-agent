@@ -188,9 +188,9 @@ annotated-types==0.8.0 \
     --hash=sha256:13b2beaad985e05e2d6407ee4c4f35590b11f8d693a258a561055cac8f64cab7 \
     --hash=sha256:f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0
     # via pydantic
-anyio==4.15.1 \
-    --hash=sha256:6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101 \
-    --hash=sha256:9f28306018cbd6d329e64a36d58256edff76dd996fe423bc957326e578b82a94
+anyio==4.16.0 \
+    --hash=sha256:59bb03251907983d1603d27c3087ddb1e93299ea2163adcdba37899a4fb12ffb \
+    --hash=sha256:c66ae634e0b8228396b801741beb3294326d4b6102f7bba4041c0dfb58c29026
     # via
     #   google-genai
     #   httpx
@@ -815,9 +815,9 @@ durationpy==0.11 \
     --hash=sha256:181898e1ae282e288f0a2291829656bf1b6b3aadf30a97993b85db4943642905 \
     --hash=sha256:a739fe2b8972c250ff72f8e2c488d18cf25f7b852f49ee76048775d5171df30c
     # via kubernetes
-filelock==4.2.4 \
-    --hash=sha256:301241438c57936ef93f4243a94f2559022268bfcf9b375a9a72eb0f8db8358e \
-    --hash=sha256:c6d8663535e1650ee430507b4ffbac7b464dd64b7647ea0112a9f406499d163d
+filelock==4.2.9 \
+    --hash=sha256:96530b7c538d4ea08493ab067247aab7948c54d8cd622cce711c97cccc5d9896 \
+    --hash=sha256:a379c50a729e5b68c8519a4d26489f755d9769960a236ecd838190e2a78db2e9
     # via
     #   huggingface-hub
     #   torch
@@ -1891,9 +1891,9 @@ nvidia-nvtx==13.4.92 ; sys_platform == 'linux' \
     --hash=sha256:d256c3a0f2f5e82de0a529112c630a74744f138b3ce97c6f468f65ca40463c98 \
     --hash=sha256:e4a9c2408da13500c90a8f8fb52ac225df26619df3f7a5a7264d92d407f0c41c
     # via cuda-toolkit
-oauthlib==4.0.0 \
-    --hash=sha256:624c28c13a0a59cabf9747dfa52af63be3e512a7f2714df16e91b5b3a145e6cd \
-    --hash=sha256:efb274799819440f95b4ab3b818869f1ce9ae26c5beacba0201d1a1b76b54f86
+oauthlib==4.0.1 \
+    --hash=sha256:3d73febdb6faa00f277c81fb04be7b7586fb96fc3b7f0b9c772dada69a25ede7 \
+    --hash=sha256:498a298876e996301950a5b053d12c31628bb7b895db03666430c69ce182eb61
     # via requests-oauthlib
 onnxruntime==1.31.1 \
     --hash=sha256:0558f29d5f6ac09957390c9c5495931485ee8ae7f0ce781ccee86a0ae5c2348b \
@@ -1921,9 +1921,9 @@ onnxruntime==1.31.1 \
     --hash=sha256:fc01b4e7c0a81778fb741bcf5c16b7871d196275f6240720a8b8bfd9f0c0af14 \
     --hash=sha256:fe8b9ac1ae8e894e12c47ee82e4f6dfc1835768133687257866469fda80d0bf1
     # via chromadb
-opentelemetry-api==1.45.1 \
-    --hash=sha256:aa38ed19bcc084ba42782a73255b3582283eced7ad6dddbd6695189e69adfb75 \
-    --hash=sha256:b31553efa588ae44bc306f863c785c5333a9ecc091248c6ee68b4b6c87fdedfb
+opentelemetry-api==1.45.2 \
+    --hash=sha256:2cbd737377e710ee740d261c94e93fa0f08e6d037c18f17513cc0a2d94479a34 \
+    --hash=sha256:d7b0008e21e5fd61cbe7a7f34ca3b6905a78ab677d9bc395e299359c75cda6b4
     # via
     #   chromadb
     #   opentelemetry-exporter-otlp-proto-grpc
@@ -3238,9 +3238,9 @@ tqdm==4.70.1 \
     #   huggingface-hub
     #   sentence-transformers
     #   transformers
-transformers==5.22.0 \
-    --hash=sha256:3cca65f94b0aa33511433c7c1a661c513e4ad8bc0504cb370d181d771e7c9aa0 \
-    --hash=sha256:f2864f282383820089b21d104d55cb72118b8594f053c2cbeb58d0740f9ff662
+transformers==5.22.1 \
+    --hash=sha256:bed9fd76d6f43b4a1a9fc5d0c565ace7c77edbd029784f8cbcdf772cb5e924d8 \
+    --hash=sha256:c940b4bf98de4f568723895f330ba1460a398bd83061b93b70238c3fe32e4389
     # via sentence-transformers
 triton==3.9.0 ; sys_platform == 'linux' \
     --hash=sha256:1622118a038b0c6e16fa4a0305da62c8b3c15904ee1cc4d4e65846a25969e41e \

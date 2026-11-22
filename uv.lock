@@ -1364,7 +1364,7 @@ wheels = [
 
 [[package]]
 name = "langchain-google-genai"
-version = "4.5.0"
+version = "4.5.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "filetype" },
@@ -1372,9 +1372,9 @@ dependencies = [
     { name = "langchain-core" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3e/b5/735a935a72ee93538035efea8893e7782041e03b9f6f1b28271e94b5e000/langchain_google_genai-4.5.0.tar.gz", hash = "sha256:54f2d887b454ff94635af13c5edca7ec4d1b8f4ad77cb51f63d3443ce4a83514", size = 370586, upload-time = "2026-11-11T19:20:20.991Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c1/2e/05e48516f3861b7b5d347274de41a9b1d5529e7b1b9cb41ed0e32d05c1b1/langchain_google_genai-4.5.1.tar.gz", hash = "sha256:494747fac64ea0f2bf20e7bf4a607db324c47a4f20bb20996649a23c102588e0", size = 372449, upload-time = "2026-11-18T22:30:09.273Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/dc/6f/7e95c6c06cdcf6f13ac42a65b39c36d4483498a352342582782daa2049b0/langchain_google_genai-4.5.0-py3-none-any.whl", hash = "sha256:0b04ca96696b41dba1e1fa29e4dd7132afab9cb6ae7d8fc173fd0b3858bdaf72", size = 89965, upload-time = "2026-11-11T19:20:19.652Z" },
+    { url = "https://files.pythonhosted.org/packages/79/f0/e6073ff14dfb142c14dcf57e8d2975cb01028885ca0c054eff7663ed4064/langchain_google_genai-4.5.1-py3-none-any.whl", hash = "sha256:fef75fd027bda5d60485fa48475a99a747f5b222c1d69bda161af27a3b01b8e0", size = 90425, upload-time = "2026-11-18T22:30:08.027Z" },
 ]
 
 [[package]]
@@ -1391,7 +1391,7 @@ wheels = [
 
 [[package]]
 name = "langgraph"
-version = "1.2.20"
+version = "1.2.23"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "langchain-core" },
@@ -1401,9 +1401,9 @@ dependencies = [
     { name = "pydantic" },
     { name = "xxhash" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/41/77/892e53207bfadd4b114d274737735444d06216ec9a88dfc4def9bd888254/langgraph-1.2.20.tar.gz", hash = "sha256:79f86df92f2dd17d5ec464cab68dbb685439ab102ca39f0b1b7b198025a2414c", size = 786292, upload-time = "2026-11-05T02:20:41.279Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/be/ef/5498873952b2b5fab8707d3ef1f9960ee44ada25deb379924bb1715c2f28/langgraph-1.2.23.tar.gz", hash = "sha256:c405d9c750730e252b07f66d78fc3d7ace7d42414172fdf392c97d0143c7b041", size = 800739, upload-time = "2026-11-19T05:32:57.741Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6c/13/df761ed2ac03dfc3e639f10b1af13573fea27f0885b69081d79c513de04d/langgraph-1.2.20-py3-none-any.whl", hash = "sha256:2b9fd01c3d5e0652e6c9b436dc0341413788010eb279ac8c46a733cf485d848b", size = 263611, upload-time = "2026-11-05T02:20:37.999Z" },
+    { url = "https://files.pythonhosted.org/packages/ff/7b/67cfd61010f705c7bac85ee1378b42ed6b87c984d4aa3a9e4b9c0d5a5a2a/langgraph-1.2.23-py3-none-any.whl", hash = "sha256:148eb984aed7641248875634f9b06ec8965aa2582751483c186527eed38c2c06", size = 264483, upload-time = "2026-11-19T05:32:56.552Z" },
 ]
 
 [[package]]
@@ -1421,15 +1421,15 @@ wheels = [
 
 [[package]]
 name = "langgraph-prebuilt"
-version = "1.1.0"
+version = "1.1.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "langchain-core" },
     { name = "langgraph-checkpoint" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/29/66/ed9b93f56bc17ef22d551892f0ac2b225a97fe0fcf23a511b857f70d590b/langgraph_prebuilt-1.1.0.tar.gz", hash = "sha256:3c579cf6eed2d17f9c157c2d0fcaddcd8688524e7022d3b22b37a3bf4589d528", size = 178833, upload-time = "2026-05-12T03:37:49.332Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b5/51/e44110cba9383391e5fd41ff3a5832712f988bb9152a95f6ccb8e7b89bba/langgraph_prebuilt-1.1.3.tar.gz", hash = "sha256:7ee72332e925000e3d24d2d491dd0ebb9d3a44dbffe650185943b730a832cf6d", size = 183612, upload-time = "2026-11-19T05:26:06.632Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e9/43/3fe1a700b8490ed02679cdbbc8c915eb23a092faf496c9c1118abcd10be3/langgraph_prebuilt-1.1.0-py3-none-any.whl", hash = "sha256:51e311747d755b751d5c6b39b0c1446124d3a7643d2515017e6714b323508fc9", size = 41043, upload-time = "2026-05-12T03:37:48.007Z" },
+    { url = "https://files.pythonhosted.org/packages/bc/f3/f1d3426c239dc7eca37e1e49586f7559cc224d3a12933e22e0070a4e8e13/langgraph_prebuilt-1.1.3-py3-none-any.whl", hash = "sha256:7b55eb1c2004348b73b9af9e2f81e5f3eda47dcf13d885ccb4195538426c55ce", size = 42512, upload-time = "2026-11-19T05:26:05.396Z" },
 ]
 
 [[package]]
@@ -2696,14 +2696,14 @@ wheels = [
 
 [[package]]
 name = "pytest-asyncio"
-version = "1.4.1.post1"
+version = "1.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pytest" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/73/7f/c60a4338420b33453d4f814ac0c930abd399f162b9bdd21af4b9e363037f/pytest_asyncio-1.4.1.post1.tar.gz", hash = "sha256:f582d9ea4a1c082195abe8bd29a1fe106aeb1cd435e3dad2d3bc2749935c36a2", size = 145360, upload-time = "2026-11-01T18:26:03.732Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2c/de/80724f9b5b9eca1a654179cae6edc51aaa0a355a9834a736e2a188b91780/pytest_asyncio-1.5.0.tar.gz", hash = "sha256:92c8fa83ca419fd0d4bd6a34df6520dae435841d3733c319343249492adf37f7", size = 146227, upload-time = "2026-11-12T16:35:49.845Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e3/de/adbc7578959cfab07e5e7c05cf6d54224a51e7667ea2c07458b6bc571e75/pytest_asyncio-1.4.1.post1-py3-none-any.whl", hash = "sha256:0755e488cc0a2b9bd2eab7292cc6390d4cbb8390f1020745647bae5a708e0165", size = 17140, upload-time = "2026-11-01T18:26:02.168Z" },
+    { url = "https://files.pythonhosted.org/packages/27/2d/e600d8f47597a803641704aba367c7266cd621f86561ec36da9888f160ec/pytest_asyncio-1.5.0-py3-none-any.whl", hash = "sha256:557f255ee03cc84f84a8d5f438bc9c6e0f714bf86970ae743c7ecb5a38d7e07d", size = 17215, upload-time = "2026-11-12T16:35:48.446Z" },
 ]
 
 [[package]]
